@@ -54,12 +54,14 @@ import com.mumfrey.liteloader.GameLoopListener;
 import com.mumfrey.liteloader.InitCompleteListener;
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.LoginListener;
+import com.mumfrey.liteloader.Permissible;
 import com.mumfrey.liteloader.PluginChannelListener;
 import com.mumfrey.liteloader.PostRenderListener;
 import com.mumfrey.liteloader.PreLoginListener;
 import com.mumfrey.liteloader.RenderListener;
 import com.mumfrey.liteloader.Tickable;
 import com.mumfrey.liteloader.gui.GuiControlsPaginated;
+import com.mumfrey.liteloader.permissions.PermissionsManagerClient;
 import com.mumfrey.liteloader.util.ModUtilities;
 import com.mumfrey.liteloader.util.PrivateFields;
 
@@ -75,12 +77,12 @@ public final class LiteLoader implements FilenameFilter, IPlayerUsage
 	/**
 	 * Liteloader version 
 	 */
-	private static final String LOADER_VERSION = "1.5.2";
+	private static final String LOADER_VERSION = "1.5.2_02";
 	
 	/**
 	 * Loader revision, can be used by mods to determine whether the loader is sufficiently up-to-date 
 	 */
-	private static final int LOADER_REVISION = 9;
+	private static final int LOADER_REVISION = 10;
 	
 	/**
 	 * Minecraft versions that we will load mods for, this will be compared
@@ -249,6 +251,11 @@ public final class LiteLoader implements FilenameFilter, IPlayerUsage
 	private ScaledResolution currentResolution;
 	
 	/**
+	 * Permission Manager 
+	 */
+	private static PermissionsManagerClient permissionsManager = PermissionsManagerClient.getInstance();
+	
+	/**
 	 * Get the singleton instance of LiteLoader, initialises the loader if necessary
 	 * 
 	 * @return LiteLoader instance
@@ -306,6 +313,11 @@ public final class LiteLoader implements FilenameFilter, IPlayerUsage
 		return LOADER_REVISION;
 	}
 	
+	public static final PermissionsManagerClient getPermissionsManager()
+	{
+		return permissionsManager;
+	}
+	
 	/**
 	 * LiteLoader constructor
 	 */
@@ -313,6 +325,9 @@ public final class LiteLoader implements FilenameFilter, IPlayerUsage
 	{
 	}
 	
+	/**
+	 * Loader initialisation
+	 */
 	private void initLoader()
 	{
 		if (this.loaderStartupDone) return;
@@ -944,6 +959,11 @@ public final class LiteLoader implements FilenameFilter, IPlayerUsage
 					this.addPluginChannelListener((PluginChannelListener)mod);
 				}
 				
+				if (mod instanceof Permissible)
+				{
+					permissionsManager.registerPermissible((Permissible)mod);
+				}
+				
 				this.loadedModsList += String.format("\n          - %s version %s", mod.getName(), mod.getVersion());
 				loadedModsCount++;
 			}
@@ -1455,6 +1475,9 @@ public final class LiteLoader implements FilenameFilter, IPlayerUsage
 		// Flag indicates whether we are in game at the moment
 		boolean inGame = this.minecraft.renderViewEntity != null && this.minecraft.renderViewEntity.worldObj != null;
 		
+		// Tick the permissions manager
+		if (tick) permissionsManager.onTick(this.minecraft, partialTicks, inGame);
+		
 		// Iterate tickable mods
 		for (Tickable tickable : this.tickListeners)
 		{
@@ -1511,6 +1534,8 @@ public final class LiteLoader implements FilenameFilter, IPlayerUsage
 	 */
 	public void onConnectToServer(NetHandler netHandler, Packet1Login loginPacket)
 	{
+		permissionsManager.onLogin(netHandler, loginPacket);
+		
 		for (LoginListener loginListener : this.loginListeners)
 			loginListener.onLogin(netHandler, loginPacket);
 		
@@ -1526,6 +1551,12 @@ public final class LiteLoader implements FilenameFilter, IPlayerUsage
 	{
 		if (hookPluginChannels != null && hookPluginChannels.channel != null && this.pluginChannels.containsKey(hookPluginChannels.channel))
 		{
+			try
+			{
+				permissionsManager.onCustomPayload(hookPluginChannels.channel, hookPluginChannels.length, hookPluginChannels.data);
+			}
+			catch (Exception ex) {}
+			
 			for (PluginChannelListener pluginChannelListener : this.pluginChannels.get(hookPluginChannels.channel))
 			{
 				try
@@ -1556,26 +1587,13 @@ public final class LiteLoader implements FilenameFilter, IPlayerUsage
 		// Clear any channels from before
 		this.pluginChannels.clear();
 		
+		// Add the permissions manager channels
+		this.addPluginChannelsFor(permissionsManager);
+		
 		// Enumerate mods for plugin channels
 		for (PluginChannelListener pluginChannelListener : this.pluginChannelListeners)
 		{
-			List<String> channels = pluginChannelListener.getChannels();
-			
-			if (channels != null)
-			{
-				for (String channel : channels)
-				{
-					if (channel.length() > 16 || channel.toUpperCase().equals("REGISTER") || channel.toUpperCase().equals("UNREGISTER"))
-						continue;
-					
-					if (!this.pluginChannels.containsKey(channel))
-					{
-						this.pluginChannels.put(channel, new LinkedList<PluginChannelListener>());
-					}
-					
-					this.pluginChannels.get(channel).add(pluginChannelListener);
-				}
-			}
+			this.addPluginChannelsFor(pluginChannelListener);
 		}
 
 		// If any mods have registered channels, send the REGISTER packet
@@ -1594,6 +1612,32 @@ public final class LiteLoader implements FilenameFilter, IPlayerUsage
 			byte[] registrationData = channelList.toString().getBytes(Charset.forName("UTF8"));
 			
 			this.sendPluginChannelMessage("REGISTER", registrationData);
+		}
+	}
+
+	/**
+	 * Adds plugin channels for the specified listener to the local channels collection
+	 * 
+	 * @param pluginChannelListener
+	 */
+	private void addPluginChannelsFor(PluginChannelListener pluginChannelListener)
+	{
+		List<String> channels = pluginChannelListener.getChannels();
+		
+		if (channels != null)
+		{
+			for (String channel : channels)
+			{
+				if (channel.length() > 16 || channel.toUpperCase().equals("REGISTER") || channel.toUpperCase().equals("UNREGISTER"))
+					continue;
+				
+				if (!this.pluginChannels.containsKey(channel))
+				{
+					this.pluginChannels.put(channel, new LinkedList<PluginChannelListener>());
+				}
+				
+				this.pluginChannels.get(channel).add(pluginChannelListener);
+			}
 		}
 	}
 
