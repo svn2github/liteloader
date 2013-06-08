@@ -69,7 +69,7 @@ import com.mumfrey.liteloader.util.PrivateFields;
  * LiteLoader is a simple loader which loads and provides useful callbacks to lightweight mods 
  *
  * @author Adam Mummery-Smith
- * @version 1.5.2
+ * @version 1.5.2_02
  */
 @SuppressWarnings("rawtypes")
 public final class LiteLoader implements FilenameFilter, IPlayerUsage
@@ -629,6 +629,24 @@ public final class LiteLoader implements FilenameFilter, IPlayerUsage
 		}
 		
 		return null;
+	}
+	
+	/**
+	 * Get whether the specified mod is installed
+	 * 
+	 * @param modName
+	 * @return
+	 */
+	public boolean isModInstalled(String modName)
+	{
+		if (!this.loaderStartupComplete) return false;
+		
+		for (LiteMod mod : this.mods)
+		{
+			if (modName.equalsIgnoreCase(mod.getName()) || modName.equalsIgnoreCase(mod.getClass().getSimpleName())) return true;
+		}
+		
+		return true;
 	}
 	
 	/**
