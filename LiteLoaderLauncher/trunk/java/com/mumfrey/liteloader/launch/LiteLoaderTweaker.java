@@ -15,7 +15,9 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  */
 public class LiteLoaderTweaker extends ChainedTweaker
 {
-	private static final String VERSION = "1.6.1";
+	private static final String VERSION = "1.6.2";
+
+	public static LaunchClassLoader launchClassLoader;
 
 	private File gameDirectory;
 	
@@ -27,14 +29,11 @@ public class LiteLoaderTweaker extends ChainedTweaker
 	
 	private Map<String, String> classifiedArgs = new HashMap<String, String>();
 	
-	public LiteLoaderTweaker()
-	{
-		super("cpw.mods.fml.common.launcher.FMLTweaker");
-	}
-
 	@Override
 	public void acceptOptions(List<String> args, File gameDirectory, File assetsDirectory, String profile)
 	{
+		// Parse out the arguments ourself because joptsimple doesn't really provide a good way to
+		// reconstruct an argument list after parsing
 		this.parseArgs(args);
 		
 		if (!this.classifiedArgs.containsKey("--version"))
@@ -53,6 +52,9 @@ public class LiteLoaderTweaker extends ChainedTweaker
 		LiteLoaderTransformer.gameDirectory = gameDirectory;
 		LiteLoaderTransformer.assetsDirectory = assetsDirectory;
 		LiteLoaderTransformer.profile = profile;
+
+		// Called last to initialise chained tweakers
+		super.acceptOptions(args, gameDirectory, assetsDirectory, profile);
 	}
 
 	private void parseArgs(List<String> args)
@@ -87,7 +89,7 @@ public class LiteLoaderTweaker extends ChainedTweaker
 	@Override
 	public void injectIntoClassLoader(LaunchClassLoader classLoader)
 	{
-		classLoader.addClassLoaderExclusion("com.mumfrey.liteloader.");
+		LiteLoaderTweaker.launchClassLoader = classLoader;
 		classLoader.registerTransformer("com.mumfrey.liteloader.launch.LiteLoaderTransformer");
 	}
 

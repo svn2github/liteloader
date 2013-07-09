@@ -4,7 +4,12 @@
 	<classpathentry kind="src" path="res"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/LegacyLauncher"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/LiteLoader"/>
 	<classpathentry kind="src" path="/Client"/>
+	<classpathentry kind="lib" path="/Client/jars/libraries/net/sf/jopt-simple/jopt-simple/4.5/jopt-simple-4.5.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/LiteLoaderLauncher/javadoc/jopt-simple-4.5-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry combineaccessrules="false" kind="src" path="/LiteLoader"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
