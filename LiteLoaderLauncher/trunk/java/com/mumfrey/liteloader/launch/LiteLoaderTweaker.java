@@ -6,14 +6,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Logger;
 
+import joptsimple.ArgumentAcceptingOptionSpec;
+import joptsimple.NonOptionArgumentSpec;
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
+
+import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
  *
  * @author Adam Mummery-Smith
  */
-public class LiteLoaderTweaker extends ChainedTweaker
+public class LiteLoaderTweaker implements ITweaker
 {
 	private static final String VERSION = "1.6.2";
 
@@ -29,12 +36,36 @@ public class LiteLoaderTweaker extends ChainedTweaker
 	
 	private Map<String, String> classifiedArgs = new HashMap<String, String>();
 	
+    private List<ITweaker> cascadedTweaks = new ArrayList<ITweaker>();
+    private ArgumentAcceptingOptionSpec<String> cascadedTweaksOption;
+    private OptionSet parsedOptions;
+    
+    private boolean fmlIsPresent = false;
+
+	private List<String> passThroughArgs;
+	
 	@Override
 	public void acceptOptions(List<String> args, File gameDirectory, File assetsDirectory, String profile)
 	{
+		this.gameDirectory = gameDirectory;
+		this.assetsDirectory = assetsDirectory;
+		this.profile = profile;
+		
+		LiteLoaderTransformer.gameDirectory = gameDirectory;
+		LiteLoaderTransformer.assetsDirectory = assetsDirectory;
+		LiteLoaderTransformer.profile = profile;
+		
+        OptionParser optionParser = new OptionParser();
+        this.cascadedTweaksOption = optionParser.accepts("cascadedTweaks", "Additional tweaks to be called by FML, implementing ITweaker").withRequiredArg().ofType(String.class).withValuesSeparatedBy(',');
+        optionParser.allowsUnrecognizedOptions();
+        NonOptionArgumentSpec<String> nonOptions = optionParser.nonOptions();
+
+        this.parsedOptions = optionParser.parse(args.toArray(new String[args.size()]));
+        this.passThroughArgs = this.parsedOptions.valuesOf(nonOptions);
+        
 		// Parse out the arguments ourself because joptsimple doesn't really provide a good way to
-		// reconstruct an argument list after parsing
-		this.parseArgs(args);
+		// add arguments to the unparsed argument list after parsing
+		this.parseArgs(this.passThroughArgs);
 		
 		if (!this.classifiedArgs.containsKey("--version"))
 			this.addClassifiedArg("--version", this.VERSION);
@@ -44,17 +75,6 @@ public class LiteLoaderTweaker extends ChainedTweaker
 		
 		if (!this.classifiedArgs.containsKey("--assetsDir") && assetsDirectory != null)
 			this.addClassifiedArg("--assetsDir", assetsDirectory.getAbsolutePath());
-		
-		this.gameDirectory = gameDirectory;
-		this.assetsDirectory = assetsDirectory;
-		this.profile = profile;
-		
-		LiteLoaderTransformer.gameDirectory = gameDirectory;
-		LiteLoaderTransformer.assetsDirectory = assetsDirectory;
-		LiteLoaderTransformer.profile = profile;
-
-		// Called last to initialise chained tweakers
-		super.acceptOptions(args, gameDirectory, assetsDirectory, profile);
 	}
 
 	private void parseArgs(List<String> args)
@@ -89,9 +109,49 @@ public class LiteLoaderTweaker extends ChainedTweaker
 	@Override
 	public void injectIntoClassLoader(LaunchClassLoader classLoader)
 	{
+		this.computeCascadedTweaks(classLoader);
 		LiteLoaderTweaker.launchClassLoader = classLoader;
 		classLoader.registerTransformer("com.mumfrey.liteloader.launch.LiteLoaderTransformer");
 	}
+
+	// Shamelessly stolen from FML
+    void computeCascadedTweaks(LaunchClassLoader classLoader)
+    {
+        if (this.parsedOptions.has(cascadedTweaksOption))
+        {
+            for (String tweaker : cascadedTweaksOption.values(parsedOptions))
+            {
+                try
+                {
+                    classLoader.addClassLoaderExclusion(tweaker.substring(0, tweaker.lastIndexOf('.')));
+                    @SuppressWarnings("unchecked")
+					Class<? extends ITweaker> tweakClass = (Class<? extends ITweaker>) Class.forName(tweaker, true, classLoader);
+                    ITweaker additionalTweak = tweakClass.newInstance();
+                    cascadedTweaks.add(additionalTweak);
+                    
+                    if ("cpw.mods.fml.common.launcher.FMLTweaker".equals(tweaker))
+                    {
+                    	this.fmlIsPresent = true;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Logger.getLogger("liteloader").info(String.format("Missing additional tweak class %s", tweaker));
+                }
+            }
+        }
+    }
+    
+    void runAdditionalTweaks(LaunchClassLoader classLoader)
+    {
+        List<String> cascadedArgs = new ArrayList<String>(this.passThroughArgs);
+        if (this.fmlIsPresent) cascadedArgs.add("--fmlIsPresent");
+        for (ITweaker tweak : this.cascadedTweaks)
+        {
+            tweak.acceptOptions(cascadedArgs, this.gameDirectory, this.assetsDirectory, this.profile);
+            tweak.injectIntoClassLoader(classLoader);
+        }
+    }
 
 	@Override
 	public String getLaunchTarget()
