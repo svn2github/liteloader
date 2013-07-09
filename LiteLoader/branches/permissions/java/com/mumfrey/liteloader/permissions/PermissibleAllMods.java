@@ -1,5 +1,6 @@
 package com.mumfrey.liteloader.permissions;
 
+import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -27,10 +28,15 @@ public class PermissibleAllMods implements Permissible
 	}
 	
 	@Override
-	public void init()
+	public void init(File configPath)
 	{
 	}
-	
+
+	@Override
+	public void upgradeSettings(String version, File configPath, File oldConfigPath)
+	{
+	}
+
 	@Override
 	public String getPermissibleModName()
 	{

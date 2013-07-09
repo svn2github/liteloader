@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.mumfrey.liteloader.Permissible;
 
-import net.minecraft.client.Minecraft;
+import net.minecraft.src.Minecraft;
 import net.minecraft.src.NetHandler;
 import net.minecraft.src.Packet1Login;
 

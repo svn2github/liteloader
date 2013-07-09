@@ -1,5 +1,6 @@
 package com.mumfrey.liteloader.permissions;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -9,7 +10,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import net.eq2online.permissions.ReplicatedPermissionsContainer;
-import net.minecraft.client.Minecraft;
+import net.minecraft.src.Minecraft;
 import net.minecraft.src.NetHandler;
 import net.minecraft.src.Packet1Login;
 
@@ -230,7 +231,7 @@ public class PermissionsManagerClient implements PermissionsManager, PluginChann
 	}
 
 	/* (non-Javadoc)
-	 * @see net.eq2online.permissions.PermissionsManager#onTick(net.minecraft.client.Minecraft, float, boolean)
+	 * @see net.eq2online.permissions.PermissionsManager#onTick(net.minecraft.src.Minecraft, float, boolean)
 	 */
 	@Override
 	public void onTick(Minecraft minecraft, float partialTicks, boolean inGame)
@@ -480,8 +481,13 @@ public class PermissionsManagerClient implements PermissionsManager, PluginChann
 	 * @see com.mumfrey.liteloader.LiteMod#init()
 	 */
 	@Override
-	public void init()
+	public void init(File configPath)
 	{
 		// Stub for PluginChannelListener interface
+	}
+	
+	@Override
+	public void upgradeSettings(String version, File configPath, File oldConfigPath)
+	{
 	}
 }
