@@ -11,7 +11,7 @@ public class RenderLightningBolt extends Render
 	static
 	{
 		Minecraft minecraft = Minecraft.getMinecraft();
-		LiteLoader.init(minecraft.mcDataDir, new File(minecraft.mcDataDir, "assets"), "mcp"); 
+		LiteLoader.init(minecraft.mcDataDir, new File(minecraft.mcDataDir, "assets"), "mcp", null); 
 	}
 
 	/**
