@@ -2,18 +2,22 @@ package com.mumfrey.liteloader.launch;
 
 import java.io.File;
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import net.minecraft.launchwrapper.IClassTransformer;
-
-//import com.mumfrey.liteloader.core.LiteLoader;
+import net.minecraft.launchwrapper.LaunchClassLoader;
 
 public class LiteLoaderTransformer implements IClassTransformer
 {
 	private static final String classMappingRenderLightningBolt = "bgp";
 
 	private static Logger logger = Logger.getLogger("liteloader");
+	
+	public static LaunchClassLoader launchClassLoader;
+
+	public static List<String> modsToLoad;
 	
 	public static File gameDirectory;
 	
@@ -30,9 +34,9 @@ public class LiteLoaderTransformer implements IClassTransformer
 
 			try
         	{
-        		Class<?> loaderClass = Class.forName("com.mumfrey.liteloader.core.LiteLoader", false, LiteLoaderTweaker.launchClassLoader);
-        		Method mInit = loaderClass.getDeclaredMethod("init", File.class, File.class, String.class);
-        		mInit.invoke(null, LiteLoaderTransformer.gameDirectory, LiteLoaderTransformer.assetsDirectory, LiteLoaderTransformer.profile);
+        		Class<?> loaderClass = Class.forName("com.mumfrey.liteloader.core.LiteLoader", false, LiteLoaderTransformer.launchClassLoader);
+        		Method mInit = loaderClass.getDeclaredMethod("init", File.class, File.class, String.class, List.class);
+        		mInit.invoke(null, LiteLoaderTransformer.gameDirectory, LiteLoaderTransformer.assetsDirectory, LiteLoaderTransformer.profile, LiteLoaderTransformer.modsToLoad);
 			}
         	catch (Throwable th)
         	{

@@ -12,7 +12,6 @@ import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.NonOptionArgumentSpec;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
-
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
@@ -23,8 +22,6 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
 public class LiteLoaderTweaker implements ITweaker
 {
 	private static final String VERSION = "1.6.2";
-
-	public static LaunchClassLoader launchClassLoader;
 
 	private File gameDirectory;
 	
@@ -37,7 +34,7 @@ public class LiteLoaderTweaker implements ITweaker
 	private Map<String, String> classifiedArgs = new HashMap<String, String>();
 	
     private List<ITweaker> cascadedTweaks = new ArrayList<ITweaker>();
-    private ArgumentAcceptingOptionSpec<String> cascadedTweaksOption;
+    private ArgumentAcceptingOptionSpec<String> cascadedTweaksOption, modsOption;
     private OptionSet parsedOptions;
     
     private boolean fmlIsPresent = false;
@@ -57,6 +54,7 @@ public class LiteLoaderTweaker implements ITweaker
 		
         OptionParser optionParser = new OptionParser();
         this.cascadedTweaksOption = optionParser.accepts("cascadedTweaks", "Additional tweaks to be called by FML, implementing ITweaker").withRequiredArg().ofType(String.class).withValuesSeparatedBy(',');
+        this.modsOption = optionParser.accepts("mods", "Comma-separated list of mods to load").withRequiredArg().ofType(String.class).withValuesSeparatedBy(',');
         optionParser.allowsUnrecognizedOptions();
         NonOptionArgumentSpec<String> nonOptions = optionParser.nonOptions();
 
@@ -75,6 +73,11 @@ public class LiteLoaderTweaker implements ITweaker
 		
 		if (!this.classifiedArgs.containsKey("--assetsDir") && assetsDirectory != null)
 			this.addClassifiedArg("--assetsDir", assetsDirectory.getAbsolutePath());
+		
+		if (this.parsedOptions.has(this.modsOption))
+		{
+			LiteLoaderTransformer.modsToLoad = this.modsOption.values(this.parsedOptions);
+		}
 	}
 
 	private void parseArgs(List<String> args)
@@ -110,16 +113,16 @@ public class LiteLoaderTweaker implements ITweaker
 	public void injectIntoClassLoader(LaunchClassLoader classLoader)
 	{
 		this.computeCascadedTweaks(classLoader);
-		LiteLoaderTweaker.launchClassLoader = classLoader;
+		LiteLoaderTransformer.launchClassLoader = classLoader;
 		classLoader.registerTransformer("com.mumfrey.liteloader.launch.LiteLoaderTransformer");
 	}
 
 	// Shamelessly stolen from FML
     void computeCascadedTweaks(LaunchClassLoader classLoader)
     {
-        if (this.parsedOptions.has(cascadedTweaksOption))
+        if (this.parsedOptions.has(this.cascadedTweaksOption))
         {
-            for (String tweaker : cascadedTweaksOption.values(parsedOptions))
+            for (String tweaker : this.cascadedTweaksOption.values(this.parsedOptions))
             {
                 try
                 {
@@ -127,7 +130,7 @@ public class LiteLoaderTweaker implements ITweaker
                     @SuppressWarnings("unchecked")
 					Class<? extends ITweaker> tweakClass = (Class<? extends ITweaker>) Class.forName(tweaker, true, classLoader);
                     ITweaker additionalTweak = tweakClass.newInstance();
-                    cascadedTweaks.add(additionalTweak);
+                    this.cascadedTweaks.add(additionalTweak);
                     
                     if ("cpw.mods.fml.common.launcher.FMLTweaker".equals(tweaker))
                     {
