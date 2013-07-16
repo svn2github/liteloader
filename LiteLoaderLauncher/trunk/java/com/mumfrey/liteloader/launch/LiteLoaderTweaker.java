@@ -115,6 +115,7 @@ public class LiteLoaderTweaker implements ITweaker
 		this.computeCascadedTweaks(classLoader);
 		LiteLoaderTransformer.launchClassLoader = classLoader;
 		classLoader.registerTransformer("com.mumfrey.liteloader.launch.LiteLoaderTransformer");
+		this.runAdditionalTweaks(classLoader);
 	}
 
 	// Shamelessly stolen from FML
