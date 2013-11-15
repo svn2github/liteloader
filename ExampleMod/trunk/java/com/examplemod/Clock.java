@@ -69,10 +69,10 @@ public class Clock
 	 * @param yPos Y position for the clock
 	 * @param size Clock size
 	 */
-	public Clock(int xPos, int yPos, int size)
+	public Clock(int xPos, int yPos)
 	{
 		this.setPosition(xPos, yPos);
-		this.setSize(size);
+		this.setSize(64);
 		
 		this.largeHandColour  = Color.WHITE;   
 		this.smallHandColour  = Color.GREY;
