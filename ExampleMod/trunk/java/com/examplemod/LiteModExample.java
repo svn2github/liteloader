@@ -9,10 +9,10 @@ import net.minecraft.src.Minecraft;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import com.mumfrey.liteloader.ExposeConfig;
 import com.mumfrey.liteloader.Tickable;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.modconfig.ConfigStrategy;
+import com.mumfrey.liteloader.modconfig.ExposableOptions;
 import com.mumfrey.liteloader.util.ModUtilities;
 
 /**
@@ -21,7 +21,7 @@ import com.mumfrey.liteloader.util.ModUtilities;
  *
  * @author Adam Mummery-Smith
  */
-@ExposeConfig(strategy = ConfigStrategy.Versioned, filename="examplemod.json")
+@ExposableOptions(strategy = ConfigStrategy.Versioned, filename="examplemod.json")
 public class LiteModExample implements Tickable
 {
 	/**
