@@ -10,9 +10,9 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import net.eq2online.permissions.ReplicatedPermissionsContainer;
-import net.minecraft.src.Minecraft;
-import net.minecraft.src.NetHandler;
-import net.minecraft.src.Packet1Login;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.INetHandler;
+import net.minecraft.network.play.server.S01PacketJoinGame;
 
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.Permissible;
@@ -175,10 +175,10 @@ public class PermissionsManagerClient implements PermissionsManager, PluginChann
 	}
 
 	/* (non-Javadoc)
-	 * @see net.eq2online.permissions.PermissionsManager#onLogin(net.minecraft.src.NetHandler, net.minecraft.src.Packet1Login)
+	 * @see com.mumfrey.liteloader.permissions.PermissionsManager#onLogin(net.minecraft.network.INetHandler, net.minecraft.network.play.server.S01PacketJoinGame)
 	 */
 	@Override
-	public void onLogin(NetHandler netHandler, Packet1Login loginPacket)
+	public void onLogin(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
 		this.clearServerPermissions();
 		this.scheduleRefresh();
@@ -253,7 +253,7 @@ public class PermissionsManagerClient implements PermissionsManager, PluginChann
 	}
 
 	/* (non-Javadoc)
-	 * @see net.eq2online.permissions.PermissionsManager#onTick(net.minecraft.src.Minecraft, float, boolean)
+	 * @see com.mumfrey.liteloader.permissions.PermissionsManager#onTick(net.minecraft.client.Minecraft, float, boolean)
 	 */
 	@Override
 	public void onTick(Minecraft minecraft, float partialTicks, boolean inGame)

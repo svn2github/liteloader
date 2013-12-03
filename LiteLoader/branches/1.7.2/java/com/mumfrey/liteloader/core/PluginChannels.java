@@ -5,16 +5,13 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
-import net.minecraft.src.Minecraft;
-import net.minecraft.src.NetHandler;
-import net.minecraft.src.Packet1Login;
-import net.minecraft.src.Packet250CustomPayload;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.INetHandler;
+import net.minecraft.network.play.client.C17PacketCustomPayload;
+import net.minecraft.network.play.server.S01PacketJoinGame;
+import net.minecraft.network.play.server.S3FPacketCustomPayload;
 
 import com.mumfrey.liteloader.PluginChannelListener;
-import com.mumfrey.liteloader.core.hooks.HookPluginChannels;
-import com.mumfrey.liteloader.core.hooks.asm.ASMHookProxy;
-import com.mumfrey.liteloader.core.hooks.asm.CustomPayloadPacketTransformer;
-import com.mumfrey.liteloader.core.hooks.asm.PacketTransformer;
 import com.mumfrey.liteloader.permissions.PermissionsManagerClient;
 
 /**
@@ -29,11 +26,6 @@ public class PluginChannels
 	private static final String CHANNEL_UNREGISTER = "UNREGISTER";
 
 	/**
-	 * True if we have initialised the hook
-	 */
-	private boolean hookInitDone;
-	
-	/**
 	 * Mapping of plugin channel names to listeners
 	 */
 	private HashMap<String, LinkedList<PluginChannelListener>> pluginChannels = new HashMap<String, LinkedList<PluginChannelListener>>();
@@ -43,39 +35,12 @@ public class PluginChannels
 	 */
 	private LinkedList<PluginChannelListener> pluginChannelListeners = new LinkedList<PluginChannelListener>();
 	
-	private ASMHookProxy asmProxy;
-
 	/**
 	 * Package private
 	 */
-	PluginChannels(ASMHookProxy proxy)
+	PluginChannels()
 	{
-		this.asmProxy = proxy;
 	}
-
-	/**
-	 * 
-	 */
-	public void initHook()
-	{
-		// Plugin channels hook
-		if (this.pluginChannelListeners.size() > 0 && !this.hookInitDone)
-		{
-			if (CustomPayloadPacketTransformer.isInjected())
-			{
-				PacketTransformer.registerProxy(Packet250CustomPayload.class, this.asmProxy);
-			}
-			else
-			{
-				LiteLoader.getLogger().info("Callback injection failed for custom payload packet, injecting reflection hook");
-				HookPluginChannels.register();
-				HookPluginChannels.registerPacketHandler(this);
-			}
-			
-			this.hookInitDone = true;
-		}
-	}
-	
 	
 	/**
 	 * @param pluginChannelListener
@@ -85,8 +50,6 @@ public class PluginChannels
 		if (!this.pluginChannelListeners.contains(pluginChannelListener))
 		{
 			this.pluginChannelListeners.add(pluginChannelListener);
-			if (this.hookInitDone)
-				this.initHook();
 		}
 	}
 
@@ -94,7 +57,7 @@ public class PluginChannels
 	 * @param netHandler
 	 * @param loginPacket
 	 */
-	public void onConnectToServer(NetHandler netHandler, Packet1Login loginPacket)
+	public void onConnectToServer(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
 		this.setupPluginChannels();
 	}
@@ -104,25 +67,25 @@ public class PluginChannels
 	 * 
 	 * @param customPayload
 	 */
-	public void onPluginChannelMessage(Packet250CustomPayload customPayload)
+	public void onPluginChannelMessage(S3FPacketCustomPayload customPayload)
 	{
-		if (customPayload != null && customPayload.channel != null && this.pluginChannels.containsKey(customPayload.channel))
+		if (customPayload != null && customPayload.getChannel() != null && this.pluginChannels.containsKey(customPayload.getChannel()))
 		{
 			try
 			{
 				PermissionsManagerClient permissionsManager = LiteLoader.getPermissionsManager();
 				if (permissionsManager != null)
 				{
-					permissionsManager.onCustomPayload(customPayload.channel, customPayload.length, customPayload.data);
+					permissionsManager.onCustomPayload(customPayload.getChannel(), customPayload.getData().length, customPayload.getData());
 				}
 			}
 			catch (Exception ex) {}
 			
-			for (PluginChannelListener pluginChannelListener : this.pluginChannels.get(customPayload.channel))
+			for (PluginChannelListener pluginChannelListener : this.pluginChannels.get(customPayload.getChannel()))
 			{
 				try
 				{
-					pluginChannelListener.onCustomPayload(customPayload.channel, customPayload.length, customPayload.data);
+					pluginChannelListener.onCustomPayload(customPayload.getChannel(), customPayload.getData().length, customPayload.getData());
 				}
 				catch (Exception ex) {}
 			}
@@ -160,7 +123,7 @@ public class PluginChannels
 			}
 			
 			byte[] registrationData = channelList.toString().getBytes(Charset.forName("UTF8"));
-			PluginChannels.dispatch(new Packet250CustomPayload(CHANNEL_REGISTER, registrationData));
+			PluginChannels.dispatch(new C17PacketCustomPayload(CHANNEL_REGISTER, registrationData));
 		}
 	}
 	
@@ -202,7 +165,7 @@ public class PluginChannels
 		if (channel == null || channel.length() > 16 || CHANNEL_REGISTER.equals(channel) || CHANNEL_UNREGISTER.equals(channel))
 			throw new RuntimeException("Invalid channel name specified"); 
 		
-		Packet250CustomPayload payload = new Packet250CustomPayload(channel, data);
+		C17PacketCustomPayload payload = new C17PacketCustomPayload(channel, data);
 		PluginChannels.dispatch(payload);
 	}
 
@@ -210,7 +173,7 @@ public class PluginChannels
 	 * @param channel
 	 * @param data
 	 */
-	private static void dispatch(Packet250CustomPayload payload)
+	private static void dispatch(C17PacketCustomPayload payload)
 	{
 		try
 		{

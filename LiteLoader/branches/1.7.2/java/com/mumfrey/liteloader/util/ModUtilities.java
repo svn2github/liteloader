@@ -1,24 +1,25 @@
 package com.mumfrey.liteloader.util;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Set;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.Render;
+import net.minecraft.client.renderer.entity.RenderManager;
+import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.entity.Entity;
 
 import com.mumfrey.liteloader.core.LiteLoader;
-import com.mumfrey.liteloader.core.PluginChannels;
 import com.mumfrey.liteloader.launch.LiteLoaderTweaker;
 
-import net.minecraft.src.*;
-
+/**
+ * A small collection of useful functions for mods
+ * 
+ * @author Adam Mummery-Smith
+ */
 public abstract class ModUtilities
 {
-	/**
-	 * Collection of packets we have already overridden, so that duplicate registrations can generate a warning
-	 */
-	private static Set<Integer> overriddenPackets = new HashSet<Integer>();
-	
 	/**
 	 * True if FML is being used, in which case we use searge names instead of raw field/method names
 	 */
@@ -45,58 +46,6 @@ public abstract class ModUtilities
 	}
 	
 	/**
-	 * Register a packet override
-	 * 
-	 * @param packetId
-	 * @param newPacket
-	 */
-	@SuppressWarnings("unchecked")
-	public static boolean registerPacketOverride(int packetId, Class<? extends Packet> newPacket)
-	{
-		if (packetId == 250)
-		{
-			throw new RuntimeException("Cannot override packet 250, register a plugin channel listener instead");
-		}
-		
-		if (overriddenPackets.contains(Integer.valueOf(packetId)))
-		{
-			LiteLoader.getLogger().warning(String.format("Packet with ID %s was already overridden by another mod, one or mods may not function correctly", packetId));
-		}
-		
-		try
-		{
-			IntHashMap packetIdToClassMap = Packet.packetIdToClassMap;
-			PrivateFields.StaticFields.packetClassToIdMap.get();
-			Map<Class<? extends Packet>, Integer> packetClassToIdMap = PrivateFields.StaticFields.packetClassToIdMap.get();
-			
-			packetIdToClassMap.removeObject(packetId);
-			packetIdToClassMap.addKey(packetId, newPacket);
-			packetClassToIdMap.put(newPacket, Integer.valueOf(packetId));
-			
-			return true;
-		}
-		catch (Exception ex)
-		{
-			LiteLoader.getLogger().warning("Error registering packet override for packet id " + packetId + ": " + ex.getMessage());
-			return false;
-		}
-	}
-	
-	/**
-	 * Send a plugin channel (custom payload) packet to the server
-	 * 
-	 * @param channel Channel to send the data
-	 * @param data
-	 * 
-	 * @deprecated User PluginChannels.sendMessage(channel, data) instead.
-	 */
-	@Deprecated
-	public static void sendPluginChannelMessage(String channel, byte[] data)
-	{
-		PluginChannels.sendMessage(channel, data);
-	}
-
-	/**
 	 * Abstraction helper function
 	 * 
 	 * @param fieldName Name of field to get, returned unmodified if in debug mode
@@ -105,7 +54,7 @@ public abstract class ModUtilities
 	public static String getObfuscatedFieldName(String fieldName, String obfuscatedFieldName, String seargeFieldName)
 	{
 		if (forgeModLoader) return seargeFieldName;
-		return !net.minecraft.src.Tessellator.instance.getClass().getSimpleName().equals("Tessellator") ? obfuscatedFieldName : fieldName;
+		return !net.minecraft.client.renderer.Tessellator.instance.getClass().getSimpleName().equals("Tessellator") ? obfuscatedFieldName : fieldName;
 	}
 
 	/**

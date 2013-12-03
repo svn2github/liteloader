@@ -1,7 +1,7 @@
 package com.mumfrey.liteloader.core.hooks.asm;
 
 /**
- * Transformer for Packet 3 (chat)
+ * Transformer for S02PacketChat
  *
  * @author Adam Mummery-Smith
  */
@@ -11,8 +11,13 @@ public class ChatPacketTransformer extends PacketTransformer
 	
 	public ChatPacketTransformer()
 	{
-		// TODO Obfuscation 1.6.4
-		super("net.minecraft.src.Packet3Chat", "dm", "handleChatPacket");
+		// TODO Obfuscation 1.7.2
+		super("net.minecraft.network.play.server.S02PacketChat", "ga", "com.mumfrey.liteloader.core.hooks.asm.ASMHookProxy", "handleChatPacket", 1000);
+	}
+
+	@Override
+	protected void notifyInjectionFailed()
+	{
 	}
 	
 	@Override

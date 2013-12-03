@@ -2,18 +2,18 @@ package com.mumfrey.liteloader.core;
 
 import java.util.List;
 
+import net.minecraft.client.audio.SoundHandler;
+import net.minecraft.client.resources.ResourceManagerReloadListener;
+import net.minecraft.client.resources.SimpleReloadableResourceManager;
+
 import com.mumfrey.liteloader.util.PrivateFields;
 
-import net.minecraft.src.ResourceManagerReloadListener;
-import net.minecraft.src.SimpleReloadableResourceManager;
-import net.minecraft.src.SoundManager;
-
 /**
- * Manager object which handles inhibiting the sound manager's reload notification at startup
+ * Manager object which handles inhibiting the sound handler's reload notification at startup
  *
  * @author Adam Mummery-Smith
  */
-public class SoundManagerReloadInhibitor
+public class SoundHandlerReloadInhibitor
 {
 	/**
 	 * Resource Manager
@@ -23,7 +23,7 @@ public class SoundManagerReloadInhibitor
 	/**
 	 * Sound manager
 	 */
-	private SoundManager soundManager;
+	private SoundHandler soundHandler;
 	
 	/**
 	 * True if inhibition is currently active
@@ -35,10 +35,10 @@ public class SoundManagerReloadInhibitor
 	 */
 	private int storedIndex;
 	
-	SoundManagerReloadInhibitor(SimpleReloadableResourceManager resourceManager, SoundManager soundManager)
+	SoundHandlerReloadInhibitor(SimpleReloadableResourceManager resourceManager, SoundHandler soundHandler)
 	{
 		this.resourceManager = resourceManager;
-		this.soundManager = soundManager;
+		this.soundHandler = soundHandler;
 	}
 	
 	/**
@@ -55,11 +55,11 @@ public class SoundManagerReloadInhibitor
 				List<ResourceManagerReloadListener> reloadListeners = PrivateFields.reloadListeners.get(this.resourceManager);
 				if (reloadListeners != null)
 				{
-					this.storedIndex = reloadListeners.indexOf(this.soundManager);
+					this.storedIndex = reloadListeners.indexOf(this.soundHandler);
 					if (this.storedIndex > -1)
 					{
-						LiteLoader.getLogger().info("Inhibiting sound manager reload");
-						reloadListeners.remove(this.soundManager);
+						LiteLoader.getLogger().info("Inhibiting sound handler reload");
+						reloadListeners.remove(this.soundHandler);
 						this.inhibited = true;
 						return true;
 					}
@@ -68,7 +68,7 @@ public class SoundManagerReloadInhibitor
 		}
 		catch (Exception ex)
 		{
-			LiteLoader.getLogger().warning("Error inhibiting sound manager reload");
+			LiteLoader.getLogger().warning("Error inhibiting sound handler reload");
 		}
 		
 		return false;
@@ -91,19 +91,19 @@ public class SoundManagerReloadInhibitor
 				{
 					if (this.storedIndex > -1)
 					{
-						reloadListeners.add(this.storedIndex, this.soundManager);
+						reloadListeners.add(this.storedIndex, this.soundHandler);
 					}
 					else
 					{
-						reloadListeners.add(this.soundManager);
+						reloadListeners.add(this.soundHandler);
 					}
 
-					LiteLoader.getLogger().info("Sound manager reload inhibit removed");
+					LiteLoader.getLogger().info("Sound handler reload inhibit removed");
 					
 					if (reload)
 					{
-						LiteLoader.getLogger().info("Reloading sound manager");
-						this.soundManager.onResourceManagerReload(this.resourceManager);
+						LiteLoader.getLogger().info("Reloading sound handler");
+						this.soundHandler.onResourceManagerReload(this.resourceManager);
 					}
 
 					this.inhibited = false;
@@ -113,7 +113,7 @@ public class SoundManagerReloadInhibitor
 		}
 		catch (Exception ex)
 		{
-			LiteLoader.getLogger().warning("Error removing sound manager reload inhibit");
+			LiteLoader.getLogger().warning("Error removing sound handler reload inhibit");
 		}
 		
 		return false;

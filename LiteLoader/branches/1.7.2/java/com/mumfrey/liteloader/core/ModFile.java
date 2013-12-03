@@ -6,14 +6,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import net.minecraft.launchwrapper.LaunchClassLoader;
 import joptsimple.internal.Strings;
+import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -62,7 +64,7 @@ public class ModFile extends File
 	/**
 	 * Name of the class transof
 	 */
-	protected String classTransformerClassName;
+	protected List<String> classTransformerClassNames = new ArrayList<String>();
 	
 	/**
 	 * File time stamp, used as sorting criteria when no revision information is found
@@ -155,7 +157,16 @@ public class ModFile extends File
 		}
 		
 		this.tweakClassName = this.metaData.get("tweakClass");
-		this.classTransformerClassName = this.metaData.get("classTransformerClass");
+		String classTransformerNames = this.metaData.get("classTransformerClasses");
+		if (classTransformerNames != null)
+		{
+			String[] names = classTransformerNames.split(",");
+			for (String name : names)
+			{
+				if (!Strings.isNullOrEmpty(name))
+					this.classTransformerClassNames.add(name);
+			}
+		}
 		this.injectAt = this.metaData.get("injectAt");
 	}
 
@@ -204,14 +215,14 @@ public class ModFile extends File
 		return this.tweakClassName;
 	}
 	
-	public boolean hasClassTransformer()
+	public boolean hasClassTransformers()
 	{
-		return this.classTransformerClassName != null;
+		return this.classTransformerClassNames.size() > 0;
 	}
 	
-	public String getClassTransformerClassName()
+	public List<String> getClassTransformerClassNames()
 	{
-		return this.classTransformerClassName;
+		return this.classTransformerClassNames;
 	}
 	
 	public boolean isInjected()

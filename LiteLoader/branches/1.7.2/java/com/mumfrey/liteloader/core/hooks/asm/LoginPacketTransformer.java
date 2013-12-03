@@ -1,7 +1,7 @@
 package com.mumfrey.liteloader.core.hooks.asm;
 
 /**
- * Transformer for Packet 1 (login)
+ * Transformer for S01PacketJoinGame
  *
  * @author Adam Mummery-Smith
  */
@@ -11,8 +11,13 @@ public class LoginPacketTransformer extends PacketTransformer
 	
 	public LoginPacketTransformer()
 	{
-		// TODO Obfuscation 1.6.4
-		super("net.minecraft.src.Packet1Login", "ep", "handleLoginPacket");
+		// TODO Obfuscation 1.7.2
+		super("net.minecraft.network.play.server.S01PacketJoinGame", "gu", "com.mumfrey.liteloader.core.hooks.asm.ASMHookProxy", "handleLoginPacket", 1000);
+	}
+	
+	@Override
+	protected void notifyInjectionFailed()
+	{
 	}
 	
 	@Override

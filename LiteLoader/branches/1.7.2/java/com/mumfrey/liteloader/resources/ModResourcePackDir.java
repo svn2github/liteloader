@@ -3,9 +3,9 @@ package com.mumfrey.liteloader.resources;
 import java.io.File;
 import java.io.IOException;
 
-import net.minecraft.src.FolderResourcePack;
-import net.minecraft.src.MetadataSection;
-import net.minecraft.src.MetadataSerializer;
+import net.minecraft.client.resources.FolderResourcePack;
+import net.minecraft.client.resources.data.MetadataSection;
+import net.minecraft.client.resources.data.MetadataSerializer;
 
 /**
  * Resource pack which wraps a mod directory on the classpath
@@ -30,7 +30,7 @@ public class ModResourcePackDir extends FolderResourcePack
 	}
 	
 	/* (non-Javadoc)
-	 * @see net.minecraft.src.AbstractResourcePack#getMetadataSection(net.minecraft.src.MetadataSerializer, java.lang.String)
+	 * @see net.minecraft.client.resources.AbstractResourcePack#getPackMetadata(net.minecraft.client.resources.data.MetadataSerializer, java.lang.String)
 	 */
 	@Override
 	public MetadataSection getPackMetadata(MetadataSerializer metadataSerializer, String metadataSectionName) throws IOException
@@ -47,7 +47,7 @@ public class ModResourcePackDir extends FolderResourcePack
 	}
 
 	/* (non-Javadoc)
-	 * @see net.minecraft.src.AbstractResourcePack#getName()
+	 * @see net.minecraft.client.resources.AbstractResourcePack#getPackName()
 	 */
 	@Override
 	public String getPackName()

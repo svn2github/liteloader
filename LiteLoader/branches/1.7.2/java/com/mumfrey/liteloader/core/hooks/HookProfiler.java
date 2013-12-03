@@ -6,14 +6,14 @@ import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.logging.Logger;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.settings.GameSettings;
+import net.minecraft.profiler.Profiler;
+
 import com.mumfrey.liteloader.core.Events;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.core.exceptions.ProfilerCrossThreadAccessException;
 import com.mumfrey.liteloader.core.exceptions.ProfilerStackCorruptionException;
-
-import net.minecraft.src.Minecraft;
-import net.minecraft.src.GameSettings;
-import net.minecraft.src.Profiler;
 
 /**
  * Main LiteLoader tick hook 
@@ -95,7 +95,7 @@ public class HookProfiler extends Profiler
 		catch (SecurityException ex) {}
 		catch (NoSuchFieldException ex)
 		{
-			this.logger.info("Optifine not detected");
+			this.logger.info("Optifine not detected, skipping compatibility check");
 		}
 		finally
 		{
@@ -133,7 +133,7 @@ public class HookProfiler extends Profiler
 	}
 	
 	/* (non-Javadoc)
-	 * @see net.minecraft.src.Profiler#startSection(java.lang.String)
+	 * @see net.minecraft.profiler.Profiler#startSection(java.lang.String)
 	 */
 	@Override
 	public void startSection(String sectionName)
@@ -197,7 +197,7 @@ public class HookProfiler extends Profiler
 	}
 	
 	/* (non-Javadoc)
-	 * @see net.minecraft.src.Profiler#endSection()
+	 * @see net.minecraft.profiler.Profiler#endSection()
 	 */
 	@Override
 	public void endSection()

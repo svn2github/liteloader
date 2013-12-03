@@ -39,7 +39,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	/**
 	 * Liteloader version
 	 */
-	public static final LiteLoaderVersion VERSION = LiteLoaderVersion.MC_1_6_4_R2;
+	public static final LiteLoaderVersion VERSION = LiteLoaderVersion.MC_1_7_2_R0;
 
 	/**
 	 * Local logger reference

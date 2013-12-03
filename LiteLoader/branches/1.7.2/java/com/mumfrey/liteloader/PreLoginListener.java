@@ -1,7 +1,8 @@
 package com.mumfrey.liteloader;
 
-import net.minecraft.src.NetHandler;
-import net.minecraft.src.Packet1Login;
+import net.minecraft.network.INetHandler;
+import net.minecraft.network.play.server.S01PacketJoinGame;
+
 
 /**
  * Interface for mods which wish to be notified when the player connects to a server (or local game)
@@ -16,5 +17,5 @@ public interface PreLoginListener extends LiteMod
 	 * @param netHandler Net handler
 	 * @param loginPacket Login packet
 	 */
-	public abstract boolean onPreLogin(NetHandler netHandler, Packet1Login loginPacket);
+	public abstract boolean onPreLogin(INetHandler netHandler, S01PacketJoinGame loginPacket);
 }

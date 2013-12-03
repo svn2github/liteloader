@@ -1,15 +1,14 @@
 package com.mumfrey.liteloader.gui;
 
+import static com.mumfrey.liteloader.gui.GuiScreenModInfo.*;
 import static org.lwjgl.opengl.GL11.*;
-import static com.mumfrey.liteloader.gui.GuiScreenModInfo.glEnableClipping;
-import static com.mumfrey.liteloader.gui.GuiScreenModInfo.glDisableClipping;
 
 import java.util.LinkedList;
 import java.util.List;
 
-import net.minecraft.src.Gui;
-import net.minecraft.src.GuiButton;
-import net.minecraft.src.Minecraft;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.GuiButton;
 
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.modconfig.ConfigPanel;
@@ -288,7 +287,7 @@ public class GuiConfigPanelContainer extends Gui implements ConfigPanelHost
 			{
 				if (control.mousePressed(this.mc, mouseX, mouseY))
 				{
-					this.mc.sndManager.playSoundFX("random.click", 1.0F, 1.0F);
+					control.func_146113_a(this.mc.getSoundHandler());
 					this.actionPerformed(control);
 				}
 			}

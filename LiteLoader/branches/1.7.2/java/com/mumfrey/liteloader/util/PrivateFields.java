@@ -5,7 +5,15 @@ import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
 
-import net.minecraft.src.*;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.RenderManager;
+import net.minecraft.client.resources.ResourceManagerReloadListener;
+import net.minecraft.client.resources.ResourcePack;
+import net.minecraft.client.resources.SimpleReloadableResourceManager;
+import net.minecraft.profiler.IPlayerUsage;
+import net.minecraft.profiler.PlayerUsageSnooper;
+import net.minecraft.profiler.Profiler;
+import net.minecraft.util.Timer;
 
 /**
  * Wrapper for obf/mcp reflection-accessed private fields, mainly added to centralise the locations I have to update the obfuscated field names
@@ -15,7 +23,7 @@ import net.minecraft.src.*;
  * @param <P> Parent class type, the type of the class that owns the field
  * @param <T> Field type, the type of the field value
  * 
- * TODO Obfuscation - updated 1.6.4
+ * TODO Obfuscation - updated 1.7.2
  */
 @SuppressWarnings("rawtypes")
 public class PrivateFields<P, T>
@@ -123,31 +131,13 @@ public class PrivateFields<P, T>
 		
 		return value;
 	}
-	
-	/**
-	 * Static private fields
-	 *
-	 * @param <P> Parent class type, the type of the class that owns the field
-	 * @param <T> Field type, the type of the field value
-	 */
-	public static final class StaticFields<P, T> extends PrivateFields<P, T>
-	{
-		@SuppressWarnings("synthetic-access")
-		public StaticFields(Class<P> owner, String mcpName, String name, String fmlName) { super(owner, mcpName, name, fmlName); }
-		public T get() { return get(null); }
-		public void set(T value) { set(null, value); }
-		
-		public static final StaticFields<Packet, Map>           packetClassToIdMap = new StaticFields<Packet, Map>     (Packet.class,     "packetClassToIdMap", "a", "field_73291_a"); // Packet/packetClassToIdMap
-		public static final StaticFields<TileEntity, Map> tileEntityNameToClassMap = new StaticFields<TileEntity, Map> (TileEntity.class, "nameToClassMap",     "a", "field_70326_a"); // TileEntity/nameToClassMap
-	}
 
-	public static final PrivateFields<Minecraft, Timer>                       minecraftTimer = new PrivateFields<Minecraft, Timer>                (Minecraft.class,          "timer",                "S",  "field_71428_T");   // Minecraft/timer
-	public static final PrivateFields<Minecraft, Profiler>                 minecraftProfiler = new PrivateFields<Minecraft, Profiler>             (Minecraft.class,          "mcProfiler",           "C",  "field_71424_I");   // Minecraft/mcProfiler
-	public static final PrivateFields<Minecraft, List<ResourcePack>>    defaultResourcePacks = new PrivateFields<Minecraft, List<ResourcePack>>   (Minecraft.class,          "defaultResourcePacks", "aq", "field_110449_ao"); // Minecraft/defaultResourcePacks
-	public static final PrivateFields<Minecraft, Boolean>                      gameIsRunning = new PrivateFields<Minecraft, Boolean>              (Minecraft.class,          "running",              "D",  "field_71425_J");   // Minecraft/running
+	public static final PrivateFields<Minecraft, Timer>                       minecraftTimer = new PrivateFields<Minecraft, Timer>                (Minecraft.class,          "timer",                "Q",  "field_71428_T");   // Minecraft/timer
+	public static final PrivateFields<Minecraft, Profiler>                 minecraftProfiler = new PrivateFields<Minecraft, Profiler>             (Minecraft.class,          "mcProfiler",           "A",  "field_71424_I");   // Minecraft/mcProfiler
+	public static final PrivateFields<Minecraft, List<ResourcePack>>    defaultResourcePacks = new PrivateFields<Minecraft, List<ResourcePack>>   (Minecraft.class,          "defaultResourcePacks", "ap", "field_110449_ao"); // Minecraft/defaultResourcePacks
+	public static final PrivateFields<Minecraft, Boolean>                      gameIsRunning = new PrivateFields<Minecraft, Boolean>              (Minecraft.class,          "running",              "B",  "field_71425_J");   // Minecraft/running
 	public static final PrivateFields<RenderManager, Map>                    entityRenderMap = new PrivateFields<RenderManager, Map>              (RenderManager.class,      "entityRenderMap",      "q",  "field_78729_o");   // RenderManager/entityRenderMap
-	public static final PrivateFields<GuiControls, GuiScreen>        guiControlsParentScreen = new PrivateFields<GuiControls, GuiScreen>          (GuiControls.class,        "parentScreen",         "b",  "field_73909_b");   // GuiControls/parentScreen
 	public static final PrivateFields<PlayerUsageSnooper, IPlayerUsage> playerStatsCollector = new PrivateFields<PlayerUsageSnooper, IPlayerUsage>(PlayerUsageSnooper.class, "playerStatsCollector", "d",  "field_76478_d");   // PlayerUsageSnooper/playerStatsCollector
-	public static final PrivateFields<SimpleReloadableResourceManager, List<ResourceManagerReloadListener>> reloadListeners = new PrivateFields<SimpleReloadableResourceManager, List<ResourceManagerReloadListener>>(SimpleReloadableResourceManager.class, "reloadListeners", "c", "field_110546_b");   // SimpleReloadableResourceManager/reloadListeners
+	public static final PrivateFields<SimpleReloadableResourceManager, List<ResourceManagerReloadListener>> reloadListeners = new PrivateFields<SimpleReloadableResourceManager, List<ResourceManagerReloadListener>>(SimpleReloadableResourceManager.class, "reloadListeners", "d", "field_110546_b");   // SimpleReloadableResourceManager/reloadListeners
 }
 

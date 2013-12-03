@@ -292,6 +292,15 @@ public class LoginManager
 	}
 	
 	/**
+	 * Get the profile name (minecraft player name) from login
+	 */
+	public String getUUID()
+	{
+		GameProfile selectedProfile = this.authentication.getSelectedProfile();
+		return selectedProfile != null ? selectedProfile.getId() : this.defaultDisplayName;
+	}
+	
+	/**
 	 * Get the session token
 	 */
 	public String getAuthenticatedToken()

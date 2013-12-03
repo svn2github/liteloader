@@ -7,14 +7,20 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import com.mumfrey.liteloader.core.hooks.asm.PacketTransformer;
+import com.mumfrey.liteloader.core.hooks.asm.PacketTransformerInfo;
 
 import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.NonOptionArgumentSpec;
@@ -32,27 +38,27 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  */
 public class LiteLoaderTweaker implements ITweaker
 {
-	public static final String VERSION = "1.6.4";
+	public static final String VERSION = "1.7.2";
+	
+	private static LiteLoaderTweaker instance;
 	
 	private static Logger logger = Logger.getLogger("liteloader");
 	
-	private static boolean preInit = true;
+	private boolean preInit = true;
 	
-	private static boolean init = true;
+	private boolean init = true;
 	
-	private static File gameDirectory;
+	private File gameDirectory;
 	
-	private static File assetsDirectory;
+	private File assetsDirectory;
 	
-	private static String profile;
+	private String profile;
 	
-	private static List<String> modsToLoad;
+	private List<String> modsToLoad;
 
-	private static ILoaderBootstrap bootstrap;
+	private ILoaderBootstrap bootstrap;
 	
-	private static Set<String> modTransformers = new HashSet<String>();
-	
-	private static URL jarUrl;
+	private URL jarUrl;
 	
 	private List<String> singularLaunchArgs = new ArrayList<String>();
 	
@@ -63,9 +69,16 @@ public class LiteLoaderTweaker implements ITweaker
 	
 	private List<String> passThroughArgs;
 	
+	private Set<String> injectTransformers = new HashSet<String>();
+	
+	private Map<String, TreeSet<PacketTransformerInfo>> packetTransformers = new HashMap<String, TreeSet<PacketTransformerInfo>>();
+	
 	private static final String[] requiredTransformers = {
 		"com.mumfrey.liteloader.launch.LiteLoaderTransformer",
-		"com.mumfrey.liteloader.core.hooks.asm.CrashReportTransformer",
+		"com.mumfrey.liteloader.core.hooks.asm.CrashReportTransformer"
+	};
+	
+	private static final String[] defaultPacketTransformers = {
 		"com.mumfrey.liteloader.core.hooks.asm.ChatPacketTransformer",
 		"com.mumfrey.liteloader.core.hooks.asm.LoginPacketTransformer",
 		"com.mumfrey.liteloader.core.hooks.asm.CustomPayloadPacketTransformer"
@@ -75,9 +88,11 @@ public class LiteLoaderTweaker implements ITweaker
 	@Override
 	public void acceptOptions(List<String> args, File gameDirectory, File assetsDirectory, String profile)
 	{
-		LiteLoaderTweaker.gameDirectory = gameDirectory;
-		LiteLoaderTweaker.assetsDirectory = assetsDirectory;
-		LiteLoaderTweaker.profile = profile;
+		LiteLoaderTweaker.instance = this;
+		
+		LiteLoaderTweaker.instance.gameDirectory = gameDirectory;
+		LiteLoaderTweaker.instance.assetsDirectory = assetsDirectory;
+		LiteLoaderTweaker.instance.profile = profile;
 		
 		OptionParser optionParser = new OptionParser();
 		this.modsOption = optionParser.accepts("mods", "Comma-separated list of mods to load").withRequiredArg().ofType(String.class).withValuesSeparatedBy(',');
@@ -103,11 +118,13 @@ public class LiteLoaderTweaker implements ITweaker
 		
 		if (this.parsedOptions.has(this.modsOption))
 		{
-			LiteLoaderTweaker.modsToLoad = this.modsOption.values(this.parsedOptions);
+			LiteLoaderTweaker.instance.modsToLoad = this.modsOption.values(this.parsedOptions);
 		}
 		
 		URL[] urls = Launch.classLoader.getURLs();
-		LiteLoaderTweaker.jarUrl = urls[urls.length - 1];
+		LiteLoaderTweaker.instance.jarUrl = urls[urls.length - 1];
+		
+		this.injectTransformers.addAll(Arrays.asList(LiteLoaderTweaker.defaultPacketTransformers));
 		
 		this.preInit();
 	}
@@ -171,19 +188,85 @@ public class LiteLoaderTweaker implements ITweaker
 	@Override
 	public void injectIntoClassLoader(LaunchClassLoader classLoader)
 	{
+		this.sortPacketTransformers(classLoader, this.injectTransformers);
+		
 		for (String requiredTransformerClassName : LiteLoaderTweaker.requiredTransformers)
 		{
 			LiteLoaderTweaker.logger.info(String.format("Injecting required class transformer '%s'", requiredTransformerClassName));
 			classLoader.registerTransformer(requiredTransformerClassName);
 		}
 		
-		for (String transformerClassName : LiteLoaderTweaker.modTransformers)
+		for (String transformerClassName : this.injectTransformers)
 		{
 			LiteLoaderTweaker.logger.info(String.format("Injecting additional class transformer class '%s'", transformerClassName));
 			classLoader.registerTransformer(transformerClassName);
 		}
 		
-		LiteLoaderTweaker.modTransformers.clear();
+		for (Entry<String, TreeSet<PacketTransformerInfo>> packetClassTransformers : this.packetTransformers.entrySet())
+		{
+			for (PacketTransformerInfo transformerInfo : packetClassTransformers.getValue())
+			{
+				String packetClass = packetClassTransformers.getKey();
+				if (packetClass.lastIndexOf('.') != -1) packetClass = packetClass.substring(packetClass.lastIndexOf('.') + 1);
+				LiteLoaderTweaker.logger.info(String.format("Injecting packet class transformer '%s' for packet class '%s' with priority %d", transformerInfo.getTransformerClassName(), packetClass, transformerInfo.getPriority()));
+				classLoader.registerTransformer(transformerInfo.getTransformerClassName());
+			}
+		}
+		
+		this.injectTransformers.clear();
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void sortPacketTransformers(LaunchClassLoader classLoader, Set<String> transformers)
+	{
+		LiteLoaderTweaker.logger.info("Sorting registered packet transformers by priority");
+		int registeredTransformers = 0;
+		
+		NonDelegatingClassLoader tempLoader = new NonDelegatingClassLoader(classLoader.getURLs(), this.getClass().getClassLoader());
+		tempLoader.addDelegatedClassName("com.mumfrey.liteloader.core.hooks.asm.PacketTransformer");
+		tempLoader.addDelegatedClassName("net.minecraft.launchwrapper.IClassTransformer");
+		tempLoader.addDelegatedPackage("org.objectweb.asm.");
+
+		Iterator<String> iter = transformers.iterator();
+		while (iter.hasNext())
+		{
+			String transformerClassName = iter.next();
+			try
+			{
+				Class<IClassTransformer> transformerClass = (Class<IClassTransformer>)tempLoader.addAndLoadClass(transformerClassName);
+				
+				if (PacketTransformer.class.isAssignableFrom(transformerClass))
+				{
+					PacketTransformer transformer = (PacketTransformer)transformerClass.newInstance();
+					String packetClass = transformer.getPacketClass();
+					if (!this.packetTransformers.containsKey(packetClass))
+						this.packetTransformers.put(packetClass, new TreeSet<PacketTransformerInfo>());
+					this.packetTransformers.get(packetClass).add(transformer.getInfo(transformerClassName));
+					registeredTransformers++;
+					iter.remove();
+				}
+			}
+			catch (NoClassDefFoundError err)
+			{
+				if (err.getCause() instanceof InvalidTransformerException)
+				{
+					InvalidTransformerException ex = (InvalidTransformerException)err.getCause();
+					ex.printStackTrace();
+					LiteLoaderTweaker.logger.warning(String.format("Packet transformer class '%s' references class '%s' which is not allowed. Packet transformers must not contain references to other classes", transformerClassName, ex.getAccessedClass())); 
+					iter.remove();
+				}
+				else
+				{
+					throw err;
+				}
+			}
+			catch (Exception ex)
+			{
+				ex.printStackTrace();
+			}
+		}
+		
+		LiteLoaderTweaker.logger.info(String.format("Added %d packet transformer classes to the transformer list", registeredTransformers));
 	}
 
 	@Override
@@ -215,7 +298,7 @@ public class LiteLoaderTweaker implements ITweaker
 	@SuppressWarnings("unchecked")
 	public static boolean addTweaker(String tweakClass)
 	{
-		if (!LiteLoaderTweaker.preInit)
+		if (!LiteLoaderTweaker.instance.preInit)
 		{
 			LiteLoaderTweaker.logger.warning(String.format("Failed to add tweak class %s because preInit is already complete", tweakClass));
 			return false;
@@ -233,13 +316,13 @@ public class LiteLoaderTweaker implements ITweaker
 
 	public static boolean addClassTransformer(String transfomerClass)
 	{
-		if (!LiteLoaderTweaker.preInit)
+		if (!LiteLoaderTweaker.instance.preInit)
 		{
 			LiteLoaderTweaker.logger.warning(String.format("Failed to add transformer class %s because preInit is already complete", transfomerClass));
 			return false;
 		}
-			
-		LiteLoaderTweaker.modTransformers.add(transfomerClass);
+
+		LiteLoaderTweaker.instance.injectTransformers.add(transfomerClass);
 		return true;
 	}
 	
@@ -248,7 +331,7 @@ public class LiteLoaderTweaker implements ITweaker
 	 */
 	public static boolean addURLToParentClassLoader(URL url)
 	{
-		if (LiteLoaderTweaker.preInit)
+		if (LiteLoaderTweaker.instance.preInit)
 		{
 			try
 			{
@@ -275,7 +358,7 @@ public class LiteLoaderTweaker implements ITweaker
 		Constructor<? extends ILoaderBootstrap> bootstrapCtor = bootstrapClass.getDeclaredConstructor(File.class, File.class, String.class);
 		bootstrapCtor.setAccessible(true);
 		
-		LiteLoaderTweaker.bootstrap = bootstrapCtor.newInstance(LiteLoaderTweaker.gameDirectory, LiteLoaderTweaker.assetsDirectory, LiteLoaderTweaker.profile);
+		LiteLoaderTweaker.instance.bootstrap = bootstrapCtor.newInstance(LiteLoaderTweaker.instance.gameDirectory, LiteLoaderTweaker.instance.assetsDirectory, LiteLoaderTweaker.instance.profile);
 	}
 
 	/**
@@ -283,18 +366,15 @@ public class LiteLoaderTweaker implements ITweaker
 	 */
 	private void preInit()
 	{
-		if (!LiteLoaderTweaker.preInit) throw new IllegalStateException("Attempt to perform LiteLoader PreInit but PreInit was already completed");
+		if (!this.preInit) throw new IllegalStateException("Attempt to perform LiteLoader PreInit but PreInit was already completed");
 		
 		try
 		{
 			LiteLoaderTweaker.logger.info("Bootstrapping LiteLoader " + LiteLoaderTweaker.VERSION);
-			
 			LiteLoaderTweaker.spawnBootstrap();
-			
 			LiteLoaderTweaker.logger.info("Beginning LiteLoader PreInit...");
-			
-			LiteLoaderTweaker.bootstrap.preInit(Launch.classLoader, true);
-			LiteLoaderTweaker.preInit = false;
+			this.bootstrap.preInit(Launch.classLoader, true);
+			this.preInit = false;
 		}
 		catch (Throwable th)
 		{
@@ -305,15 +385,15 @@ public class LiteLoaderTweaker implements ITweaker
 	/**
 	 * Do the second stage of loader startup
 	 */
-	protected static void init()
+	public static void init()
 	{
-		if (LiteLoaderTweaker.preInit) throw new IllegalStateException("Attempt to perform LiteLoader Init but PreInit was not completed");
-		LiteLoaderTweaker.init = true;
+		if (LiteLoaderTweaker.instance.preInit) throw new IllegalStateException("Attempt to perform LiteLoader Init but PreInit was not completed");
+		LiteLoaderTweaker.instance.init = true;
 		
 		try
 		{
-			LiteLoaderTweaker.bootstrap.init(LiteLoaderTweaker.modsToLoad, Launch.classLoader);
-			LiteLoaderTweaker.init = false;
+			LiteLoaderTweaker.instance.bootstrap.init(LiteLoaderTweaker.instance.modsToLoad, Launch.classLoader);
+			LiteLoaderTweaker.instance.init = false;
 		}
 		catch (Throwable th)
 		{
@@ -324,13 +404,13 @@ public class LiteLoaderTweaker implements ITweaker
 	/**
 	 * Do the second stage of loader startup
 	 */
-	protected static void postInit()
+	public static void postInit()
 	{
-		if (LiteLoaderTweaker.init) throw new IllegalStateException("Attempt to perform LiteLoader PostInit but Init was not completed");
+		if (LiteLoaderTweaker.instance.init) throw new IllegalStateException("Attempt to perform LiteLoader PostInit but Init was not completed");
 
 		try
 		{
-			LiteLoaderTweaker.bootstrap.postInit();
+			LiteLoaderTweaker.instance.bootstrap.postInit();
 		}
 		catch (Throwable th)
 		{
@@ -353,6 +433,6 @@ public class LiteLoaderTweaker implements ITweaker
 	
 	public static URL getJarUrl()
 	{
-		return LiteLoaderTweaker.jarUrl;
+		return LiteLoaderTweaker.instance.jarUrl;
 	}
 }

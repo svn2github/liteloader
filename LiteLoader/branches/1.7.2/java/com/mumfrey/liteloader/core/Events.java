@@ -3,20 +3,22 @@ package com.mumfrey.liteloader.core;
 import java.util.LinkedList;
 import java.util.logging.Level;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiNewChat;
+import net.minecraft.client.gui.ScaledResolution;
+import net.minecraft.network.INetHandler;
+import net.minecraft.network.play.server.S01PacketJoinGame;
+import net.minecraft.network.play.server.S02PacketChat;
+import net.minecraft.profiler.IPlayerUsage;
+import net.minecraft.profiler.PlayerUsageSnooper;
+import net.minecraft.profiler.Profiler;
+import net.minecraft.util.IChatComponent;
+import net.minecraft.util.Timer;
+
 import org.lwjgl.input.Mouse;
 
-import net.minecraft.src.*;
-
 import com.mumfrey.liteloader.*;
-import com.mumfrey.liteloader.Tickable;
-import com.mumfrey.liteloader.core.hooks.HookChat;
-import com.mumfrey.liteloader.core.hooks.HookLogin;
 import com.mumfrey.liteloader.core.hooks.HookProfiler;
-import com.mumfrey.liteloader.core.hooks.asm.ASMHookProxy;
-import com.mumfrey.liteloader.core.hooks.asm.ChatPacketTransformer;
-import com.mumfrey.liteloader.core.hooks.asm.LoginPacketTransformer;
-import com.mumfrey.liteloader.core.hooks.asm.PacketTransformer;
-import com.mumfrey.liteloader.util.ModUtilities;
 import com.mumfrey.liteloader.util.PrivateFields;
 
 /**
@@ -41,11 +43,6 @@ public class Events implements IPlayerUsage
 	private final PluginChannels pluginChannels;
 	
 	/**
-	 * ASM hook proxy 
-	 */
-	private final ASMHookProxy asmProxy;
-	
-	/**
 	 * Reference to the minecraft timer
 	 */
 	private Timer minecraftTimer;
@@ -53,7 +50,7 @@ public class Events implements IPlayerUsage
 	/**
 	 * Flags which keep track of whether hooks have been applied
 	 */
-	private boolean hookInitDone, lateInitDone, chatHooked, loginHooked, tickHooked;
+	private boolean hookInitDone, lateInitDone, tickHooked;
 	
 	/**
 	 * Profiler hook objects
@@ -153,12 +150,11 @@ public class Events implements IPlayerUsage
 	 * @param minecraft
 	 * @param pluginChannels
 	 */
-	Events(LiteLoader loader, Minecraft minecraft, PluginChannels pluginChannels, ASMHookProxy asmProxy)
+	Events(LiteLoader loader, Minecraft minecraft, PluginChannels pluginChannels)
 	{
 		this.loader = loader;
 		this.minecraft = minecraft;
 		this.pluginChannels = pluginChannels;
-		this.asmProxy = asmProxy;
 	}
 
 	/**
@@ -245,40 +241,6 @@ public class Events implements IPlayerUsage
 		{
 			LiteLoader.getLogger().info("Event manager is registering hooks");
 			
-			// Chat hook
-			if ((this.chatListeners.size() > 0 || this.chatFilters.size() > 0) && !this.chatHooked)
-			{
-				this.chatHooked = true;
-				
-				if (ChatPacketTransformer.isInjected())
-				{
-					PacketTransformer.registerProxy(Packet3Chat.class, this.asmProxy);
-				}
-				else
-				{
-					LiteLoader.getLogger().info("Callback injection failed for chat packet, injecting reflection hook");
-					HookChat.register();
-					HookChat.registerPacketHandler(this);
-				}
-			}
-			
-			// Login hook
-			if ((this.preLoginListeners.size() > 0 || this.loginListeners.size() > 0) && !this.loginHooked)
-			{
-				this.loginHooked = true;
-				
-				if (LoginPacketTransformer.isInjected())
-				{
-					PacketTransformer.registerProxy(Packet1Login.class, this.asmProxy);
-				}
-				else
-				{
-					LiteLoader.getLogger().info("Callback injection failed for login packet, injecting reflection hook");
-					ModUtilities.registerPacketOverride(1, HookLogin.class);
-					HookLogin.events = this;
-				}
-			}
-
 			// Tick hook
 			if (!this.tickHooked)
 			{
@@ -289,8 +251,6 @@ public class Events implements IPlayerUsage
 			// Sanity hook
 			PlayerUsageSnooper snooper = this.minecraft.getPlayerUsageSnooper();
 			PrivateFields.playerStatsCollector.setFinal(snooper, this);
-
-			this.pluginChannels.initHook();
 		}
 		catch (Exception ex)
 		{
@@ -481,8 +441,6 @@ public class Events implements IPlayerUsage
 		this.screenWidth = this.currentResolution.getScaledWidth();
 		this.screenHeight = this.currentResolution.getScaledHeight();
 		
-		this.loader.onRender();
-		
 		for (RenderListener renderListener : this.renderListeners)
 			renderListener.onRender();
 	}
@@ -647,13 +605,13 @@ public class Events implements IPlayerUsage
 	 * @param chatPacket
 	 * @return
 	 */
-	public boolean onChat(Packet3Chat chatPacket)
+	public boolean onChat(S02PacketChat chatPacket)
 	{
-		if (chatPacket.message == null)
+		if (chatPacket.func_148915_c() == null)
 			return true;
 		
-		ChatMessageComponent chat = ChatMessageComponent.createFromJson(chatPacket.message);
-		String message = chat.toStringWithFormatting(true);
+		IChatComponent chat = chatPacket.func_148915_c();
+		String message = chat.func_150260_c();
 		
 		// Chat filters get a stab at the chat first, if any filter returns
 		// false the chat is discarded
@@ -661,8 +619,8 @@ public class Events implements IPlayerUsage
 		{
 			if (chatFilter.onChat(chatPacket, chat, message))
 			{
-				chat = ChatMessageComponent.createFromJson(chatPacket.message);
-				message = chat.toStringWithFormatting(true);
+				chat = chatPacket.func_148915_c();
+				message = chat.func_150260_c();
 			}
 			else
 			{
@@ -684,7 +642,7 @@ public class Events implements IPlayerUsage
 	 * @param hookLogin
 	 * @return
 	 */
-	public boolean onPreLogin(NetHandler netHandler, Packet1Login loginPacket)
+	public boolean onPreLogin(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
 		boolean cancelled = false;
 		
@@ -702,7 +660,7 @@ public class Events implements IPlayerUsage
 	 * @param netHandler
 	 * @param loginPacket
 	 */
-	public void onConnectToServer(NetHandler netHandler, Packet1Login loginPacket)
+	public void onConnectToServer(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
 		this.loader.onLogin(netHandler, loginPacket);
 		
@@ -712,12 +670,8 @@ public class Events implements IPlayerUsage
 		this.pluginChannels.onConnectToServer(netHandler, loginPacket);
 	}
 	
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * net.minecraft.src.IPlayerUsage#addServerStatsToSnooper(net.minecraft.
-	 * src.PlayerUsageSnooper)
+	/* (non-Javadoc)
+	 * @see net.minecraft.profiler.IPlayerUsage#addServerStatsToSnooper(net.minecraft.profiler.PlayerUsageSnooper)
 	 */
 	@Override
 	public void addServerStatsToSnooper(PlayerUsageSnooper var1)
@@ -725,12 +679,8 @@ public class Events implements IPlayerUsage
 		this.minecraft.addServerStatsToSnooper(var1);
 	}
 	
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * net.minecraft.src.IPlayerUsage#addServerTypeToSnooper(net.minecraft.src
-	 * .PlayerUsageSnooper)
+	/* (non-Javadoc)
+	 * @see net.minecraft.profiler.IPlayerUsage#addServerTypeToSnooper(net.minecraft.profiler.PlayerUsageSnooper)
 	 */
 	@Override
 	public void addServerTypeToSnooper(PlayerUsageSnooper var1)
@@ -739,26 +689,13 @@ public class Events implements IPlayerUsage
 		this.minecraft.addServerTypeToSnooper(var1);
 	}
 	
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see net.minecraft.src.IPlayerUsage#isSnooperEnabled()
+	/* (non-Javadoc)
+	 * @see net.minecraft.profiler.IPlayerUsage#isSnooperEnabled()
 	 */
 	@Override
 	public boolean isSnooperEnabled()
 	{
 		return this.minecraft.isSnooperEnabled();
-	}
-	
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see net.minecraft.src.IPlayerUsage#getLogAgent()
-	 */
-	@Override
-	public ILogAgent getLogAgent()
-	{
-		return this.minecraft.getLogAgent();
 	}
 	
 	/**

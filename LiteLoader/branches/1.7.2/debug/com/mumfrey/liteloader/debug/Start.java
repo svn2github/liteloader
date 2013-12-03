@@ -13,7 +13,7 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogFormatter;
  * Wrapper class for LaunchWrapper Main class, which logs into minecraft.net first so that online shizzle can be tested
  * 
  * @author Adam Mummery-Smith
- * @version 0.6
+ * @version 0.6.1
  */
 public abstract class Start
 {
@@ -41,12 +41,13 @@ public abstract class Start
 		File assetsDir = new File(gameDir, "assets");
 		
 		args = new String[] {
-			"--tweakClass", LiteLoaderTweaker.class.getName(),
-			"--username",   loginManager.getProfileName(),
-			"--session",    loginManager.getAuthenticatedToken(),
-			"--version",    "mcp",
-			"--gameDir",    gameDir.getAbsolutePath(),
-			"--assetsDir",  assetsDir.getAbsolutePath()
+			"--tweakClass",  LiteLoaderTweaker.class.getName(),
+			"--username",    loginManager.getProfileName(),
+			"--uuid",        loginManager.getUUID(),
+			"--accessToken", loginManager.getAuthenticatedToken(),
+			"--version",     "mcp",
+			"--gameDir",     gameDir.getAbsolutePath(),
+			"--assetsDir",   assetsDir.getAbsolutePath()
 		};
 		
 		Launch.main(args);

@@ -58,7 +58,7 @@
         <echo level="info" message="Obfuscating classes" />
 
 		<exec executable="${python}" dir="${mcp.dir}">
-			<arg value="runtime/reobfuscate.py" />
+			<arg value="runtime/reobfuscate17.py" />
             <arg value="--client" />
 			<arg value="%*" />
 		</exec>

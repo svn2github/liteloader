@@ -1,13 +1,14 @@
 package com.mumfrey.liteloader.core.hooks.asm;
 
+import net.minecraft.network.INetHandler;
+import net.minecraft.network.play.INetHandlerPlayClient;
+import net.minecraft.network.play.server.S01PacketJoinGame;
+import net.minecraft.network.play.server.S02PacketChat;
+import net.minecraft.network.play.server.S3FPacketCustomPayload;
+
 import com.mumfrey.liteloader.core.Events;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.core.PluginChannels;
-
-import net.minecraft.src.NetHandler;
-import net.minecraft.src.Packet1Login;
-import net.minecraft.src.Packet250CustomPayload;
-import net.minecraft.src.Packet3Chat;
 
 /**
  * Proxy class which handles the redirected calls from the injected packet hooks and routes them to the
@@ -19,45 +20,45 @@ import net.minecraft.src.Packet3Chat;
 public class ASMHookProxy
 {
 	/**
-	 * Packet3Chat::processPacket()
+	 * S02PacketChat::processPacket()
 	 * 
 	 * @param netHandler
 	 * @param packet
 	 */
-	public void handleChatPacket(NetHandler netHandler, Packet3Chat packet)
+	public static void handleChatPacket(INetHandler netHandler, S02PacketChat packet)
 	{
 		Events events = LiteLoader.getEvents();
 		if (events.onChat(packet))
 		{
-			netHandler.handleChat(packet);
+			((INetHandlerPlayClient)netHandler).func_147251_a(packet);
 		}
 	}
 	
 	/**
-	 * Packet3Chat::processPacket()
+	 * S01PacketJoinGame::processPacket()
 	 * 
 	 * @param netHandler
 	 * @param packet
 	 */
-	public void handleLoginPacket(NetHandler netHandler, Packet1Login packet)
+	public static void handleLoginPacket(INetHandler netHandler, S01PacketJoinGame packet)
 	{
 		Events events = LiteLoader.getEvents();
 		if (events.onPreLogin(netHandler, packet))
 		{
-			netHandler.handleLogin(packet);
+			((INetHandlerPlayClient)netHandler).func_147282_a(packet);
 			events.onConnectToServer(netHandler, packet);
 		}
 	}
 	
 	/**
-	 * Packet3Chat::processPacket()
+	 * S3FPacketCustomPayload::processPacket()
 	 * 
 	 * @param netHandler
 	 * @param packet
 	 */
-	public void handleCustomPayloadPacket(NetHandler netHandler, Packet250CustomPayload packet)
+	public static void handleCustomPayloadPacket(INetHandler netHandler, S3FPacketCustomPayload packet)
 	{
-		netHandler.handleCustomPayload(packet);
+		((INetHandlerPlayClient)netHandler).func_147240_a(packet);;
 		
 		PluginChannels pluginChannels = LiteLoader.getPluginChannels();
 		pluginChannels.onPluginChannelMessage(packet);

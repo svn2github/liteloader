@@ -19,26 +19,22 @@ import java.util.logging.Logger;
 
 import javax.activity.InvalidActivityException;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiMainMenu;
+import net.minecraft.client.resources.ResourcePack;
+import net.minecraft.client.resources.SimpleReloadableResourceManager;
+import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.crash.CrashReport;
+import net.minecraft.launchwrapper.LaunchClassLoader;
+import net.minecraft.network.INetHandler;
+import net.minecraft.network.play.server.S01PacketJoinGame;
+import net.minecraft.world.World;
+
 import org.lwjgl.input.Keyboard;
 
-import net.minecraft.launchwrapper.LaunchClassLoader;
-import net.minecraft.src.CrashReport;
-import net.minecraft.src.GuiControls;
-import net.minecraft.src.GuiMainMenu;
-import net.minecraft.src.GuiScreen;
-import net.minecraft.src.KeyBinding;
-import net.minecraft.src.Minecraft;
-import net.minecraft.src.NetHandler;
-import net.minecraft.src.Packet1Login;
-import net.minecraft.src.ResourcePack;
-import net.minecraft.src.SimpleReloadableResourceManager;
-import net.minecraft.src.World;
-
-import com.mumfrey.liteloader.*;
-import com.mumfrey.liteloader.core.hooks.asm.ASMHookProxy;
+import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.crashreport.CallableLiteLoaderBrand;
 import com.mumfrey.liteloader.crashreport.CallableLiteLoaderMods;
-import com.mumfrey.liteloader.gui.GuiControlsPaginated;
 import com.mumfrey.liteloader.gui.GuiScreenModInfo;
 import com.mumfrey.liteloader.modconfig.ConfigManager;
 import com.mumfrey.liteloader.modconfig.Exposable;
@@ -50,13 +46,12 @@ import com.mumfrey.liteloader.util.PrivateFields;
  * lightweight mods
  * 
  * @author Adam Mummery-Smith
- * @version 1.6.4_02
+ * @version 1.7.2_00
  */
 public final class LiteLoader
 {
 	private static final String OPTION_MOD_INFO_SCREEN   = "modInfoScreen";
 	private static final String OPTION_SOUND_MANAGER_FIX = "soundManagerFix";
-	private static final String OPTION_CONTROLS_PAGES    = "controls.pages";
 
 	/**
 	 * LiteLoader is a singleton, this is the singleton instance
@@ -110,12 +105,6 @@ public final class LiteLoader
 	private Minecraft minecraft;
 	
 	/**
-	 * Setting value, if true we will swap out the MC "Controls" GUI for our
-	 * custom, paginated one
-	 */
-	private boolean paginateControls = true;
-	
-	/**
 	 * Loader Bootstrap instance 
 	 */
 	private final LiteLoaderBootstrap bootstrap;
@@ -151,11 +140,6 @@ public final class LiteLoader
 	private final LinkedList<ModFile> disabledMods = new LinkedList<ModFile>();
 	
 	/**
-	 * ASM hook proxy
-	 */
-	private final ASMHookProxy asmProxy = new ASMHookProxy();
-	
-	/**
 	 * Event manager
 	 */
 	private Events events;
@@ -163,7 +147,7 @@ public final class LiteLoader
 	/**
 	 * Plugin channel manager 
 	 */
-	private final PluginChannels pluginChannels = new PluginChannels(this.asmProxy);
+	private final PluginChannels pluginChannels = new PluginChannels();
 	
 	/**
 	 * Permission Manager
@@ -193,7 +177,7 @@ public final class LiteLoader
 	/**
 	 * If inhibit is enabled, this object is used to reflectively inhibit the sound manager's reload process during startup by removing it from the reloadables list
 	 */
-	private SoundManagerReloadInhibitor soundManagerReloadInhibitor;
+	private SoundHandlerReloadInhibitor soundManagerReloadInhibitor;
 
 	/**
 	 * File in which we will store mod key mappings
@@ -333,7 +317,6 @@ public final class LiteLoader
 				catch (Exception ex) {}
 			}
 			
-			this.paginateControls = this.bootstrap.getAndStoreBooleanProperty(OPTION_CONTROLS_PAGES, true);
 			this.inhibitSoundManagerReload = this.bootstrap.getAndStoreBooleanProperty(OPTION_SOUND_MANAGER_FIX, true);
 			this.displayModInfoScreenTab = this.bootstrap.getAndStoreBooleanProperty(OPTION_MOD_INFO_SCREEN, true);
 			
@@ -355,9 +338,9 @@ public final class LiteLoader
 
 		// Cache local minecraft reference
 		this.minecraft = minecraft;
-
+		
 		// Create the event broker
-		this.events = new Events(this, this.minecraft, this.pluginChannels, this.asmProxy);
+		this.events = new Events(this, this.minecraft, this.pluginChannels);
 		
 		// Spawn mod instances
 		this.loadMods();
@@ -374,7 +357,7 @@ public final class LiteLoader
 	}
 	
 	/* (non-Javadoc)
-	 * @see com.mumfrey.liteloader.core.ICustomResourcePackManager#registerModResourcePack(net.minecraft.src.ResourcePack)
+	 * @see com.mumfrey.liteloader.core.ICustomResourcePackManager#registerModResourcePack(net.minecraft.client.resources.ResourcePack)
 	 */
 	public boolean registerModResourcePack(ResourcePack resourcePack)
 	{
@@ -395,7 +378,7 @@ public final class LiteLoader
 	}
 	
 	/* (non-Javadoc)
-	 * @see com.mumfrey.liteloader.core.ICustomResourcePackManager#unRegisterModResourcePack(net.minecraft.src.ResourcePack)
+	 * @see com.mumfrey.liteloader.core.ICustomResourcePackManager#unRegisterModResourcePack(net.minecraft.client.resources.ResourcePack)
 	 */
 	public boolean unRegisterModResourcePack(ResourcePack resourcePack)
 	{
@@ -823,7 +806,7 @@ public final class LiteLoader
 		LiteLoader.logInfo("Discovered %d total mod(s)", this.enumerator.modsToLoadCount());
 		
 		this.pendingResourceReload = false;
-		this.soundManagerReloadInhibitor = new SoundManagerReloadInhibitor((SimpleReloadableResourceManager)this.minecraft.getResourceManager(), this.minecraft.sndManager);
+		this.soundManagerReloadInhibitor = new SoundHandlerReloadInhibitor((SimpleReloadableResourceManager)this.minecraft.getResourceManager(), this.minecraft.getSoundHandler());
 		if (this.inhibitSoundManagerReload) this.soundManagerReloadInhibitor.inhibit();
 		
 		for (Class<? extends LiteMod> mod : this.enumerator.getModsToLoad())
@@ -843,7 +826,7 @@ public final class LiteLoader
 			}
 			catch (Throwable th)
 			{
-				th.printStackTrace(System.out);
+				th.printStackTrace();
 				LiteLoader.getLogger().log(Level.WARNING, String.format("Error loading mod from %s", mod.getName()), th);
 			}
 		}
@@ -1019,7 +1002,7 @@ public final class LiteLoader
 	 * @param netHandler
 	 * @param loginPacket
 	 */
-	void onLogin(NetHandler netHandler, Packet1Login loginPacket)
+	void onLogin(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
 		this.permissionsManager.onLogin(netHandler, loginPacket);
 	}
@@ -1035,25 +1018,6 @@ public final class LiteLoader
 		{
 			// For bungeecord
 			this.permissionsManager.scheduleRefresh();
-		}
-	}
-
-	/**
-	 * On render callback
-	 */
-	void onRender()
-	{
-		if (this.paginateControls && this.minecraft.currentScreen != null && this.minecraft.currentScreen.getClass().equals(GuiControls.class))
-		{
-			try
-			{
-				// Try to get the parent screen entry from the existing screen
-				GuiScreen parentScreen = PrivateFields.guiControlsParentScreen.get((GuiControls)this.minecraft.currentScreen);
-				this.minecraft.displayGuiScreen(new GuiControlsPaginated(parentScreen, this.minecraft.gameSettings));
-			}
-			catch (Exception ex)
-			{
-			}
 		}
 	}
 	
@@ -1129,11 +1093,11 @@ public final class LiteLoader
 		
 		if (!keyBindings.contains(binding))
 		{
-			if (this.keyMapSettings.containsKey(binding.keyDescription))
+			if (this.keyMapSettings.containsKey(binding.getKeyDescription()))
 			{
 				try
 				{
-					binding.keyCode = Integer.parseInt(this.keyMapSettings.getProperty(binding.keyDescription, String.valueOf(binding.keyCode)));
+					binding.setKeyCode(Integer.parseInt(this.keyMapSettings.getProperty(binding.getKeyDescription(), String.valueOf(binding.getKeyCode()))));
 				}
 				catch (NumberFormatException ex) {}
 			}
@@ -1156,7 +1120,7 @@ public final class LiteLoader
 		
 		for (KeyBinding binding : this.modKeyBindings)
 		{
-			if (binding.keyCode != this.storedModKeyBindings.get(binding))
+			if (binding.getKeyCode() != this.storedModKeyBindings.get(binding))
 			{
 				this.updateBinding(binding);
 				updated = true;
@@ -1172,8 +1136,8 @@ public final class LiteLoader
 	 */
 	private void updateBinding(KeyBinding binding)
 	{
-		this.keyMapSettings.setProperty(binding.keyDescription, String.valueOf(binding.keyCode));
-		this.storedModKeyBindings.put(binding, Integer.valueOf(binding.keyCode));
+		this.keyMapSettings.setProperty(binding.getKeyDescription(), String.valueOf(binding.getKeyCode()));
+		this.storedModKeyBindings.put(binding, Integer.valueOf(binding.getKeyCode()));
 	}
 
 	/**

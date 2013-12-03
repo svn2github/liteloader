@@ -16,10 +16,10 @@ import org.objectweb.asm.tree.VarInsnNode;
 
 public class CrashReportTransformer implements IClassTransformer
 {
-	private static final String classMappingCallableJVMFlags = "net.minecraft.src.CallableJVMFlags";
+	private static final String classMappingCallableJVMFlags = "net.minecraft.crash.CrashReport$6";
 	
-	// TODO Obfuscation 1.6.4
-	private static final String classMappingCallableJVMFlagsObf = "h";
+	// TODO Obfuscation 1.7.2
+	private static final String classMappingCallableJVMFlagsObf = "i";
 	
 	@Override
 	public byte[] transform(String name, String transformedName, byte[] basicClass)

@@ -11,6 +11,14 @@ import java.util.TreeMap;
 
 import javax.imageio.ImageIO;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.GuiMainMenu;
+import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.util.ResourceLocation;
+
 import org.lwjgl.BufferUtils;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
@@ -19,16 +27,8 @@ import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.core.EnabledModsList;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.core.ModFile;
-import com.mumfrey.liteloader.modconfig.ConfigPanel;
 import com.mumfrey.liteloader.modconfig.ConfigManager;
-
-import net.minecraft.src.DynamicTexture;
-import net.minecraft.src.GuiButton;
-import net.minecraft.src.GuiMainMenu;
-import net.minecraft.src.GuiScreen;
-import net.minecraft.src.Minecraft;
-import net.minecraft.src.ResourceLocation;
-import net.minecraft.src.Tessellator;
+import com.mumfrey.liteloader.modconfig.ConfigPanel;
 
 /**
  * GUI screen which displays info about loaded mods and also allows them to be enabled and
@@ -234,7 +234,7 @@ public class GuiScreenModInfo extends GuiScreen
 	}
 
 	/* (non-Javadoc)
-	 * @see net.minecraft.src.GuiScreen#initGui()
+	 * @see net.minecraft.client.gui.GuiScreen#initGui()
 	 */
 	@SuppressWarnings("unchecked")
 	@Override
@@ -267,7 +267,7 @@ public class GuiScreenModInfo extends GuiScreen
 	}
 	
 	/* (non-Javadoc)
-	 * @see net.minecraft.src.GuiScreen#setWorldAndResolution(net.minecraft.src.Minecraft, int, int)
+	 * @see net.minecraft.client.gui.GuiScreen#setWorldAndResolution(net.minecraft.client.Minecraft, int, int)
 	 */
 	@Override
 	public void setWorldAndResolution(Minecraft minecraft, int width, int height)
@@ -282,7 +282,7 @@ public class GuiScreenModInfo extends GuiScreen
 	}
 	
 	/* (non-Javadoc)
-	 * @see net.minecraft.src.GuiScreen#updateScreen()
+	 * @see net.minecraft.client.gui.GuiScreen#updateScreen()
 	 */
 	@Override
 	public void updateScreen()
@@ -312,7 +312,7 @@ public class GuiScreenModInfo extends GuiScreen
 	}
 	
 	/* (non-Javadoc)
-	 * @see net.minecraft.src.GuiScreen#drawScreen(int, int, float)
+	 * @see net.minecraft.client.gui.GuiScreen#drawScreen(int, int, float)
 	 */
 	@Override
 	public void drawScreen(int mouseX, int mouseY, float partialTicks)
@@ -539,7 +539,7 @@ public class GuiScreenModInfo extends GuiScreen
 	}
 	
 	/* (non-Javadoc)
-	 * @see net.minecraft.src.GuiScreen#actionPerformed(net.minecraft.src.GuiButton)
+	 * @see net.minecraft.client.gui.GuiScreen#actionPerformed(net.minecraft.client.gui.GuiButton)
 	 */
 	@Override
 	protected void actionPerformed(GuiButton button)
@@ -567,7 +567,7 @@ public class GuiScreenModInfo extends GuiScreen
 	}
 	
 	/* (non-Javadoc)
-	 * @see net.minecraft.src.GuiScreen#keyTyped(char, int)
+	 * @see net.minecraft.client.gui.GuiScreen#keyTyped(char, int)
 	 */
 	@Override
 	protected void keyTyped(char keyChar, int keyCode)
@@ -630,7 +630,7 @@ public class GuiScreenModInfo extends GuiScreen
 	}
 
 	/* (non-Javadoc)
-	 * @see net.minecraft.src.GuiScreen#mouseClicked(int, int, int)
+	 * @see net.minecraft.client.gui.GuiScreen#mouseClicked(int, int, int)
 	 */
 	@Override
 	protected void mouseClicked(int mouseX, int mouseY, int button)
@@ -674,7 +674,7 @@ public class GuiScreenModInfo extends GuiScreen
 	}
 	
 	/* (non-Javadoc)
-	 * @see net.minecraft.src.GuiScreen#mouseMovedOrUp(int, int, int)
+	 * @see net.minecraft.client.gui.GuiScreen#mouseMovedOrUp(int, int, int)
 	 */
 	@Override
 	protected void mouseMovedOrUp(int mouseX, int mouseY, int button)
@@ -698,7 +698,7 @@ public class GuiScreenModInfo extends GuiScreen
 	}
 	
 	/* (non-Javadoc)
-	 * @see net.minecraft.src.GuiScreen#handleMouseInput()
+	 * @see net.minecraft.client.gui.GuiScreen#handleMouseInput()
 	 */
 	@Override
 	public void handleMouseInput()

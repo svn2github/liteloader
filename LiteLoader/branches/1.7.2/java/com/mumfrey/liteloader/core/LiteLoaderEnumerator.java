@@ -322,7 +322,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 			File packagePath = new File(classPathPart);
 			ClassPathMod classPathMod = new ClassPathMod(packagePath, null);
 			
-			if (classPathMod.hasTweakClass() || classPathMod.hasClassTransformer())
+			if (classPathMod.hasTweakClass() || classPathMod.hasClassTransformers())
 			{
 				this.addTweaksFromMod(classPathMod);
 			}
@@ -449,9 +449,9 @@ class LiteLoaderEnumerator implements FilenameFilter
 			this.addTweaksFromJar(modFile);
 		}
 		
-		if (modFile.hasClassTransformer())
+		if (modFile.hasClassTransformers())
 		{
-			this.addClassTransformerFrom(modFile, modFile.getClassTransformerClassName());
+			this.addClassTransformersFrom(modFile, modFile.getClassTransformerClassNames());
 		}
 	}
 
@@ -532,15 +532,18 @@ class LiteLoaderEnumerator implements FilenameFilter
 		}
 	}
 
-	private void addClassTransformerFrom(File jarFile, String classTransformerClass)
+	private void addClassTransformersFrom(File jarFile, List<String> classTransformerClasses)
 	{
 		try
 		{
-			LiteLoaderEnumerator.logInfo("Mod file '%s' provides classTransformer '%s', adding to class loader", jarFile.getName(), classTransformerClass);
-			if (LiteLoaderTweaker.addClassTransformer(classTransformerClass))
+			for (String classTransformerClass : classTransformerClasses)
 			{
-				LiteLoaderEnumerator.logInfo("classTransformer '%s' was successfully added", classTransformerClass);
-				this.injectIntoClassLoader(jarFile);
+				LiteLoaderEnumerator.logInfo("Mod file '%s' provides classTransformer '%s', adding to class loader", jarFile.getName(), classTransformerClass);
+				if (LiteLoaderTweaker.addClassTransformer(classTransformerClass))
+				{
+					LiteLoaderEnumerator.logInfo("classTransformer '%s' was successfully added", classTransformerClass);
+					this.injectIntoClassLoader(jarFile);
+				}
 			}
 		}
 		catch (MalformedURLException ex)

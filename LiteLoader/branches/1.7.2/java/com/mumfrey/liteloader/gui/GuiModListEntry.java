@@ -1,13 +1,13 @@
 package com.mumfrey.liteloader.gui;
 
+import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.gui.Gui;
+
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.core.ClassPathMod;
 import com.mumfrey.liteloader.core.EnabledModsList;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.core.ModFile;
-
-import net.minecraft.src.FontRenderer;
-import net.minecraft.src.Gui;
 
 /**
  * Represents a mod in the mod info screen, keeps track of mod information and provides methods

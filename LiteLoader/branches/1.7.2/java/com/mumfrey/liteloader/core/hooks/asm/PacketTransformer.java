@@ -1,69 +1,108 @@
 package com.mumfrey.liteloader.core.hooks.asm;
 
-import java.lang.reflect.Field;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.logging.Logger;
+
+import net.minecraft.launchwrapper.IClassTransformer;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.TryCatchBlockNode;
 import org.objectweb.asm.tree.VarInsnNode;
-
-import net.minecraft.launchwrapper.IClassTransformer;
 
 /**
  * Class transformer which transforms a Packet class and alters the "processPacket" function to call the specified
- * callback method in ASMHookProxy instead of the usual behaviour of calling handleXXXPacket in NetClientHandler.
+ * callback method in the specified callback class instead of the usual behaviour of calling the relevant synthetic bridge
+ * method in the packet class itself.
  *
  * @author Adam Mummery-Smith
  */
 public abstract class PacketTransformer implements IClassTransformer
 {
-	private static final String netHandlerClass = "net/minecraft/src/NetHandler";
+	private static Logger logger = Logger.getLogger("liteloader");
+	
+	private static final Set<String> transformedPackets = new HashSet<String>();
+	private static int transformerOrder = 0;
+	
+	private static final String netHandlerClass = "net/minecraft/network/INetHandler";
 	private static final String processPacketMethod = "processPacket";
 	
-	// TODO Obfuscation 1.6.4
-	private static final String netHandlerClassObf = "ez";
+	// TODO Obfuscation 1.7.2
+	private static final String netHandlerClassObf = "es";
 	private static final String processPacketMethodObf = "a";
 	
 	private final String packetClass;
 	private final String packetClassObf;
 
+	private final String handlerClassName;
 	private final String handlerMethodName;
 	
+	private final boolean prepend;
+	private final int priority;
+	private final int order;
+	
 	/**
-	 * ctor
+	 * Create a PacketTransformer with default priority
+	 * 
 	 * @param packetClass Packet class name we want to override (FQ)
 	 * @param packetClassObf Obfuscated packet class name
-	 * @param handlerMethodName Method name to map to in handlerClass (must have signature (NetHandler, PacketClass)Void) 
+	 * @param handlerClassName Name of the class which will handle the callback
+	 * @param handlerMethodName Method name to map to in handlerClass (must have signature (INetHandler, PacketClass)Void) 
 	 */
-	protected PacketTransformer(String packetClass, String packetClassObf, String handlerMethodName)
+	protected PacketTransformer(String packetClass, String packetClassObf, String handlerClassName, String handlerMethodName)
+	{
+		this(packetClass, packetClassObf, handlerClassName, handlerMethodName, 0);
+	}
+	
+	/**
+	 * Create a PacketTransformer with default priority
+	 * 
+	 * @param packetClass Packet class name we want to override (FQ)
+	 * @param packetClassObf Obfuscated packet class name
+	 * @param handlerClassName Name of the class which will handle the callback
+	 * @param handlerMethodName Method name to map to in handlerClass (must have signature (INetHandler, PacketClass)Void)
+	 * @param priority transformer priority, if there are multiple transformers registered for this packet then higher priority handlers are called before lower priority ones, default priority is 0 
+	 */
+	protected PacketTransformer(String packetClass, String packetClassObf, String handlerClassName, String handlerMethodName, int priority)
 	{
 		this.packetClass = packetClass;
 		this.packetClassObf = packetClassObf;
+		this.handlerClassName = handlerClassName.replace('.', '/'); 
 		this.handlerMethodName = handlerMethodName;
+		
+		this.prepend = PacketTransformer.transformedPackets.contains(packetClass);
+		PacketTransformer.transformedPackets.add(packetClass);
+		
+		this.priority = priority;
+		this.order = PacketTransformer.transformerOrder++;
 	}
 
 	/* (non-Javadoc)
 	 * @see net.minecraft.launchwrapper.IClassTransformer#transform(java.lang.String, java.lang.String, byte[])
 	 */
 	@Override
-	public byte[] transform(String name, String transformedName, byte[] basicClass)
+	public final byte[] transform(String name, String transformedName, byte[] basicClass)
 	{
 		if (this.packetClass.equals(name) || this.packetClassObf.equals(name))
 		{
+			PacketTransformer.logger.info(String.format("PacketTransformer: Running transformer %s for %s", this.getClass().getName(), name));
+			
 			try
 			{
 				byte[] transformedClass = this.transformClass(name, basicClass);
 				this.notifyInjected();
 				return transformedClass;
 			}
-			catch (Exception ex) {}
+			catch (Exception ex) { ex.printStackTrace(); }
 		}
 		
 		return basicClass;
@@ -78,8 +117,6 @@ public abstract class PacketTransformer implements IClassTransformer
 	 */
 	private byte[] transformClass(String className, byte[] basicClass)
 	{
-		boolean transformed = true;
-		
 		ClassReader classReader = new ClassReader(basicClass);
 		ClassNode classNode = new ClassNode();
 		classReader.accept(classNode, ClassReader.EXPAND_FRAMES);
@@ -90,14 +127,8 @@ public abstract class PacketTransformer implements IClassTransformer
 			// Try to transform non-obf for use in dev env
 			if (!this.tryTransformMethod(className, classNode, PacketTransformer.processPacketMethod, PacketTransformer.netHandlerClass))
 			{
-				transformed = false;
+				PacketTransformer.logger.warning(String.format("PacketTransformer: failed transforming class '%s' (%s)", this.packetClass, this.packetClassObf));
 			}
-		}
-
-		// If we successfully transformed the method, transform the class and add a private static field "proxy" which will hold the handler
-		if (transformed)
-		{
-			classNode.fields.add(new FieldNode(Opcodes.ACC_PRIVATE + Opcodes.ACC_STATIC, "proxy", "Lcom/mumfrey/liteloader/core/hooks/asm/ASMHookProxy;", null, null));
 		}
 		
 		ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
@@ -133,29 +164,82 @@ public abstract class PacketTransformer implements IClassTransformer
 	 */
 	private void transformMethod(String className, MethodNode method, String targetMethodSig)
 	{
-		// Dump the old method content, we don't want it any more
-		method.instructions.clear();
+		if (this.prepend)
+		{
+			InsnList insns = new InsnList();
+			
+			// Push method argument 1 (INetHandler instance) onto the stack
+			insns.add(new VarInsnNode(Opcodes.ALOAD, 1));
+			
+			// Push "this" onto the stack
+			insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
+			
+			// Invoke the handler function with the args we just pushed onto the stack
+			insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, this.handlerClassName, this.handlerMethodName, targetMethodSig));
+			
+			method.instructions.insert(method.instructions.getFirst(), insns);
+		}
+		else
+		{
+			// Labels for try/catch
+			LabelNode tryLabel = new LabelNode();
+			LabelNode catchLabel = new LabelNode();
+			
+			// Add try/catch
+			method.tryCatchBlocks.clear();
+			method.tryCatchBlocks.add(new TryCatchBlockNode(tryLabel, catchLabel, catchLabel, PacketHandlerException.class.getName().replace('.', '/')));
+			
+			// Dump the old method content, we don't want it any more
+			method.instructions.clear();
+			
+			// Try
+			method.instructions.add(tryLabel);
 		
-		// Get the value of the "proxy" field from the object on the stack (which is "this")
-		method.instructions.add(new FieldInsnNode(Opcodes.GETSTATIC, className.replace('.', '/'), "proxy", "Lcom/mumfrey/liteloader/core/hooks/asm/ASMHookProxy;"));
+			// Push method argument 1 (INetHandler instance) onto the stack
+			method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 1));
+			
+			// Push "this" onto the stack
+			method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+			
+			// Invoke the handler function with the args we just pushed onto the stack
+			method.instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, this.handlerClassName, this.handlerMethodName, targetMethodSig));
 
-		// Push method argument 1 (NetHandler instance) onto the stack
-		method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 1));
-		
-		// Push "this" onto the stack
-		method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
-		
-		// Invoke the handler function with the args we just pushed onto the stack
-		method.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "com/mumfrey/liteloader/core/hooks/asm/ASMHookProxy", this.handlerMethodName, targetMethodSig));
-		
-		// Return
-		method.instructions.add(new InsnNode(Opcodes.RETURN));
+			// Return if no exception
+			method.instructions.add(new InsnNode(Opcodes.RETURN));
+			
+			// Catch
+			method.instructions.add(catchLabel);
+
+			// Return if exception caught
+			method.instructions.add(new InsnNode(Opcodes.RETURN));
+		}
+	}
+	
+	/**
+	 * For ordering transformers, returns the class name this transformer wants to transform
+	 */
+	public final String getPacketClass()
+	{
+		return this.packetClass;
+	}
+	
+	/**
+	 * Get the priority of this transformer, higher priority transformers run earlier
+	 */
+	public final int getPriority()
+	{
+		return this.priority;
 	}
 	
 	/**
 	 * For subclasses, to set a local flag indicating the code was successfully injected
 	 */
 	protected abstract void notifyInjected();
+	
+	/**
+	 *  For subclasses, indicates the transformer ran but was not successful
+	 */
+	protected abstract void notifyInjectionFailed();
 	
 	/**
 	 * @param classNode
@@ -177,22 +261,11 @@ public abstract class PacketTransformer implements IClassTransformer
 	}
 	
 	/**
-	 * Register the proxy (handler) for a packet
-	 * 
-	 * @param packetClass
-	 * @param proxy
+	 * @param className
+	 * @return
 	 */
-	public static void registerProxy(Class<?> packetClass, ASMHookProxy proxy)
+	public final PacketTransformerInfo getInfo(String className)
 	{
-		try
-		{
-			Field fProxy = packetClass.getDeclaredField("proxy");
-			fProxy.setAccessible(true);
-			fProxy.set(null, proxy);
-		}
-		catch (Exception ex)
-		{
-			ex.printStackTrace();
-		}
+		return new PacketTransformerInfo(this.priority, this.order, className);
 	}
 }
