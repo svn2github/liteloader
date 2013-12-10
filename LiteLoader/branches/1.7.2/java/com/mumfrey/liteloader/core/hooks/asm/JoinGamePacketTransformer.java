@@ -5,14 +5,14 @@ package com.mumfrey.liteloader.core.hooks.asm;
  *
  * @author Adam Mummery-Smith
  */
-public class LoginPacketTransformer extends PacketTransformer
+public class JoinGamePacketTransformer extends PacketTransformer
 {
 	private static boolean injected = false;
 	
-	public LoginPacketTransformer()
+	public JoinGamePacketTransformer()
 	{
 		// TODO Obfuscation 1.7.2
-		super("net.minecraft.network.play.server.S01PacketJoinGame", "gu", "com.mumfrey.liteloader.core.hooks.asm.ASMHookProxy", "handleLoginPacket", 1000);
+		super("net.minecraft.network.play.server.S01PacketJoinGame", "gu", "com.mumfrey.liteloader.core.hooks.asm.ASMHookProxy", "handleJoinGamePacket", 1000);
 	}
 	
 	@Override
@@ -23,11 +23,11 @@ public class LoginPacketTransformer extends PacketTransformer
 	@Override
 	protected void notifyInjected()
 	{
-		LoginPacketTransformer.injected = true;
+		JoinGamePacketTransformer.injected = true;
 	}
 	
 	public static boolean isInjected()
 	{
-		return LoginPacketTransformer.injected;
+		return JoinGamePacketTransformer.injected;
 	}
 }

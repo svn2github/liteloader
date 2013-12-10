@@ -1,6 +1,8 @@
 package com.mumfrey.liteloader.core.hooks.asm;
 
 import net.minecraft.network.INetHandler;
+import net.minecraft.network.login.INetHandlerLoginClient;
+import net.minecraft.network.login.server.S02PacketLoginSuccess;
 import net.minecraft.network.play.INetHandlerPlayClient;
 import net.minecraft.network.play.server.S01PacketJoinGame;
 import net.minecraft.network.play.server.S02PacketChat;
@@ -19,6 +21,12 @@ import com.mumfrey.liteloader.core.PluginChannels;
  */
 public class ASMHookProxy
 {
+	public static void handleLoginSuccessPacket(INetHandler netHandler, S02PacketLoginSuccess packet)
+	{
+		((INetHandlerLoginClient)netHandler).func_147390_a(packet);
+		LiteLoader.getEvents().onPostLogin((INetHandlerLoginClient)netHandler, packet);
+	}
+	
 	/**
 	 * S02PacketChat::processPacket()
 	 * 
@@ -40,13 +48,13 @@ public class ASMHookProxy
 	 * @param netHandler
 	 * @param packet
 	 */
-	public static void handleLoginPacket(INetHandler netHandler, S01PacketJoinGame packet)
+	public static void handleJoinGamePacket(INetHandler netHandler, S01PacketJoinGame packet)
 	{
 		Events events = LiteLoader.getEvents();
-		if (events.onPreLogin(netHandler, packet))
+		if (events.onPreJoinGame(netHandler, packet))
 		{
 			((INetHandlerPlayClient)netHandler).func_147282_a(packet);
-			events.onConnectToServer(netHandler, packet);
+			events.onJoinGame(netHandler, packet);
 		}
 	}
 	

@@ -36,9 +36,9 @@ public interface PermissionsManager
 	 * permissions ready to receive new permissions from the server
 	 * 
 	 * @param netHandler
-	 * @param loginPacket
+	 * @param joinGamePacket
 	 */
-	public abstract void onLogin(INetHandler netHandler, S01PacketJoinGame loginPacket);
+	public abstract void onJoinGame(INetHandler netHandler, S01PacketJoinGame joinGamePacket);
 
 	/**
 	 * Handler for tick event

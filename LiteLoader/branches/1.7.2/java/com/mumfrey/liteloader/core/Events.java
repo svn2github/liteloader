@@ -7,6 +7,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiNewChat;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.network.INetHandler;
+import net.minecraft.network.login.INetHandlerLoginClient;
+import net.minecraft.network.login.server.S02PacketLoginSuccess;
 import net.minecraft.network.play.server.S01PacketJoinGame;
 import net.minecraft.network.play.server.S02PacketChat;
 import net.minecraft.profiler.IPlayerUsage;
@@ -126,16 +128,21 @@ public class Events implements IPlayerUsage
 	private LinkedList<ChatFilter> chatFilters = new LinkedList<ChatFilter>();
 	
 	/**
-	 * List of mods which implement LoginListener interface and will receive
-	 * client login events
+	 * List of mods which implement PostLoginListener and want to be notified post login
 	 */
-	private LinkedList<LoginListener> loginListeners = new LinkedList<LoginListener>();
+	private LinkedList<PostLoginListener> postLoginListeners = new LinkedList<PostLoginListener>();
 	
 	/**
 	 * List of mods which implement LoginListener interface and will receive
 	 * client login events
 	 */
-	private LinkedList<PreLoginListener> preLoginListeners = new LinkedList<PreLoginListener>();
+	private LinkedList<JoinGameListener> joinGameListeners = new LinkedList<JoinGameListener>();
+	
+	/**
+	 * List of mods which implement LoginListener interface and will receive
+	 * client login events
+	 */
+	private LinkedList<PreJoinGameListener> preJoinGameListeners = new LinkedList<PreJoinGameListener>();
 	
 	/**
 	 * Hash code of the current world. We don't store the world reference here because we don't want
@@ -216,14 +223,14 @@ public class Events implements IPlayerUsage
 			this.addHUDRenderListener((HUDRenderListener)listener);
 		}
 		
-		if (listener instanceof PreLoginListener)
+		if (listener instanceof PreJoinGameListener)
 		{
-			this.addPreLoginListener((PreLoginListener)listener);
+			this.addPreJoinGameListener((PreJoinGameListener)listener);
 		}
 		
-		if (listener instanceof LoginListener)
+		if (listener instanceof JoinGameListener)
 		{
-			this.addLoginListener((LoginListener)listener);
+			this.addJoinGameListener((JoinGameListener)listener);
 		}
 		
 		if (listener instanceof PluginChannelListener)
@@ -334,8 +341,6 @@ public class Events implements IPlayerUsage
 		if (!this.chatFilters.contains(chatFilter))
 		{
 			this.chatFilters.add(chatFilter);
-			if (this.hookInitDone)
-				this.initHooks();
 		}
 	}
 	
@@ -347,8 +352,6 @@ public class Events implements IPlayerUsage
 		if (!this.chatListeners.contains(chatListener))
 		{
 			this.chatListeners.add(chatListener);
-			if (this.hookInitDone)
-				this.initHooks();
 		}
 	}
 	
@@ -379,28 +382,35 @@ public class Events implements IPlayerUsage
 	}
 	
 	/**
-	 * @param loginListener
+	 * @param postLoginListener
 	 */
-	public void addPreLoginListener(PreLoginListener loginListener)
+	public void addPreJoinGameListener(PostLoginListener postLoginListener)
 	{
-		if (!this.preLoginListeners.contains(loginListener))
+		if (!this.postLoginListeners.contains(postLoginListener))
 		{
-			this.preLoginListeners.add(loginListener);
-			if (this.hookInitDone)
-				this.initHooks();
+			this.postLoginListeners.add(postLoginListener);
 		}
 	}
 	
 	/**
-	 * @param loginListener
+	 * @param joinGameListener
 	 */
-	public void addLoginListener(LoginListener loginListener)
+	public void addPreJoinGameListener(PreJoinGameListener joinGameListener)
 	{
-		if (!this.loginListeners.contains(loginListener))
+		if (!this.preJoinGameListeners.contains(joinGameListener))
 		{
-			this.loginListeners.add(loginListener);
-			if (this.hookInitDone)
-				this.initHooks();
+			this.preJoinGameListeners.add(joinGameListener);
+		}
+	}
+	
+	/**
+	 * @param joinGameListener
+	 */
+	public void addJoinGameListener(JoinGameListener joinGameListener)
+	{
+		if (!this.joinGameListeners.contains(joinGameListener))
+		{
+			this.joinGameListeners.add(joinGameListener);
 		}
 	}
 
@@ -636,38 +646,48 @@ public class Events implements IPlayerUsage
 	}
 	
 	/**
-	 * Pre-login callback from the login hook
+	 * @param netHandler
+	 * @param loginPacket
+	 */
+	public void onPostLogin(INetHandlerLoginClient netHandler, S02PacketLoginSuccess loginPacket)
+	{
+		for (PostLoginListener loginListener : this.postLoginListeners)
+			loginListener.onPostLogin(netHandler, loginPacket);
+	}
+	
+	/**
+	 * Pre join game callback from the login hook
 	 * 
 	 * @param netHandler
 	 * @param hookLogin
 	 * @return
 	 */
-	public boolean onPreLogin(INetHandler netHandler, S01PacketJoinGame loginPacket)
+	public boolean onPreJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
+		this.pluginChannels.setupPluginChannels(netHandler);
+
 		boolean cancelled = false;
 		
-		for (PreLoginListener loginListener : this.preLoginListeners)
+		for (PreJoinGameListener joinGameListener : this.preJoinGameListeners)
 		{
-			cancelled |= !loginListener.onPreLogin(netHandler, loginPacket);
+			cancelled |= !joinGameListener.onPreJoinGame(netHandler, loginPacket);
 		}
 		
 		return !cancelled;
 	}
 	
 	/**
-	 * Callback from the login hook
+	 * Callback from the join game hook
 	 * 
 	 * @param netHandler
 	 * @param loginPacket
 	 */
-	public void onConnectToServer(INetHandler netHandler, S01PacketJoinGame loginPacket)
+	public void onJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
 		this.loader.onLogin(netHandler, loginPacket);
 		
-		for (LoginListener loginListener : this.loginListeners)
-			loginListener.onLogin(netHandler, loginPacket);
-		
-		this.pluginChannels.onConnectToServer(netHandler, loginPacket);
+		for (JoinGameListener joinGameListener : this.joinGameListeners)
+			joinGameListener.onJoinGame(netHandler, loginPacket);
 	}
 	
 	/* (non-Javadoc)

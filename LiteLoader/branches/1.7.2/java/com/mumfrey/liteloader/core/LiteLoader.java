@@ -1004,7 +1004,7 @@ public final class LiteLoader
 	 */
 	void onLogin(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
-		this.permissionsManager.onLogin(netHandler, loginPacket);
+		this.permissionsManager.onJoinGame(netHandler, loginPacket);
 	}
 	
 	/**

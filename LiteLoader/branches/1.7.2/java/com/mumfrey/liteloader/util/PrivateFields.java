@@ -6,10 +6,12 @@ import java.util.List;
 import java.util.Map;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.network.NetHandlerLoginClient;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.resources.ResourceManagerReloadListener;
 import net.minecraft.client.resources.ResourcePack;
 import net.minecraft.client.resources.SimpleReloadableResourceManager;
+import net.minecraft.network.INetworkManager;
 import net.minecraft.profiler.IPlayerUsage;
 import net.minecraft.profiler.PlayerUsageSnooper;
 import net.minecraft.profiler.Profiler;
@@ -139,5 +141,6 @@ public class PrivateFields<P, T>
 	public static final PrivateFields<RenderManager, Map>                    entityRenderMap = new PrivateFields<RenderManager, Map>              (RenderManager.class,      "entityRenderMap",      "q",  "field_78729_o");   // RenderManager/entityRenderMap
 	public static final PrivateFields<PlayerUsageSnooper, IPlayerUsage> playerStatsCollector = new PrivateFields<PlayerUsageSnooper, IPlayerUsage>(PlayerUsageSnooper.class, "playerStatsCollector", "d",  "field_76478_d");   // PlayerUsageSnooper/playerStatsCollector
 	public static final PrivateFields<SimpleReloadableResourceManager, List<ResourceManagerReloadListener>> reloadListeners = new PrivateFields<SimpleReloadableResourceManager, List<ResourceManagerReloadListener>>(SimpleReloadableResourceManager.class, "reloadListeners", "d", "field_110546_b");   // SimpleReloadableResourceManager/reloadListeners
+	public static final PrivateFields<NetHandlerLoginClient, INetworkManager>     netManager = new PrivateFields<NetHandlerLoginClient, INetworkManager>(NetHandlerLoginClient.class, "field_147393_d", "d", "field_147393_d");   // NetHandlerLoginClient/field_147393_d
 }
 

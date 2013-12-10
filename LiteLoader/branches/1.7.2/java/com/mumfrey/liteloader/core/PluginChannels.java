@@ -1,18 +1,25 @@
 package com.mumfrey.liteloader.core;
 
+import io.netty.util.concurrent.GenericFutureListener;
+
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Level;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.network.NetHandlerLoginClient;
 import net.minecraft.network.INetHandler;
+import net.minecraft.network.INetworkManager;
+import net.minecraft.network.login.INetHandlerLoginClient;
+import net.minecraft.network.play.INetHandlerPlayClient;
 import net.minecraft.network.play.client.C17PacketCustomPayload;
-import net.minecraft.network.play.server.S01PacketJoinGame;
 import net.minecraft.network.play.server.S3FPacketCustomPayload;
 
 import com.mumfrey.liteloader.PluginChannelListener;
 import com.mumfrey.liteloader.permissions.PermissionsManagerClient;
+import com.mumfrey.liteloader.util.PrivateFields;
 
 /**
  * Manages plugin channel connections and subscriptions for LiteLoader
@@ -54,15 +61,6 @@ public class PluginChannels
 	}
 
 	/**
-	 * @param netHandler
-	 * @param loginPacket
-	 */
-	public void onConnectToServer(INetHandler netHandler, S01PacketJoinGame loginPacket)
-	{
-		this.setupPluginChannels();
-	}
-
-	/**
 	 * Callback for the plugin channel hook
 	 * 
 	 * @param customPayload
@@ -95,35 +93,51 @@ public class PluginChannels
 	/**
 	 * Query loaded mods for registered channels
 	 */
-	protected void setupPluginChannels()
+	void setupPluginChannels(INetHandler netHandler)
 	{
-		// Clear any channels from before
-		this.pluginChannels.clear();
-		
-		// Add the permissions manager channels
-		this.addPluginChannelsFor(LiteLoader.getPermissionsManager());
-		
-		// Enumerate mods for plugin channels
-		for (PluginChannelListener pluginChannelListener : this.pluginChannelListeners)
+		try
 		{
-			this.addPluginChannelsFor(pluginChannelListener);
-		}
-		
-		// If any mods have registered channels, send the REGISTER packet
-		if (this.pluginChannels.keySet().size() > 0)
-		{
-			StringBuilder channelList = new StringBuilder();
-			boolean separator = false;
+			// Clear any channels from before
+			this.pluginChannels.clear();
 			
-			for (String channel : this.pluginChannels.keySet())
+			// Add the permissions manager channels
+			this.addPluginChannelsFor(LiteLoader.getPermissionsManager());
+			
+			// Enumerate mods for plugin channels
+			for (PluginChannelListener pluginChannelListener : this.pluginChannelListeners)
 			{
-				if (separator) channelList.append("\u0000");
-				channelList.append(channel);
-				separator = true;
+				this.addPluginChannelsFor(pluginChannelListener);
 			}
 			
-			byte[] registrationData = channelList.toString().getBytes(Charset.forName("UTF8"));
-			PluginChannels.dispatch(new C17PacketCustomPayload(CHANNEL_REGISTER, registrationData));
+			// If any mods have registered channels, send the REGISTER packet
+			if (this.pluginChannels.keySet().size() > 0)
+			{
+				StringBuilder channelList = new StringBuilder();
+				boolean separator = false;
+				
+				for (String channel : this.pluginChannels.keySet())
+				{
+					if (separator) channelList.append("\u0000");
+					channelList.append(channel);
+					separator = true;
+				}
+				
+				byte[] registrationData = channelList.toString().getBytes(Charset.forName("UTF8"));
+
+				if (netHandler instanceof INetHandlerLoginClient)
+				{
+					INetworkManager networkManager = PrivateFields.netManager.get(((NetHandlerLoginClient)netHandler));
+					networkManager.func_150725_a(new C17PacketCustomPayload(CHANNEL_REGISTER, registrationData), new GenericFutureListener[0]);
+				}
+				else if (netHandler instanceof INetHandlerPlayClient)
+				{
+					PluginChannels.dispatch(new C17PacketCustomPayload(CHANNEL_REGISTER, registrationData));
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			LiteLoader.getLogger().log(Level.WARNING, "Error dispatching REGISTER packet to server " + ex.getClass().getSimpleName(), ex);
 		}
 	}
 	
@@ -160,28 +174,33 @@ public class PluginChannels
 	 * @param channel Channel to send, must not be a reserved channel name
 	 * @param data
 	 */
-	public static void sendMessage(String channel, byte[] data)
+	public static boolean sendMessage(String channel, byte[] data)
 	{
 		if (channel == null || channel.length() > 16 || CHANNEL_REGISTER.equals(channel) || CHANNEL_UNREGISTER.equals(channel))
 			throw new RuntimeException("Invalid channel name specified"); 
 		
 		C17PacketCustomPayload payload = new C17PacketCustomPayload(channel, data);
-		PluginChannels.dispatch(payload);
+		return PluginChannels.dispatch(payload);
 	}
 
 	/**
 	 * @param channel
 	 * @param data
 	 */
-	private static void dispatch(C17PacketCustomPayload payload)
+	private static boolean dispatch(C17PacketCustomPayload payload)
 	{
 		try
 		{
 			Minecraft minecraft = Minecraft.getMinecraft();
 			
 			if (minecraft.thePlayer != null && minecraft.thePlayer.sendQueue != null)
+			{
 				minecraft.thePlayer.sendQueue.addToSendQueue(payload);
+				return true;
+			}
 		}
 		catch (Exception ex) {}
+		
+		return false;
 	}
 }

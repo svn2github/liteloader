@@ -9,13 +9,13 @@ import net.minecraft.network.play.server.S01PacketJoinGame;
  *
  * @author Adam Mummery-Smith
  */
-public interface PreLoginListener extends LiteMod
+public interface PreJoinGameListener extends LiteMod
 {
 	/**
 	 * Called on login
 	 * 
 	 * @param netHandler Net handler
-	 * @param loginPacket Login packet
+	 * @param joinGamePacket Join game packet
 	 */
-	public abstract boolean onPreLogin(INetHandler netHandler, S01PacketJoinGame loginPacket);
+	public abstract boolean onPreJoinGame(INetHandler netHandler, S01PacketJoinGame joinGamePacket);
 }

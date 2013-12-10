@@ -178,7 +178,7 @@ public class PermissionsManagerClient implements PermissionsManager, PluginChann
 	 * @see com.mumfrey.liteloader.permissions.PermissionsManager#onLogin(net.minecraft.network.INetHandler, net.minecraft.network.play.server.S01PacketJoinGame)
 	 */
 	@Override
-	public void onLogin(INetHandler netHandler, S01PacketJoinGame loginPacket)
+	public void onJoinGame(INetHandler netHandler, S01PacketJoinGame joinGamePacket)
 	{
 		this.clearServerPermissions();
 		this.scheduleRefresh();

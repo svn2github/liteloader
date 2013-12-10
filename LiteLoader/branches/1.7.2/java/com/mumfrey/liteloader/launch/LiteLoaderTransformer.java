@@ -11,6 +11,12 @@ import net.minecraft.launchwrapper.IClassTransformer;
 
 public class LiteLoaderTransformer implements IClassTransformer
 {
+	private static final String LITELOADER_TWEAKER_CLASS = LiteLoaderTweaker.class.getName().replace('.', '/');
+	
+	private static final String METHOD_INIT = "init";
+
+	private static final String METHOD_POSTINIT = "postInit";
+
 	private static final String classMappingRenderLightningBolt = "net.minecraft.client.renderer.entity.RenderLightningBolt";
 	
 	// TODO Obfuscation 1.7.2
@@ -39,8 +45,8 @@ public class LiteLoaderTransformer implements IClassTransformer
 		{
 			if ("<init>".equals(method.name))
 			{
-				method.instructions.insert(new MethodInsnNode(Opcodes.INVOKESTATIC, "com/mumfrey/liteloader/launch/LiteLoaderTweaker", "postInit", "()V"));
-				method.instructions.insert(new MethodInsnNode(Opcodes.INVOKESTATIC, "com/mumfrey/liteloader/launch/LiteLoaderTweaker", "init", "()V"));
+				method.instructions.insert(new MethodInsnNode(Opcodes.INVOKESTATIC, LiteLoaderTransformer.LITELOADER_TWEAKER_CLASS, LiteLoaderTransformer.METHOD_POSTINIT, "()V"));
+				method.instructions.insert(new MethodInsnNode(Opcodes.INVOKESTATIC, LiteLoaderTransformer.LITELOADER_TWEAKER_CLASS, LiteLoaderTransformer.METHOD_INIT, "()V"));
 			}
 		}
 		

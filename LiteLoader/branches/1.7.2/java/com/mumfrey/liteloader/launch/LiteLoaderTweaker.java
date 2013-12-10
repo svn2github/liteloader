@@ -26,7 +26,6 @@ import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.NonOptionArgumentSpec;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
-import net.minecraft.client.ClientBrandRetriever;
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
@@ -79,8 +78,9 @@ public class LiteLoaderTweaker implements ITweaker
 	};
 	
 	private static final String[] defaultPacketTransformers = {
+		"com.mumfrey.liteloader.core.hooks.asm.LoginSuccessPacketTransformer",
 		"com.mumfrey.liteloader.core.hooks.asm.ChatPacketTransformer",
-		"com.mumfrey.liteloader.core.hooks.asm.LoginPacketTransformer",
+		"com.mumfrey.liteloader.core.hooks.asm.JoinGamePacketTransformer",
 		"com.mumfrey.liteloader.core.hooks.asm.CustomPayloadPacketTransformer"
 	};
 	
@@ -416,19 +416,6 @@ public class LiteLoaderTweaker implements ITweaker
 		{
 			LiteLoaderTweaker.logger.log(Level.SEVERE, String.format("Error during LiteLoader PostInit: %s", th.getMessage()), th);
 		}
-	}
-
-	/**
-	 * Naive implementation to check whether Forge ModLoader (FML) is loaded
-	 */
-	public static boolean fmlIsPresent()
-	{
-		if (ClientBrandRetriever.getClientModName().contains("fml")) return true;
-				
-		for (IClassTransformer transformer : Launch.classLoader.getTransformers())
-			if (transformer.getClass().getName().contains("fml")) return true;
-		
-		return false;
 	}
 	
 	public static URL getJarUrl()

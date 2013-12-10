@@ -7,7 +7,7 @@ import java.util.List;
  *
  * @author Adam Mummery-Smith
  */
-public interface PluginChannelListener extends LoginListener
+public interface PluginChannelListener extends JoinGameListener
 {
 	/**
 	 * Return a list of the plugin channels the mod wants to register

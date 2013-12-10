@@ -4,14 +4,17 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Map;
 
+import net.minecraft.client.ClientBrandRetriever;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.entity.Entity;
+import net.minecraft.launchwrapper.IClassTransformer;
+import net.minecraft.launchwrapper.Launch;
 
 import com.mumfrey.liteloader.core.LiteLoader;
-import com.mumfrey.liteloader.launch.LiteLoaderTweaker;
 
 /**
  * A small collection of useful functions for mods
@@ -23,12 +26,25 @@ public abstract class ModUtilities
 	/**
 	 * True if FML is being used, in which case we use searge names instead of raw field/method names
 	 */
-	private static boolean forgeModLoader = false;
+	private static boolean fmlDetected = false;
 	
 	static
 	{
 		// Check for FML
-		ModUtilities.forgeModLoader = LiteLoaderTweaker.fmlIsPresent();
+		ModUtilities.fmlDetected = ModUtilities.fmlIsPresent();
+	}
+
+	/**
+	 * @return
+	 */
+	public static boolean fmlIsPresent()
+	{
+		if (ClientBrandRetriever.getClientModName().contains("fml")) return true;
+
+		for (IClassTransformer transformer : Launch.classLoader.getTransformers())
+			if (transformer.getClass().getName().contains("fml")) return true;
+
+		return false;
 	}
 	
 	/**
@@ -53,8 +69,8 @@ public abstract class ModUtilities
 	 */
 	public static String getObfuscatedFieldName(String fieldName, String obfuscatedFieldName, String seargeFieldName)
 	{
-		if (forgeModLoader) return seargeFieldName;
-		return !net.minecraft.client.renderer.Tessellator.instance.getClass().getSimpleName().equals("Tessellator") ? obfuscatedFieldName : fieldName;
+		boolean deobfuscated = Tessellator.class.getSimpleName().equals("Tessellator");
+		return deobfuscated ? fieldName : (ModUtilities.fmlDetected ? seargeFieldName : obfuscatedFieldName);
 	}
 
 	/**

@@ -9,7 +9,7 @@ import java.util.logging.LogRecord;
 
 public class LiteLoaderLogFormatter extends Formatter
 {
-	private static SimpleDateFormat simpleDateFormatLogFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	private static SimpleDateFormat simpleDateFormatLogFormatter = new SimpleDateFormat("HH:mm:ss");
 
 	private boolean prepend = false;
 	
