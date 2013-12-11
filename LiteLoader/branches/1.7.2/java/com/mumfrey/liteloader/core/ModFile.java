@@ -180,6 +180,11 @@ public class ModFile extends File
 		return this.modName;
 	}
 	
+	public String getModMetaName()
+	{
+		return this.modName.toLowerCase();
+	}
+	
 	public boolean isValid()
 	{
 		return this.valid;

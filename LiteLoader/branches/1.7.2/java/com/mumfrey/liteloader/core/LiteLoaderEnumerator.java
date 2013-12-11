@@ -67,10 +67,15 @@ class LiteLoaderEnumerator implements FilenameFilter
 	private final LaunchClassLoader classLoader;
 
 	/**
+	 * 
+	 */
+	private final EnabledModsList enabledModsList;
+
+	/**
 	 * Array of class path entries specified to the JVM instance 
 	 */
 	private final String[] classPathEntries;
-
+	
 	/**
 	 * Classes to load, mapped by class name 
 	 */
@@ -110,12 +115,14 @@ class LiteLoaderEnumerator implements FilenameFilter
 	 * @param gameFolder
 	 * @param classLoader
 	 * @param loadTweaks
+	 * @param enabledModsList 
 	 */
-	public LiteLoaderEnumerator(LiteLoaderBootstrap bootstrap, LaunchClassLoader classLoader, boolean loadTweaks)
+	public LiteLoaderEnumerator(LiteLoaderBootstrap bootstrap, LaunchClassLoader classLoader, boolean loadTweaks, EnabledModsList enabledModsList)
 	{
-		this.bootstrap   = bootstrap;
-		this.classLoader = classLoader;
-		this.loadTweaks  = loadTweaks;
+		this.bootstrap       = bootstrap;
+		this.classLoader     = classLoader;
+		this.loadTweaks      = loadTweaks;
+		this.enabledModsList = enabledModsList;
 
 		// Read the JVM class path into the local array
 		this.classPathEntries = this.readClassPath();
@@ -184,7 +191,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 	{
 		String modClassName = modClass.getSimpleName();
 		if (!this.modFiles.containsKey(modClassName)) return null;
-		return this.modFiles.get(modClassName).getModName().toLowerCase();
+		return this.modFiles.get(modClassName).getModMetaName();
 	}
 	
 	/**
@@ -440,6 +447,12 @@ class LiteLoaderEnumerator implements FilenameFilter
 	
 	private void addTweaksFromMod(ModFile modFile)
 	{
+		if (!this.enabledModsList.isEnabled(this.bootstrap.getProfile(), modFile.getModMetaName()))
+		{
+			LiteLoaderEnumerator.logInfo("Mod %s is disabled for profile %s, not injecting tranformers", modFile.getModMetaName(), this.bootstrap.getProfile());
+			return;
+		}
+		
 		if (modFile.hasTweakClass())
 		{
 			this.addTweakFrom(modFile, modFile.getTweakClassName(), null);

@@ -373,7 +373,7 @@ public class LiteLoaderTweaker implements ITweaker
 			LiteLoaderTweaker.logger.info("Bootstrapping LiteLoader " + LiteLoaderTweaker.VERSION);
 			LiteLoaderTweaker.spawnBootstrap();
 			LiteLoaderTweaker.logger.info("Beginning LiteLoader PreInit...");
-			this.bootstrap.preInit(Launch.classLoader, true);
+			this.bootstrap.preInit(Launch.classLoader, true, this.modsToLoad);
 			this.preInit = false;
 		}
 		catch (Throwable th)
@@ -392,7 +392,7 @@ public class LiteLoaderTweaker implements ITweaker
 		
 		try
 		{
-			LiteLoaderTweaker.instance.bootstrap.init(LiteLoaderTweaker.instance.modsToLoad, Launch.classLoader);
+			LiteLoaderTweaker.instance.bootstrap.init(Launch.classLoader);
 			LiteLoaderTweaker.instance.init = false;
 		}
 		catch (Throwable th)

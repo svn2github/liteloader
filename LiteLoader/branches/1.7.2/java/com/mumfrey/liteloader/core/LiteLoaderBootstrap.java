@@ -85,6 +85,11 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	 * File containing the properties
 	 */
 	private File propertiesFile;
+	
+	/**
+	 * JSON file containing the list of enabled/disabled mods by profile
+	 */
+	private File enabledModsFile;
 
 	/**
 	 * Internal properties loaded from inside the jar
@@ -108,6 +113,11 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	private LiteLoaderEnumerator enumerator;
 	
 	/**
+	 * List of mods passed into the command line
+	 */
+	private EnabledModsList enabledModsList;
+	
+	/**
 	 * @param gameDirectory
 	 * @param assetsDirectory
 	 * @param profile
@@ -122,6 +132,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		this.configBaseFolder = new File(this.gameDirectory,    "liteconfig");
 		this.logFile          = new File(this.configBaseFolder, "liteloader.log");
 		this.propertiesFile   = new File(this.configBaseFolder, "liteloader.properties");
+		this.enabledModsFile  = new File(this.configBaseFolder, "liteloader.profiles.json");
 
 		if (!this.modsFolder.exists()) this.modsFolder.mkdirs();
 		if (!this.configBaseFolder.exists()) this.configBaseFolder.mkdirs();
@@ -131,7 +142,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	 * @see com.mumfrey.liteloader.launch.ILoaderBootstrap#preInit(net.minecraft.launchwrapper.LaunchClassLoader, boolean)
 	 */
 	@Override
-	public void preInit(LaunchClassLoader classLoader, boolean loadTweaks)
+	public void preInit(LaunchClassLoader classLoader, boolean loadTweaks, List<String> modsToLoad)
 	{
 		// Set up the bootstrap
 		if (!this.prepare()) return;
@@ -146,7 +157,10 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		
 		LiteLoaderBootstrap.logInfo("Java reports OS=\"%s\"", System.getProperty("os.name").toLowerCase());
 		
-		this.enumerator = new LiteLoaderEnumerator(this, classLoader, loadTweaks);
+		this.enabledModsList = EnabledModsList.createFrom(this.enabledModsFile);
+		this.enabledModsList.processModsList(this.profile, modsToLoad);
+
+		this.enumerator = new LiteLoaderEnumerator(this, classLoader, loadTweaks, this.enabledModsList);
 		this.enumerator.discoverMods();
 
 		LiteLoaderBootstrap.logInfo("LiteLoader PreInit completed");
@@ -156,7 +170,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	 * @see com.mumfrey.liteloader.launch.ILoaderBootstrap#init(java.util.List, net.minecraft.launchwrapper.LaunchClassLoader)
 	 */
 	@Override
-	public void init(List<String> modsToLoad, LaunchClassLoader classLoader)
+	public void init(LaunchClassLoader classLoader)
 	{
 		// PreInit failed
 		if (this.enumerator == null) return;
@@ -169,7 +183,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		catch (Exception ex) {}
 
 		LiteLoaderBootstrap.logger.info("Beginning LiteLoader Init...");
-		LiteLoader.init(this, this.enumerator, modsToLoad, classLoader);
+		LiteLoader.init(this, this.enumerator, this.enabledModsList, classLoader);
 	}
 
 	/* (non-Javadoc)

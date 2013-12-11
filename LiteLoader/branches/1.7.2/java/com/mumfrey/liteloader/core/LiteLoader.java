@@ -69,11 +69,6 @@ public final class LiteLoader
 	private static LaunchClassLoader classLoader;
 	
 	/**
-	 * List of mods passed into the command line
-	 */
-	private EnabledModsList enabledModsList = null;
-	
-	/**
 	 * Mods folder which contains mods and legacy config files
 	 */
 	private File modsFolder;
@@ -95,11 +90,6 @@ public final class LiteLoader
 	private File versionConfigFolder;
 	
 	/**
-	 * JSON file containing the list of enabled/disabled mods by profile
-	 */
-	private File enabledModsFile;
-	
-	/**
 	 * Reference to the Minecraft game instance
 	 */
 	private Minecraft minecraft;
@@ -113,6 +103,11 @@ public final class LiteLoader
 	 * Mod enumerator instance
 	 */
 	private final LiteLoaderEnumerator enumerator;
+	
+	/**
+	 * List of mods passed into the command line
+	 */
+	private final EnabledModsList enabledModsList;
 	
 	/**
 	 * Registered resource packs 
@@ -226,13 +221,13 @@ public final class LiteLoader
 	 * @param modNameFilter List of mod names parsed from the command line
 	 * @param classLoader LaunchClassLoader
 	 */
-	static final void init(LiteLoaderBootstrap bootstrap, LiteLoaderEnumerator enumerator, List<String> modNameFilter, LaunchClassLoader classLoader)
+	static final void init(LiteLoaderBootstrap bootstrap, LiteLoaderEnumerator enumerator, EnabledModsList enabledModsList, LaunchClassLoader classLoader)
 	{
 		if (LiteLoader.instance == null)
 		{
 			LiteLoader.classLoader = classLoader;
 			
-			LiteLoader.instance = new LiteLoader(bootstrap, enumerator, modNameFilter);
+			LiteLoader.instance = new LiteLoader(bootstrap, enumerator, enabledModsList);
 			LiteLoader.instance.onInit();
 		}
 	}
@@ -254,15 +249,13 @@ public final class LiteLoader
 	 * @param profile 
 	 * @param modNameFilter 
 	 */
-	private LiteLoader(LiteLoaderBootstrap bootstrap, LiteLoaderEnumerator enumerator, List<String> modNameFilter)
+	private LiteLoader(LiteLoaderBootstrap bootstrap, LiteLoaderEnumerator enumerator, EnabledModsList enabledModsList)
 	{
 		this.bootstrap = bootstrap;
 		this.enumerator = enumerator;
+		this.enabledModsList = enabledModsList;
 		
 		this.setupPaths(bootstrap);
-		
-		this.enabledModsList = EnabledModsList.createFrom(this.enabledModsFile);
-		this.enabledModsList.processModsList(bootstrap.getProfile(), modNameFilter);
 		
 		this.configManager = new ConfigManager();
 	}
@@ -283,7 +276,6 @@ public final class LiteLoader
 		if (!this.commonConfigFolder.exists()) this.commonConfigFolder.mkdirs();
 		if (!this.versionConfigFolder.exists()) this.versionConfigFolder.mkdirs();
 		
-		this.enabledModsFile = new File(this.configBaseFolder, "liteloader.profiles.json");
 		this.keyMapSettingsFile = new File(this.configBaseFolder, "liteloader.keys.properties");
 	}
 	
@@ -352,7 +344,7 @@ public final class LiteLoader
 		this.events.initHooks();
 		this.startupComplete = true;
 		
-		this.enabledModsList.saveTo(this.enabledModsFile);
+		this.enabledModsList.save();
 		this.bootstrap.writeProperties();
 	}
 	
@@ -739,7 +731,7 @@ public final class LiteLoader
 	public void setModEnabled(String modMetaName, boolean enabled)
 	{
 		this.enabledModsList.setEnabled(this.bootstrap.getProfile(), modMetaName, enabled);
-		this.enabledModsList.saveTo(this.enabledModsFile);
+		this.enabledModsList.save();
 	}
 
 	/**
@@ -1002,7 +994,7 @@ public final class LiteLoader
 	 * @param netHandler
 	 * @param loginPacket
 	 */
-	void onLogin(INetHandler netHandler, S01PacketJoinGame loginPacket)
+	void onJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
 		this.permissionsManager.onJoinGame(netHandler, loginPacket);
 	}
