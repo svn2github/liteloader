@@ -233,10 +233,7 @@ public class Events implements IPlayerUsage
 			this.addJoinGameListener((JoinGameListener)listener);
 		}
 		
-		if (listener instanceof PluginChannelListener)
-		{
-			this.pluginChannels.addPluginChannelListener((PluginChannelListener)listener);
-		}
+		this.pluginChannels.addListener(listener);
 	}
 	
 	/**
@@ -651,6 +648,8 @@ public class Events implements IPlayerUsage
 	 */
 	public void onPostLogin(INetHandlerLoginClient netHandler, S02PacketLoginSuccess loginPacket)
 	{
+		this.pluginChannels.onPostLogin(netHandler, loginPacket);
+
 		for (PostLoginListener loginListener : this.postLoginListeners)
 			loginListener.onPostLogin(netHandler, loginPacket);
 	}
@@ -664,8 +663,6 @@ public class Events implements IPlayerUsage
 	 */
 	public boolean onPreJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
-		this.pluginChannels.setupPluginChannels(netHandler);
-
 		boolean cancelled = false;
 		
 		for (PreJoinGameListener joinGameListener : this.preJoinGameListeners)
@@ -684,7 +681,8 @@ public class Events implements IPlayerUsage
 	 */
 	public void onJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
-		this.loader.onLogin(netHandler, loginPacket);
+		this.loader.onJoinGame(netHandler, loginPacket);
+		this.pluginChannels.onJoinGame(netHandler, loginPacket);
 		
 		for (JoinGameListener joinGameListener : this.joinGameListeners)
 			joinGameListener.onJoinGame(netHandler, loginPacket);

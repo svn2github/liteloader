@@ -18,6 +18,7 @@ import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.Permissible;
 import com.mumfrey.liteloader.PluginChannelListener;
 import com.mumfrey.liteloader.core.PluginChannels;
+import com.mumfrey.liteloader.core.PluginChannels.ChannelPolicy;
 
 /**
  * This class manages permissions on the client, it is a singleton class which can manage permissions for multiple 
@@ -242,7 +243,7 @@ public class PermissionsManagerClient implements PermissionsManager, PluginChann
 				if (!query.modName.equals("all") || query.permissions.size() > 0)
 				{
 					byte[] data = query.getBytes();
-					PluginChannels.sendMessage(ReplicatedPermissionsContainer.CHANNEL, data);
+					PluginChannels.sendMessage(ReplicatedPermissionsContainer.CHANNEL, data, ChannelPolicy.DISPATCH_ALWAYS);
 				}
 			}
 		}
