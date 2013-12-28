@@ -8,10 +8,10 @@ import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.network.NetHandlerLoginClient;
 import net.minecraft.client.renderer.entity.RenderManager;
-import net.minecraft.client.resources.ResourceManagerReloadListener;
-import net.minecraft.client.resources.ResourcePack;
+import net.minecraft.client.resources.IResourceManagerReloadListener;
+import net.minecraft.client.resources.IResourcePack;
 import net.minecraft.client.resources.SimpleReloadableResourceManager;
-import net.minecraft.network.INetworkManager;
+import net.minecraft.network.NetworkManager;
 import net.minecraft.profiler.IPlayerUsage;
 import net.minecraft.profiler.PlayerUsageSnooper;
 import net.minecraft.profiler.Profiler;
@@ -136,11 +136,11 @@ public class PrivateFields<P, T>
 
 	public static final PrivateFields<Minecraft, Timer>                       minecraftTimer = new PrivateFields<Minecraft, Timer>                (Minecraft.class,          "timer",                "Q",  "field_71428_T");   // Minecraft/timer
 	public static final PrivateFields<Minecraft, Profiler>                 minecraftProfiler = new PrivateFields<Minecraft, Profiler>             (Minecraft.class,          "mcProfiler",           "A",  "field_71424_I");   // Minecraft/mcProfiler
-	public static final PrivateFields<Minecraft, List<ResourcePack>>    defaultResourcePacks = new PrivateFields<Minecraft, List<ResourcePack>>   (Minecraft.class,          "defaultResourcePacks", "ap", "field_110449_ao"); // Minecraft/defaultResourcePacks
+	public static final PrivateFields<Minecraft, List<IResourcePack>>    defaultResourcePacks = new PrivateFields<Minecraft, List<IResourcePack>> (Minecraft.class,          "defaultResourcePacks", "ap", "field_110449_ao"); // Minecraft/defaultResourcePacks
 	public static final PrivateFields<Minecraft, Boolean>                      gameIsRunning = new PrivateFields<Minecraft, Boolean>              (Minecraft.class,          "running",              "B",  "field_71425_J");   // Minecraft/running
 	public static final PrivateFields<RenderManager, Map>                    entityRenderMap = new PrivateFields<RenderManager, Map>              (RenderManager.class,      "entityRenderMap",      "q",  "field_78729_o");   // RenderManager/entityRenderMap
 	public static final PrivateFields<PlayerUsageSnooper, IPlayerUsage> playerStatsCollector = new PrivateFields<PlayerUsageSnooper, IPlayerUsage>(PlayerUsageSnooper.class, "playerStatsCollector", "d",  "field_76478_d");   // PlayerUsageSnooper/playerStatsCollector
-	public static final PrivateFields<SimpleReloadableResourceManager, List<ResourceManagerReloadListener>> reloadListeners = new PrivateFields<SimpleReloadableResourceManager, List<ResourceManagerReloadListener>>(SimpleReloadableResourceManager.class, "reloadListeners", "d", "field_110546_b");   // SimpleReloadableResourceManager/reloadListeners
-	public static final PrivateFields<NetHandlerLoginClient, INetworkManager>     netManager = new PrivateFields<NetHandlerLoginClient, INetworkManager>(NetHandlerLoginClient.class, "field_147393_d", "d", "field_147393_d");   // NetHandlerLoginClient/field_147393_d
+	public static final PrivateFields<SimpleReloadableResourceManager, List<IResourceManagerReloadListener>> reloadListeners = new PrivateFields<SimpleReloadableResourceManager, List<IResourceManagerReloadListener>>(SimpleReloadableResourceManager.class, "reloadListeners", "d", "field_110546_b");   // SimpleReloadableResourceManager/reloadListeners
+	public static final PrivateFields<NetHandlerLoginClient, NetworkManager>     netManager = new PrivateFields<NetHandlerLoginClient, NetworkManager>(NetHandlerLoginClient.class, "field_147393_d", "d", "field_147393_d");   // NetHandlerLoginClient/field_147393_d
 }
 

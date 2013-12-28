@@ -16,7 +16,7 @@ import java.util.logging.Level;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.network.NetHandlerLoginClient;
 import net.minecraft.network.INetHandler;
-import net.minecraft.network.INetworkManager;
+import net.minecraft.network.NetworkManager;
 import net.minecraft.network.login.INetHandlerLoginClient;
 import net.minecraft.network.login.server.S02PacketLoginSuccess;
 import net.minecraft.network.play.INetHandlerPlayClient;
@@ -275,7 +275,7 @@ public class PluginChannels
 
 				if (netHandler instanceof INetHandlerLoginClient)
 				{
-					INetworkManager networkManager = PrivateFields.netManager.get(((NetHandlerLoginClient)netHandler));
+					NetworkManager networkManager = PrivateFields.netManager.get(((NetHandlerLoginClient)netHandler));
 					networkManager.func_150725_a(new C17PacketCustomPayload(CHANNEL_REGISTER, registrationData), new GenericFutureListener[0]);
 				}
 				else if (netHandler instanceof INetHandlerPlayClient)

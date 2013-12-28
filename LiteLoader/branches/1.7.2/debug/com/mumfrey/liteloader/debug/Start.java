@@ -29,6 +29,8 @@ public abstract class Start
 	 */
 	public static void main(String[] args)
 	{
+		System.setProperty("mcpenv", "true");
+		
 		boolean fmlDetected = false;
 		List<String> argsList = new ArrayList<String>();
 
@@ -54,7 +56,7 @@ public abstract class Start
 		Start.logger.info(String.format("Launching game as %s", loginManager.getProfileName()));
 		
 		File gameDir = new File(System.getProperty("user.dir"));
-		File assetsDir = new File(gameDir, "assets");
+		File assetsDir = new File(gameDir, "assets/virtual/legacy");
 
 		argsList.add("--tweakClass");  argsList.add(LiteLoaderTweaker.class.getName());
 		argsList.add("--username");    argsList.add(loginManager.getProfileName());

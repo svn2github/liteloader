@@ -21,7 +21,7 @@ import javax.activity.InvalidActivityException;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiMainMenu;
-import net.minecraft.client.resources.ResourcePack;
+import net.minecraft.client.resources.IResourcePack;
 import net.minecraft.client.resources.SimpleReloadableResourceManager;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.crash.CrashReport;
@@ -112,7 +112,7 @@ public final class LiteLoader
 	/**
 	 * Registered resource packs 
 	 */
-	private final Map<String, ResourcePack> registeredResourcePacks = new HashMap<String, ResourcePack>();
+	private final Map<String, IResourcePack> registeredResourcePacks = new HashMap<String, IResourcePack>();
 	
 	/**
 	 * List of loaded mods, for crash reporting
@@ -351,13 +351,13 @@ public final class LiteLoader
 	/* (non-Javadoc)
 	 * @see com.mumfrey.liteloader.core.ICustomResourcePackManager#registerModResourcePack(net.minecraft.client.resources.ResourcePack)
 	 */
-	public boolean registerModResourcePack(ResourcePack resourcePack)
+	public boolean registerModResourcePack(IResourcePack resourcePack)
 	{
 		if (!this.registeredResourcePacks.containsKey(resourcePack.getPackName()))
 		{
 			this.pendingResourceReload = true;
 
-			List<ResourcePack> defaultResourcePacks = PrivateFields.defaultResourcePacks.get(this.minecraft);
+			List<IResourcePack> defaultResourcePacks = PrivateFields.defaultResourcePacks.get(this.minecraft);
 			if (!defaultResourcePacks.contains(resourcePack))
 			{
 				defaultResourcePacks.add(resourcePack);
@@ -372,13 +372,13 @@ public final class LiteLoader
 	/* (non-Javadoc)
 	 * @see com.mumfrey.liteloader.core.ICustomResourcePackManager#unRegisterModResourcePack(net.minecraft.client.resources.ResourcePack)
 	 */
-	public boolean unRegisterModResourcePack(ResourcePack resourcePack)
+	public boolean unRegisterModResourcePack(IResourcePack resourcePack)
 	{
 		if (this.registeredResourcePacks.containsValue(resourcePack))
 		{
 			this.pendingResourceReload = true;
 
-			List<ResourcePack> defaultResourcePacks = PrivateFields.defaultResourcePacks.get(this.minecraft);
+			List<IResourcePack> defaultResourcePacks = PrivateFields.defaultResourcePacks.get(this.minecraft);
 			this.registeredResourcePacks.remove(resourcePack.getPackName());
 			defaultResourcePacks.remove(resourcePack);
 			return true;
@@ -523,6 +523,14 @@ public final class LiteLoader
 	public static String getProfile()
 	{
 		return LiteLoader.getInstance().bootstrap.getProfile();
+	}
+	
+	/**
+	 * @return
+	 */
+	public static boolean isDevelopmentEnvironment()
+	{
+		return "true".equals(System.getProperty("mcpenv"));
 	}
 	
 	/**
@@ -852,7 +860,7 @@ public final class LiteLoader
 			{
 				modFile.initResourcePack(modName);
 				
-				if (modFile.hasResourcePack() && this.registerModResourcePack((ResourcePack)modFile.getResourcePack()))
+				if (modFile.hasResourcePack() && this.registerModResourcePack((IResourcePack)modFile.getResourcePack()))
 				{
 					LiteLoader.logInfo("Successfully added \"%s\" to active resource pack set", modFile.getAbsolutePath());
 				}

@@ -3,7 +3,7 @@ package com.mumfrey.liteloader.core;
 import java.util.List;
 
 import net.minecraft.client.audio.SoundHandler;
-import net.minecraft.client.resources.ResourceManagerReloadListener;
+import net.minecraft.client.resources.IResourceManagerReloadListener;
 import net.minecraft.client.resources.SimpleReloadableResourceManager;
 
 import com.mumfrey.liteloader.util.PrivateFields;
@@ -52,7 +52,7 @@ public class SoundHandlerReloadInhibitor
 		{
 			if (!this.inhibited)
 			{
-				List<ResourceManagerReloadListener> reloadListeners = PrivateFields.reloadListeners.get(this.resourceManager);
+				List<IResourceManagerReloadListener> reloadListeners = PrivateFields.reloadListeners.get(this.resourceManager);
 				if (reloadListeners != null)
 				{
 					this.storedIndex = reloadListeners.indexOf(this.soundHandler);
@@ -86,7 +86,7 @@ public class SoundHandlerReloadInhibitor
 		{
 			if (this.inhibited)
 			{
-				List<ResourceManagerReloadListener> reloadListeners = PrivateFields.reloadListeners.get(this.resourceManager);
+				List<IResourceManagerReloadListener> reloadListeners = PrivateFields.reloadListeners.get(this.resourceManager);
 				if (reloadListeners != null)
 				{
 					if (this.storedIndex > -1)

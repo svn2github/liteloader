@@ -51,6 +51,8 @@ public class LiteLoaderTweaker implements ITweaker
 	
 	private File assetsDirectory;
 	
+	private File jarFile;
+	
 	private String profile;
 	
 	private List<String> modsToLoad;
@@ -63,6 +65,7 @@ public class LiteLoaderTweaker implements ITweaker
 	
 	private Map<String, String> launchArgs;
 	
+	private ArgumentAcceptingOptionSpec<String> jarOption;
 	private ArgumentAcceptingOptionSpec<String> modsOption;
 	private OptionSet parsedOptions;
 	
@@ -95,6 +98,7 @@ public class LiteLoaderTweaker implements ITweaker
 		LiteLoaderTweaker.instance.profile = profile;
 		
 		OptionParser optionParser = new OptionParser();
+		this.jarOption = optionParser.accepts("versionJar", "Minecraft version jar to use").withRequiredArg().ofType(String.class);
 		this.modsOption = optionParser.accepts("mods", "Comma-separated list of mods to load").withRequiredArg().ofType(String.class).withValuesSeparatedBy(',');
 		optionParser.allowsUnrecognizedOptions();
 		NonOptionArgumentSpec<String> nonOptions = optionParser.nonOptions();
@@ -109,6 +113,8 @@ public class LiteLoaderTweaker implements ITweaker
 			Launch.blackboard.put("launchArgs", this.launchArgs);
 		}
 		
+		this.initJarUrl();
+		
 		// Parse out the arguments ourself because joptsimple doesn't really provide a good way to
 		// add arguments to the unparsed argument list after parsing
 		this.parseArgs(this.passThroughArgs);
@@ -121,12 +127,42 @@ public class LiteLoaderTweaker implements ITweaker
 			LiteLoaderTweaker.instance.modsToLoad = this.modsOption.values(this.parsedOptions);
 		}
 		
-		URL[] urls = Launch.classLoader.getURLs();
-		LiteLoaderTweaker.instance.jarUrl = urls[urls.length - 1];
-		
 		this.injectTransformers.addAll(Arrays.asList(LiteLoaderTweaker.defaultPacketTransformers));
 		
+		if (this.jarFile != null)
+		{
+			LiteLoaderTweaker.logger.info(String.format("Injecting version jar '%s'", this.jarFile.getAbsolutePath()));
+			Launch.classLoader.addURL(this.jarUrl);
+			LiteLoaderTweaker.addURLToParentClassLoader(this.jarUrl);
+		}
+		
 		this.preInit();
+	}
+
+	/**
+	 * 
+	 */
+	protected void initJarUrl()
+	{
+		if (this.parsedOptions.has(this.jarOption))
+		{
+			try
+			{
+				String jarPath = this.jarOption.value(this.parsedOptions);
+				if (jarPath.matches("^[0-9\\.]+$")) jarPath = String.format("versions/%1$s/%1$s.jar", jarPath);
+				this.jarFile = new File(jarPath);
+				this.jarUrl = this.jarFile.toURI().toURL();
+			}
+			catch (Exception ex)
+			{
+				ex.printStackTrace();
+			}
+		}
+		else
+		{
+			URL[] urls = Launch.classLoader.getURLs();
+			this.jarUrl = urls[urls.length - 1];
+		}
 	}
 
 	/**
@@ -188,7 +224,7 @@ public class LiteLoaderTweaker implements ITweaker
 	@Override
 	public void injectIntoClassLoader(LaunchClassLoader classLoader)
 	{
-		this.sortPacketTransformers(classLoader, this.injectTransformers);
+		this.sieveAndSortPacketTransformers(classLoader, this.injectTransformers);
 		
 		for (String requiredTransformerClassName : LiteLoaderTweaker.requiredTransformers)
 		{
@@ -217,7 +253,7 @@ public class LiteLoaderTweaker implements ITweaker
 	}
 	
 	@SuppressWarnings("unchecked")
-	private void sortPacketTransformers(LaunchClassLoader classLoader, Set<String> transformers)
+	private void sieveAndSortPacketTransformers(LaunchClassLoader classLoader, Set<String> transformers)
 	{
 		LiteLoaderTweaker.logger.info("Sorting registered packet transformers by priority");
 		int registeredTransformers = 0;
