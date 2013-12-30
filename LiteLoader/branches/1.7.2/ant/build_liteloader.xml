@@ -214,5 +214,11 @@
 			<fileset dir="${stage.dir}" />
 		</jar>
 	</target>
-
+	
+	<property environment="env" />
+	
+	<target name="deploy" depends="rebuild" description="Deploy artifact to local minecraft installation in APPDATA">
+		<mkdir dir="${env.APPDATA}/.minecraft/libraries/com/mumfrey/liteloader/1.7.2"/>
+		<copy todir="${env.APPDATA}/.minecraft/libraries/com/mumfrey/liteloader/1.7.2" file="${dist.dir}/${ant.project.name}-${mcversion}.${filetype}" failonerror="false" overwrite="true" />
+	</target>
 </project>
