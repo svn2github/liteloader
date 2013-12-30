@@ -52,6 +52,8 @@ public class PrivateFields<P, T>
 	 */
 	private final String fieldName;
 	
+	private boolean errorReported = false;
+	
 	/**
 	 * Creates a new private field entry
 	 * 
@@ -86,6 +88,11 @@ public class PrivateFields<P, T>
 		}
 		catch (Exception ex)
 		{
+			if (!this.errorReported)
+			{
+				this.errorReported = true;
+				ex.printStackTrace();
+			}
 			return null;
 		}
 	}
@@ -105,7 +112,14 @@ public class PrivateFields<P, T>
 			field.setAccessible(true);
 			field.set(instance, value);
 		}
-		catch (Exception ex) { }
+		catch (Exception ex)
+		{
+			if (!this.errorReported)
+			{
+				this.errorReported = true;
+				ex.printStackTrace();
+			}
+		}
 		
 		return value;
 	}
@@ -129,7 +143,14 @@ public class PrivateFields<P, T>
 			field.setAccessible(true);
 			field.set(instance, value);
 		}
-		catch (Exception ex) { }
+		catch (Exception ex)
+		{
+			if (!this.errorReported)
+			{
+				this.errorReported = true;
+				ex.printStackTrace();
+			}
+		}
 		
 		return value;
 	}

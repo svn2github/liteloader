@@ -28,10 +28,24 @@ public abstract class ModUtilities
 	 */
 	private static boolean fmlDetected = false;
 	
+	private static boolean seargeNames = false;
+	
 	static
 	{
 		// Check for FML
 		ModUtilities.fmlDetected = ModUtilities.fmlIsPresent();
+
+		try
+		{
+			Minecraft.class.getDeclaredField("running");
+		}
+		catch (SecurityException ex)
+		{
+		}
+		catch (NoSuchFieldException ex)
+		{
+			ModUtilities.seargeNames = true;
+		}
 	}
 
 	/**
@@ -70,7 +84,7 @@ public abstract class ModUtilities
 	public static String getObfuscatedFieldName(String fieldName, String obfuscatedFieldName, String seargeFieldName)
 	{
 		boolean deobfuscated = Tessellator.class.getSimpleName().equals("Tessellator");
-		return deobfuscated ? fieldName : (ModUtilities.fmlDetected ? seargeFieldName : obfuscatedFieldName);
+		return deobfuscated ? (ModUtilities.seargeNames ? seargeFieldName : fieldName) : (ModUtilities.fmlDetected ? seargeFieldName : obfuscatedFieldName);
 	}
 
 	/**

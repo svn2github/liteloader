@@ -74,6 +74,8 @@ public class LiteLoaderTweaker implements ITweaker
 	private Set<String> injectTransformers = new HashSet<String>();
 	
 	private Map<String, TreeSet<PacketTransformerInfo>> packetTransformers = new HashMap<String, TreeSet<PacketTransformerInfo>>();
+
+	private boolean isPrimary;
 	
 	private static final String[] requiredTransformers = {
 		"com.mumfrey.liteloader.launch.LiteLoaderTransformer",
@@ -232,12 +234,6 @@ public class LiteLoaderTweaker implements ITweaker
 			classLoader.registerTransformer(requiredTransformerClassName);
 		}
 		
-		for (String transformerClassName : this.injectTransformers)
-		{
-			LiteLoaderTweaker.logger.info(String.format("Injecting additional class transformer class '%s'", transformerClassName));
-			classLoader.registerTransformer(transformerClassName);
-		}
-		
 		for (Entry<String, TreeSet<PacketTransformerInfo>> packetClassTransformers : this.packetTransformers.entrySet())
 		{
 			for (PacketTransformerInfo transformerInfo : packetClassTransformers.getValue())
@@ -248,8 +244,19 @@ public class LiteLoaderTweaker implements ITweaker
 				classLoader.registerTransformer(transformerInfo.getTransformerClassName());
 			}
 		}
+	}
+
+	private void injectModTransformers()
+	{
+		LiteLoaderTweaker.logger.info("Injecting downstream transformers");
+
+		for (String transformerClassName : LiteLoaderTweaker.instance.injectTransformers)
+		{
+			LiteLoaderTweaker.logger.info(String.format("Injecting additional class transformer class '%s'", transformerClassName));
+			Launch.classLoader.registerTransformer(transformerClassName);
+		}
 		
-		this.injectTransformers.clear();
+		LiteLoaderTweaker.instance.injectTransformers.clear();
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -308,6 +315,9 @@ public class LiteLoaderTweaker implements ITweaker
 	@Override
 	public String getLaunchTarget()
 	{
+		this.isPrimary = true;
+		LiteLoaderTweaker.preBeginGame();
+		
 		return "net.minecraft.client.main.Main";
 	}
 
@@ -402,8 +412,6 @@ public class LiteLoaderTweaker implements ITweaker
 	 */
 	private void preInit()
 	{
-		if (!this.preInit) throw new IllegalStateException("Attempt to perform LiteLoader PreInit but PreInit was already completed");
-		
 		try
 		{
 			LiteLoaderTweaker.logger.info("Bootstrapping LiteLoader " + LiteLoaderTweaker.VERSION);
@@ -416,6 +424,11 @@ public class LiteLoaderTweaker implements ITweaker
 		{
 			LiteLoaderTweaker.logger.log(Level.SEVERE, String.format("Error during LiteLoader PreInit: %s", th.getMessage()), th);
 		}
+	}
+	
+	public static void preBeginGame()
+	{
+		LiteLoaderTweaker.instance.injectModTransformers();
 	}
 
 	/**
@@ -457,5 +470,10 @@ public class LiteLoaderTweaker implements ITweaker
 	public static URL getJarUrl()
 	{
 		return LiteLoaderTweaker.instance.jarUrl;
+	}
+	
+	public static boolean isPrimary()
+	{
+		return LiteLoaderTweaker.instance.isPrimary;
 	}
 }

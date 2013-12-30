@@ -33,6 +33,7 @@ import net.minecraft.world.World;
 import org.lwjgl.input.Keyboard;
 
 import com.mumfrey.liteloader.LiteMod;
+import com.mumfrey.liteloader.crashreport.CallableLaunchWrapper;
 import com.mumfrey.liteloader.crashreport.CallableLiteLoaderBrand;
 import com.mumfrey.liteloader.crashreport.CallableLiteLoaderMods;
 import com.mumfrey.liteloader.gui.GuiScreenModInfo;
@@ -46,7 +47,7 @@ import com.mumfrey.liteloader.util.PrivateFields;
  * lightweight mods
  * 
  * @author Adam Mummery-Smith
- * @version 1.7.2_00
+ * @version 1.7.2_01
  */
 public final class LiteLoader
 {
@@ -1209,6 +1210,7 @@ public final class LiteLoader
 			CrashReport crashReport = (CrashReport)objCrashReport;
 			crashReport.getCategory().addCrashSectionCallable("Mod Pack",        new CallableLiteLoaderBrand(crashReport));
 			crashReport.getCategory().addCrashSectionCallable("LiteLoader Mods", new CallableLiteLoaderMods(crashReport));
+			crashReport.getCategory().addCrashSectionCallable("LaunchWrapper",   new CallableLaunchWrapper(crashReport));
 		}
 	}
 }
