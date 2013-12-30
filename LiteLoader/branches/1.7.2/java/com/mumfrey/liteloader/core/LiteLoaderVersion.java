@@ -7,7 +7,7 @@ import java.util.Set;
  * LiteLoader version table
  *
  * @author Adam Mummery-Smith
- * @version 1.7.2_00
+ * @version 1.7.2_01
  */
 public enum LiteLoaderVersion
 {
@@ -26,7 +26,7 @@ public enum LiteLoaderVersion
 	MC_1_6_4_R1(18, "1.6.4", "1.6.4_01", "1.6.4", "1.6.r4"),
 	MC_1_6_4_R2(19, "1.6.4", "1.6.4_02", "1.6.4", "1.6.r4"),
 	MC_1_7_2_R0(20, "1.7.2", "1.7.2",    "1.7.2", "1.7.r1"),
-	MC_1_7_2_R1(21, "1.7.2", "1.7.2_01", "1.7.2", "1.7.r1");
+	MC_1_7_2_R1(21, "1.7.2", "1.7.2_01", "1.7.2_01");
 	
 	private int revision;
 	
