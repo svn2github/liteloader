@@ -4,10 +4,10 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
 
 import com.mumfrey.liteloader.LiteMod;
-import com.mumfrey.liteloader.core.ClassPathMod;
 import com.mumfrey.liteloader.core.EnabledModsList;
 import com.mumfrey.liteloader.core.LiteLoader;
-import com.mumfrey.liteloader.core.ModFile;
+import com.mumfrey.liteloader.core.Loadable;
+import com.mumfrey.liteloader.core.LoadableMod;
 
 /**
  * Represents a mod in the mod info screen, keeps track of mod information and provides methods
@@ -47,17 +47,17 @@ public class GuiModListEntry extends Gui
 	/**
 	 * Mod author, from the metadata
 	 */
-	private String author;
+	private String author = "Unknown";
 	
 	/**
 	 * Mod URL, from the metadata
 	 */
-	private String url;
+	private String url = null;
 	
 	/**
 	 * Mod description, from metadata
 	 */
-	private String description;
+	private String description = "";
 	
 	/**
 	 * Whether the mod is currently active
@@ -79,6 +79,8 @@ public class GuiModListEntry extends Gui
 	 * True if the mouse was over this mod on the last render
 	 */
 	private boolean mouseOver;
+	
+	private boolean external;
 	
 	/**
 	 * Mod list entry for an ACTIVE mod
@@ -110,20 +112,25 @@ public class GuiModListEntry extends Gui
 	 * @param loader
 	 * @param enabledMods
 	 * @param fontRenderer
-	 * @param file
+	 * @param mod
 	 */
-	GuiModListEntry(LiteLoader loader, EnabledModsList enabledMods, FontRenderer fontRenderer, ModFile file)
+	GuiModListEntry(LiteLoader loader, EnabledModsList enabledMods, FontRenderer fontRenderer, Loadable<?> mod)
 	{
 		this.fontRenderer    = fontRenderer;
-		this.metaName        = file.getModName().toLowerCase();
-		this.name            = file instanceof ClassPathMod ? file.getModName() : file.getName();
-		this.version         = file.getVersion();
-		this.author          = file.getMetaValue("author", "Unknown");
-		this.url             = file.getMetaValue("url", null);
-		this.description     = file.getMetaValue("description", "");
-		this.enabled         = false;
-		this.canBeToggled    = enabledMods.saveAllowed();
+		this.metaName        = mod.getIdentifier().toLowerCase();
+		this.name            = mod.getDisplayName();
+		this.version         = mod.getVersion();
+		this.enabled         = mod.isEnabled(enabledMods, LiteLoader.getProfile());
+		this.canBeToggled    = mod.isToggleable() && enabledMods.saveAllowed();
 		this.willBeEnabled   = enabledMods.isEnabled(loader.getProfile(), this.metaName);
+		this.external        = mod.isExternalJar();
+		
+		if (mod instanceof LoadableMod<?>)
+		{
+			this.author          = ((LoadableMod<?>)mod).getMetaValue("author", "Unknown");
+			this.url             = ((LoadableMod<?>)mod).getMetaValue("url", null);
+			this.description     = ((LoadableMod<?>)mod).getMetaValue("description", "");
+		}
 	}
 	
 	/**
@@ -140,13 +147,13 @@ public class GuiModListEntry extends Gui
 	 */
 	public int drawListEntry(int mouseX, int mouseY, float partialTicks, int xPosition, int yPosition, int width, boolean selected)
 	{
-		int colour1 = selected ? 0xB04785D1 : 0xB0000000;
+		int colour1 = selected ? (this.external ? 0xB047d1aa : 0xB04785D1) : 0xB0000000;
 		drawGradientRect(xPosition, yPosition, xPosition + width, yPosition + PANEL_HEIGHT, colour1, 0xB0333333);
 		
-		this.fontRenderer.drawString(this.name, xPosition + 5, yPosition + 2, this.enabled ? 0xFFFFFFFF : 0xFF999999);
+		this.fontRenderer.drawString(this.name, xPosition + 5, yPosition + 2, this.enabled ? (this.external ? 0xFF47d1aa : 0xFFFFFFFF) : 0xFF999999);
 		this.fontRenderer.drawString("Version " + this.version, xPosition + 5, yPosition + 12, 0xFF999999);
 		
-		String status = "Active";
+		String status = this.external ? "Loaded" : "Active";
 		
 		if (this.canBeToggled)
 		{
@@ -155,7 +162,7 @@ public class GuiModListEntry extends Gui
 			if ( this.enabled && !this.willBeEnabled) status = "\247cDisabled on next startup";
 		}
 		
-		this.fontRenderer.drawString(status, xPosition + 5, yPosition + 22, 0xFF4785D1);
+		this.fontRenderer.drawString(status, xPosition + 5, yPosition + 22, this.external ? 0xB047d1aa : 0xFF4785D1);
 		
 		this.mouseOver = mouseX > xPosition && mouseX < xPosition + width && mouseY > yPosition && mouseY < yPosition + PANEL_HEIGHT; 
 		drawRect(xPosition, yPosition, xPosition + 1, yPosition + PANEL_HEIGHT, this.mouseOver ? 0xFFFFFFFF : 0xFF999999);

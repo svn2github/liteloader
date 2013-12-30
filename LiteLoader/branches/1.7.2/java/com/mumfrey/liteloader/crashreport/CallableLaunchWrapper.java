@@ -34,7 +34,7 @@ public class CallableLaunchWrapper implements Callable<String>
 		
 		StringBuilder sb = new StringBuilder();
 		sb.append(transformers.size());
-		sb.append(" active transformer(s)\n");
+		sb.append(" active transformer(s)");
 		
 		for (IClassTransformer transformer : transformers)
 		{

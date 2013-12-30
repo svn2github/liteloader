@@ -14,8 +14,9 @@ import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import joptsimple.internal.Strings;
 import net.minecraft.launchwrapper.LaunchClassLoader;
+
+import joptsimple.internal.Strings;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -30,7 +31,7 @@ import com.mumfrey.liteloader.resources.ModResourcePack;
  *
  * @author Adam Mummery-Smith
  */
-public class ModFile extends File
+public class ModFile extends TweakContainer implements LoadableMod<File>
 {
 	private static final long serialVersionUID = -7952147161905688459L;
 
@@ -55,11 +56,6 @@ public class ModFile extends File
 	 * Loader version
 	 */
 	protected String targetVersion;
-	
-	/**
-	 * Name of the tweak class
-	 */
-	protected String tweakClassName;
 	
 	/**
 	 * Name of the class transof
@@ -90,18 +86,6 @@ public class ModFile extends File
 	 * ALL of the parsed metadata from the file, associated with the mod later on for retrieval via the loader
 	 */
 	protected Map<String, String> metaData = new HashMap<String, String>();
-
-	/**
-	 * True once this file has been injected into the class path 
-	 */
-	private boolean injected;
-	
-	/**
-	 * Position to inject the mod file at in the class path, if blank injects at the bottom as usual, alternatively
-	 * the developer can specify "top" to inject at the top, "base" to inject above the game jar, or "above: name" to
-	 * inject above a specified other library matching "name".
-	 */
-	private String injectAt;
 	
 	/**
 	 * @param file
@@ -175,66 +159,79 @@ public class ModFile extends File
 		return this.getName().replaceAll("[^a-zA-Z]", "");
 	}
 	
+	@Override
 	public String getModName()
 	{
 		return this.modName;
 	}
 	
-	public String getModMetaName()
+	@Override
+	public String getIdentifier()
 	{
 		return this.modName.toLowerCase();
 	}
 	
+	@Override
+	public String getDisplayName()
+	{
+		return this.getName();
+	}
+	
+	@Override
+	public boolean isExternalJar()
+	{
+		return false;
+	}
+	
+	@Override
+	public boolean isToggleable()
+	{
+		return true;
+	}
+	
+	@Override
 	public boolean isValid()
 	{
 		return this.valid;
 	}
 	
+	@Override
 	public String getVersion()
 	{
 		return this.targetVersion;
 	}
 	
+	@Override
 	public float getRevision()
 	{
 		return this.revision;
 	}
 	
+	@Override
 	public String getMetaValue(String metaKey, String defaultValue)
 	{
 		return this.metaData.containsKey(metaKey) ? this.metaData.get(metaKey) : defaultValue;
 	}
 
+	@Override
 	public Map<String, String> getMetaData()
 	{
 		return this.metaData;
 	}
 	
-	public boolean hasTweakClass()
-	{
-		return this.tweakClassName != null;
-	}
-	
-	public String getTweakClassName()
-	{
-		return this.tweakClassName;
-	}
-	
+	@Override
 	public boolean hasClassTransformers()
 	{
 		return this.classTransformerClassNames.size() > 0;
 	}
 	
+	@Override
 	public List<String> getClassTransformerClassNames()
 	{
 		return this.classTransformerClassNames;
 	}
 	
-	public boolean isInjected()
-	{
-		return this.injected;
-	}
-	
+	@Override
 	public boolean injectIntoClassPath(LaunchClassLoader classLoader, boolean injectIntoParent) throws MalformedURLException
 	{
 		if (!this.injected)
@@ -264,7 +261,8 @@ public class ModFile extends File
 		
 		return false;
 	}
-	
+
+	@Override
 	@SuppressWarnings("unchecked")
 	public <T> T getResourcePack()
 	{
@@ -276,6 +274,7 @@ public class ModFile extends File
 	 * 
 	 * @param name
 	 */
+	@Override
 	public void initResourcePack(String name)
 	{
 		if (this.resourcePack == null)
@@ -291,6 +290,7 @@ public class ModFile extends File
 	 * @param name
 	 * @return true if the pack was added
 	 */
+	@Override
 	public boolean hasResourcePack()
 	{
 		return (this.resourcePack != null);

@@ -18,8 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeSet;
-import java.util.jar.Attributes;
-import java.util.jar.JarFile;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
@@ -87,6 +85,11 @@ class LiteLoaderEnumerator implements FilenameFilter
 	private final List<ModFile> allModFiles = new ArrayList<ModFile>();
 	
 	/**
+	 * Other tweak-containing jars which we have injected 
+	 */
+	private final List<TweakContainer> injectedTweaks = new ArrayList<TweakContainer>();
+	
+	/**
 	 * Mod metadata from version file 
 	 */
 	private final Map<String, ModFile> modFiles = new HashMap<String, ModFile>();
@@ -141,6 +144,14 @@ class LiteLoaderEnumerator implements FilenameFilter
 	{
 		return this.modsToLoad.values();
 	}
+	
+	/**
+	 * Get the list of injected tweak containers
+	 */
+	public List<TweakContainer> getInjectedTweaks()
+	{
+		return this.injectedTweaks;
+	}
 
 	/**
 	 * Get the number of mods to load
@@ -191,7 +202,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 	{
 		String modClassName = modClass.getSimpleName();
 		if (!this.modFiles.containsKey(modClassName)) return null;
-		return this.modFiles.get(modClassName).getModMetaName();
+		return this.modFiles.get(modClassName).getIdentifier();
 	}
 	
 	/**
@@ -331,7 +342,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 			
 			if (classPathMod.hasTweakClass() || classPathMod.hasClassTransformers())
 			{
-				this.addTweaksFromMod(classPathMod);
+				this.addTweaksFrom(classPathMod);
 			}
 		}
 	}
@@ -412,7 +423,8 @@ class LiteLoaderEnumerator implements FilenameFilter
 				}
 				else if (isVersionedModFolder && this.loadTweaks && this.readJarFiles && modFile.getName().toLowerCase().endsWith(".jar"))
 				{
-					this.addTweaksFromJar(modFile);
+					TweakContainer container = new TweakContainer(modFile);
+					this.addTweaksFrom(container);
 				}
 				
 				modZip.close();
@@ -435,7 +447,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 			{
 				try
 				{
-					this.addTweaksFromMod(newestVersion);
+					this.addTweaksFrom(newestVersion);
 				}
 				catch (Throwable th)
 				{
@@ -445,83 +457,42 @@ class LiteLoaderEnumerator implements FilenameFilter
 		}
 	}
 	
-	private void addTweaksFromMod(ModFile modFile)
+	private void addTweaksFrom(TweakContainer container)
 	{
-		if (!this.enabledModsList.isEnabled(this.bootstrap.getProfile(), modFile.getModMetaName()))
+		if (!container.isEnabled(this.enabledModsList, this.bootstrap.getProfile()))
 		{
-			LiteLoaderEnumerator.logInfo("Mod %s is disabled for profile %s, not injecting tranformers", modFile.getModMetaName(), this.bootstrap.getProfile());
+			LiteLoaderEnumerator.logInfo("Mod %s is disabled for profile %s, not injecting tranformers", container.getIdentifier(), this.bootstrap.getProfile());
 			return;
 		}
 		
-		if (modFile.hasTweakClass())
+		if (container.hasTweakClass())
 		{
-			this.addTweakFrom(modFile, modFile.getTweakClassName(), null);
-		}
-		else if (modFile.isFile())
-		{
-			this.addTweaksFromJar(modFile);
+			this.addTweakFrom(container);
 		}
 		
-		if (modFile.hasClassTransformers())
+		if (container.hasClassTransformers())
 		{
-			this.addClassTransformersFrom(modFile, modFile.getClassTransformerClassNames());
+			this.addClassTransformersFrom(container, container.getClassTransformerClassNames());
 		}
 	}
 
-	/**
-	 * @param jarFile
-	 * @throws IOException
-	 */
-	private void addTweaksFromJar(File jarFile)
-	{
-		JarFile jar = null;
-		
-		try
-		{
-			jar = new JarFile(jarFile);
-			if (jar.getManifest() != null)
-			{
-				LiteLoaderEnumerator.logInfo("Searching for tweaks in '%s'", jarFile.getName());
-				Attributes manifestAttributes = jar.getManifest().getMainAttributes();
-				
-				String tweakClass = manifestAttributes.getValue("TweakClass");
-				if (tweakClass != null)
-				{
-					String[] classPathEntries = null;
-					String classPath = manifestAttributes.getValue("Class-Path");
-					if (classPath != null)
-					{
-						classPathEntries = classPath.split(" ");
-					}
-					
-					this.addTweakFrom(jarFile, tweakClass, classPathEntries);
-				}
-			}
-		}
-		catch (Exception ex)
-		{
-			LiteLoaderEnumerator.logWarning("Error parsing tweak class manifest entry in '%s'", jarFile.getAbsolutePath());
-		}
-		finally
-		{
-			try
-			{
-				if (jar != null) jar.close();
-			}
-			catch (IOException ex) {}
-		}
-	}
-	
-	private void addTweakFrom(File jarFile, String tweakClass, String[] classPathEntries)
+	private void addTweakFrom(TweakContainer container)
 	{
 		try
 		{
-			LiteLoaderEnumerator.logInfo("Mod file '%s' provides tweakClass '%s', adding to Launch queue", jarFile.getName(), tweakClass);
+			String tweakClass = container.getTweakClassName();
+			LiteLoaderEnumerator.logInfo("Mod file '%s' provides tweakClass '%s', adding to Launch queue", container.getName(), tweakClass);
 			if (LiteLoaderTweaker.addTweaker(tweakClass))
 			{
 				LiteLoaderEnumerator.logInfo("tweakClass '%s' was successfully added", tweakClass);
-				this.injectIntoClassLoader(jarFile);
+				container.injectIntoClassPath(this.classLoader, true);
 				
+				if (container.isExternalJar())
+				{
+					this.injectedTweaks.add(container);
+				}
+				
+				String[] classPathEntries = container.getClassPathEntries();
 				if (classPathEntries != null)
 				{
 					for (String classPathEntry : classPathEntries)
@@ -545,39 +516,22 @@ class LiteLoaderEnumerator implements FilenameFilter
 		}
 	}
 
-	private void addClassTransformersFrom(File jarFile, List<String> classTransformerClasses)
+	private void addClassTransformersFrom(TweakContainer container, List<String> classTransformerClasses)
 	{
 		try
 		{
 			for (String classTransformerClass : classTransformerClasses)
 			{
-				LiteLoaderEnumerator.logInfo("Mod file '%s' provides classTransformer '%s', adding to class loader", jarFile.getName(), classTransformerClass);
+				LiteLoaderEnumerator.logInfo("Mod file '%s' provides classTransformer '%s', adding to class loader", container.getName(), classTransformerClass);
 				if (LiteLoaderTweaker.addClassTransformer(classTransformerClass))
 				{
 					LiteLoaderEnumerator.logInfo("classTransformer '%s' was successfully added", classTransformerClass);
-					this.injectIntoClassLoader(jarFile);
+					container.injectIntoClassPath(this.classLoader, true);
 				}
 			}
 		}
 		catch (MalformedURLException ex)
 		{
-		}
-	}
-	
-	/**
-	 * @param jarFile
-	 * @throws MalformedURLException
-	 */
-	private void injectIntoClassLoader(File jarFile) throws MalformedURLException
-	{
-		if (jarFile instanceof ModFile)
-		{
-			((ModFile)jarFile).injectIntoClassPath(this.classLoader, true);
-		}
-		else
-		{
-			LiteLoaderTweaker.addURLToParentClassLoader(jarFile.toURI().toURL());
-			this.classLoader.addURL(jarFile.toURI().toURL());
 		}
 	}
 	

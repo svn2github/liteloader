@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -133,7 +134,7 @@ public final class LiteLoader
 	/**
 	 * Mods which are loaded but disabled
 	 */
-	private final LinkedList<ModFile> disabledMods = new LinkedList<ModFile>();
+	private final LinkedList<Loadable<?>> disabledMods = new LinkedList<Loadable<?>>();
 	
 	/**
 	 * Event manager
@@ -441,6 +442,16 @@ public final class LiteLoader
 	}
 	
 	/**
+	 * Get LiteLoader version
+	 * 
+	 * @return
+	 */
+	public static final String getVersionDisplayString()
+	{
+		return String.format("LiteLoader %s", LiteLoaderBootstrap.VERSION.getLoaderVersion());
+	}
+	
+	/**
 	 * Get the loader revision
 	 * 
 	 * @return
@@ -527,6 +538,16 @@ public final class LiteLoader
 	}
 	
 	/**
+	 * Used to get the name of the modpack being used
+	 * 
+	 * @return name of the modpack in use or null if no pack
+	 */
+	public static String getBranding()
+	{
+		return LiteLoader.getInstance().bootstrap.getBranding();
+	}
+	
+	/**
 	 * @return
 	 */
 	public static boolean isDevelopmentEnvironment()
@@ -555,21 +576,18 @@ public final class LiteLoader
 	/**
 	 * Get a list containing all mod files which were NOT loaded
 	 */
-	public List<ModFile> getDisabledMods()
+	public List<Loadable<?>> getDisabledMods()
 	{
 		return Collections.unmodifiableList(this.disabledMods);
 	}
-	
 	/**
-	 * Used to get the name of the modpack being used
-	 * 
-	 * @return name of the modpack in use or null if no pack
+	 * Get the list of injected tweak containers
 	 */
-	public String getBranding()
+	public Collection<TweakContainer> getInjectedTweaks()
 	{
-		return this.bootstrap.getBranding();
+		return Collections.unmodifiableCollection(this.enumerator.getInjectedTweaks());
 	}
-	
+
 	/**
 	 * Get a reference to a loaded mod, if the mod exists
 	 * 

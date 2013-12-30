@@ -26,7 +26,8 @@ import org.lwjgl.input.Mouse;
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.core.EnabledModsList;
 import com.mumfrey.liteloader.core.LiteLoader;
-import com.mumfrey.liteloader.core.ModFile;
+import com.mumfrey.liteloader.core.Loadable;
+import com.mumfrey.liteloader.core.TweakContainer;
 import com.mumfrey.liteloader.modconfig.ConfigManager;
 import com.mumfrey.liteloader.modconfig.ConfigPanel;
 
@@ -195,12 +196,19 @@ public class GuiScreenModInfo extends GuiScreen
 		}
 		
 		// Disabled mods
-		for (ModFile disabledMod : loader.getDisabledMods())
+		for (Loadable<?> disabledMod : loader.getDisabledMods())
 		{
 			GuiModListEntry modListEntry = new GuiModListEntry(loader, enabledModsList, this.mc.fontRenderer, disabledMod);
 			sortedMods.put(modListEntry.getKey(), modListEntry);
 		}
 
+		// Injected tweaks
+		for (TweakContainer injectedTweak : loader.getInjectedTweaks())
+		{
+			GuiModListEntry modListEntry = new GuiModListEntry(loader, enabledModsList, this.mc.fontRenderer, injectedTweak);
+			sortedMods.put(modListEntry.getKey(), modListEntry);
+		}
+		
 		// Add the sorted mods to the mods list
 		this.mods.addAll(sortedMods.values());
 		
@@ -349,7 +357,8 @@ public class GuiScreenModInfo extends GuiScreen
 		
 		if (mouseOverTab && this.tweenAmount < 0.01)
 		{
-			this.drawTooltip("LiteLoader Mods", mouseX, mouseY, this.width - TAB_WIDTH - 2, this.height, 0xFFFFFF, 0xB0000000);
+			this.drawTooltip(LiteLoader.getVersionDisplayString(), mouseX, mouseY, this.width, this.height, 0xFFFFFF, 0xB0000000);
+			this.drawTooltip(this.activeModText, mouseX, mouseY + 13, this.width, this.height, 0xCCCCCC, 0xB0000000);
 		}
 	}
 
@@ -814,11 +823,10 @@ public class GuiScreenModInfo extends GuiScreen
 	protected void drawTooltip(String tooltipText, int mouseX, int mouseY, int screenWidth, int screenHeight, int colour, int backgroundColour)
 	{
 		int textSize = this.fontRenderer.getStringWidth(tooltipText);
-		mouseX = Math.max(0, Math.min(screenWidth - textSize - 6, mouseX - 6));
-		mouseY = Math.max(0, Math.min(screenHeight - 16, mouseY - 18));
-		
-		drawRect(mouseX, mouseY, mouseX + textSize + 6, mouseY + 16, backgroundColour);
-		this.fontRenderer.drawStringWithShadow(tooltipText, mouseX + 3, mouseY + 4, colour);
+		mouseX = Math.max(0, Math.min(screenWidth - 4, mouseX - 4));
+		mouseY = Math.max(0, Math.min(screenHeight - 16, mouseY));
+		drawRect(mouseX - textSize - 2, mouseY, mouseX + 2, mouseY + 12, backgroundColour);
+		this.fontRenderer.drawStringWithShadow(tooltipText, mouseX - textSize, mouseY + 2, colour);
 	}
 
 	

@@ -40,6 +40,12 @@ public class ClassPathMod extends ModFile
 	}
 	
 	@Override
+	public String getDisplayName()
+	{
+		return this.getModName();
+	}
+
+	@Override
 	public void initResourcePack(String name)
 	{
 		if (this.resourcePack == null)
