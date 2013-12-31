@@ -338,11 +338,14 @@ class LiteLoaderEnumerator implements FilenameFilter
 		for (String classPathPart : this.classPathEntries)
 		{
 			File packagePath = new File(classPathPart);
-			ClassPathMod classPathMod = new ClassPathMod(packagePath, null);
-			
-			if (classPathMod.hasTweakClass() || classPathMod.hasClassTransformers())
+			if (packagePath.exists())
 			{
-				this.addTweaksFrom(classPathMod);
+				ClassPathMod classPathMod = new ClassPathMod(packagePath, null);
+				
+				if (classPathMod.hasTweakClass() || classPathMod.hasClassTransformers())
+				{
+					this.addTweaksFrom(classPathMod);
+				}
 			}
 		}
 	}
