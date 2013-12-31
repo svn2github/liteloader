@@ -53,7 +53,7 @@ public class TweakContainer extends File implements Loadable<File>, Injectable
 
 	protected String version = "Unknown";
 
-	protected String author;
+	protected String author = "Unknown";
 
 	/**
 	 * Create a new tweak container wrapping the specified file
@@ -114,7 +114,7 @@ public class TweakContainer extends File implements Loadable<File>, Injectable
 					this.version = manifestAttributes.getValue("TweakVersion");
 				
 				if (manifestAttributes.getValue("TweakAuthor") != null)
-					this.version = manifestAttributes.getValue("TweakAuthor");
+					this.author = manifestAttributes.getValue("TweakAuthor");
 			}
 		}
 		catch (Exception ex)

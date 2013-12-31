@@ -344,17 +344,27 @@ public class LiteLoaderTweaker implements ITweaker
 	@SuppressWarnings("unchecked")
 	public static boolean addTweaker(String tweakClass)
 	{
-		if (!LiteLoaderTweaker.instance.preInit)
+		List<String> tweakClasses = (List<String>)Launch.blackboard.get("TweakClasses");
+		List<ITweaker> tweakers = (List<ITweaker>)Launch.blackboard.get("Tweaks");
+		if (tweakClasses != null && tweakers != null)
 		{
-			LiteLoaderTweaker.logger.warning(String.format("Failed to add tweak class %s because preInit is already complete", tweakClass));
-			return false;
-		}
-		
-		List<String> tweakers = (List<String>)Launch.blackboard.get("TweakClasses");
-		if (tweakers != null)
-		{
-			tweakers.add(tweakClass);
-			return true;
+			if (!tweakClasses.contains(tweakClass))
+			{
+				if (!LiteLoaderTweaker.instance.preInit)
+				{
+					LiteLoaderTweaker.logger.warning(String.format("Failed to add tweak class %s because preInit is already complete", tweakClass));
+					return false;
+				}
+				
+				for (ITweaker existingTweaker : tweakers)
+				{
+					if (tweakClass.equals(existingTweaker.getClass().getName()))
+						return false;
+				}
+				
+				tweakClasses.add(tweakClass);
+				return true;
+			}
 		}
 		
 		return false;
