@@ -120,6 +120,7 @@ public class GuiModListEntry extends Gui
 		this.metaName        = mod.getIdentifier().toLowerCase();
 		this.name            = mod.getDisplayName();
 		this.version         = mod.getVersion();
+		this.author          = mod.getAuthor();
 		this.enabled         = mod.isEnabled(enabledMods, LiteLoader.getProfile());
 		this.canBeToggled    = mod.isToggleable() && enabledMods.saveAllowed();
 		this.willBeEnabled   = enabledMods.isEnabled(loader.getProfile(), this.metaName);
@@ -127,7 +128,6 @@ public class GuiModListEntry extends Gui
 		
 		if (mod instanceof LoadableMod<?>)
 		{
-			this.author          = ((LoadableMod<?>)mod).getMetaValue("author", "Unknown");
 			this.url             = ((LoadableMod<?>)mod).getMetaValue("url", null);
 			this.description     = ((LoadableMod<?>)mod).getMetaValue("description", "");
 		}

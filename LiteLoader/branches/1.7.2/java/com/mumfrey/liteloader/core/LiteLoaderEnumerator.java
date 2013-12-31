@@ -82,17 +82,17 @@ class LiteLoaderEnumerator implements FilenameFilter
 	/**
 	 * URLs to add once init is completed
 	 */
-	private final List<ModFile> allModFiles = new ArrayList<ModFile>();
+	private final List<LoadableMod<File>> allLoadableMods = new ArrayList<LoadableMod<File>>();
 	
 	/**
 	 * Other tweak-containing jars which we have injected 
 	 */
-	private final List<TweakContainer> injectedTweaks = new ArrayList<TweakContainer>();
+	private final List<Loadable<File>> injectedTweaks = new ArrayList<Loadable<File>>();
 	
 	/**
 	 * Mod metadata from version file 
 	 */
-	private final Map<String, ModFile> modFiles = new HashMap<String, ModFile>();
+	private final Map<String, LoadableMod<File>> modFiles = new HashMap<String, LoadableMod<File>>();
 	
 	/**
 	 * True if the loader is allowed to load tweak classes from mod files 
@@ -148,7 +148,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 	/**
 	 * Get the list of injected tweak containers
 	 */
-	public List<TweakContainer> getInjectedTweaks()
+	public List<Loadable<File>> getInjectedTweaks()
 	{
 		return this.injectedTweaks;
 	}
@@ -179,7 +179,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 	 */
 	public String getModMetaData(Class<? extends LiteMod> modClass, String metaDataKey, String defaultValue)
 	{
-		ModFile modFile = this.getModFile(modClass);
+		LoadableMod<File> modFile = this.getModFile(modClass);
 		return modFile != null ? modFile.getMetaValue(metaDataKey, defaultValue) : defaultValue;
 	}
 	
@@ -187,7 +187,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 	 * @param mod
 	 * @return
 	 */
-	public ModFile getModFile(Class<? extends LiteMod> modClass)
+	public LoadableMod<File> getModFile(Class<? extends LiteMod> modClass)
 	{
 		return this.modFiles.get(modClass.getSimpleName());
 	}
@@ -264,7 +264,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 					this.findModFiles(versionedModsFolder, true);
 				}
 				
-				LiteLoaderEnumerator.logInfo("Found %d mod file(s)", this.allModFiles.size());
+				LiteLoaderEnumerator.logInfo("Found %d mod file(s)", this.allLoadableMods.size());
 			}
 		}
 	}
@@ -296,18 +296,18 @@ class LiteLoaderEnumerator implements FilenameFilter
 	{
 		LiteLoaderEnumerator.logInfo("Injecting external mods into class path...");
 		
-		for (ModFile file : this.allModFiles)
+		for (LoadableMod<File> loadableMod : this.allLoadableMods)
 		{
 			try
 			{
-				if (file.injectIntoClassPath(this.classLoader, false))
+				if (loadableMod.injectIntoClassPath(this.classLoader, false))
 				{
-					LiteLoaderEnumerator.logInfo("Successfully injected mod file '%s' into classpath", file.getAbsolutePath());
+					LiteLoaderEnumerator.logInfo("Successfully injected mod file '%s' into classpath", loadableMod.getLocation());
 				}
 			}
 			catch (MalformedURLException ex)
 			{
-				LiteLoaderEnumerator.logWarning("Error injecting '%s' into classPath. The mod will not be loaded", file.getAbsolutePath());
+				LiteLoaderEnumerator.logWarning("Error injecting '%s' into classPath. The mod will not be loaded", loadableMod.getLocation());
 			}
 		}
 	}
@@ -371,13 +371,13 @@ class LiteLoaderEnumerator implements FilenameFilter
 	{
 		Map<String, TreeSet<ModFile>> versionOrderingSets = new HashMap<String, TreeSet<ModFile>>();
 		
-		for (File modFile : modFolder.listFiles(this))
+		for (File candidateFile : modFolder.listFiles(this))
 		{
 			try
 			{
-				ZipFile modZip = new ZipFile(modFile);
-				ZipEntry versionEntry = modZip.getEntry("litemod.json");
-				ZipEntry legacyVersionEntry = modZip.getEntry("version.txt");
+				ZipFile candidateZip = new ZipFile(candidateFile);
+				ZipEntry versionEntry = candidateZip.getEntry("litemod.json");
+				ZipEntry legacyVersionEntry = candidateZip.getEntry("version.txt");
 
 				// Check for a version file
 				if (versionEntry != null)
@@ -385,53 +385,53 @@ class LiteLoaderEnumerator implements FilenameFilter
 					String strVersion = null;
 					try
 					{
-						strVersion = ModFile.zipEntryToString(modZip, versionEntry);
+						strVersion = ModFile.zipEntryToString(candidateZip, versionEntry);
 					}
 					catch (IOException ex)
 					{
-						LiteLoaderEnumerator.logWarning("Error reading version data from %s", modZip.getName());
+						LiteLoaderEnumerator.logWarning("Error reading version data from %s", candidateZip.getName());
 					}
 					
 					if (strVersion != null)
 					{
-						ModFile modFileInfo = new ModFile(modFile, strVersion);
+						ModFile modFile = new ModFile(candidateFile, strVersion);
 						
-						if (modFileInfo.isValid())
+						if (modFile.hasValidMetaData())
 						{
 							// Only add the mod if the version matches, we add candidates to the versionOrderingSets in
 							// order to determine the most recent version available.
-							if (LiteLoaderBootstrap.VERSION.isVersionSupported(modFileInfo.getVersion()))
+							if (LiteLoaderBootstrap.VERSION.isVersionSupported(modFile.getTargetVersion()))
 							{
-								if (!versionOrderingSets.containsKey(modFileInfo.getName()))
+								if (!versionOrderingSets.containsKey(modFile.getName()))
 								{
-									versionOrderingSets.put(modFileInfo.getModName(), new TreeSet<ModFile>());
+									versionOrderingSets.put(modFile.getModName(), new TreeSet<ModFile>());
 								}
 								
-								LiteLoaderEnumerator.logInfo("Considering valid mod file: %s", modFileInfo.getAbsolutePath());
-								versionOrderingSets.get(modFileInfo.getModName()).add(modFileInfo);
+								LiteLoaderEnumerator.logInfo("Considering valid mod file: %s", modFile.getAbsolutePath());
+								versionOrderingSets.get(modFile.getModName()).add(modFile);
 							}
 							else
 							{
-								LiteLoaderEnumerator.logInfo("Not adding invalid or outdated mod file: %s", modFile.getAbsolutePath());
+								LiteLoaderEnumerator.logInfo("Not adding invalid or outdated mod file: %s", candidateFile.getAbsolutePath());
 							}
 						}
 					}
 				}
 				else if (legacyVersionEntry != null)
 				{
-					LiteLoaderEnumerator.logWarning("version.txt is no longer supported, ignoring outdated mod file: %s", modFile.getAbsolutePath());
+					LiteLoaderEnumerator.logWarning("version.txt is no longer supported, ignoring outdated mod file: %s", candidateFile.getAbsolutePath());
 				}
-				else if (isVersionedModFolder && this.loadTweaks && this.readJarFiles && modFile.getName().toLowerCase().endsWith(".jar"))
+				else if (isVersionedModFolder && this.loadTweaks && this.readJarFiles && candidateFile.getName().toLowerCase().endsWith(".jar"))
 				{
-					TweakContainer container = new TweakContainer(modFile);
+					TweakContainer container = new TweakContainer(candidateFile);
 					this.addTweaksFrom(container);
 				}
 				
-				modZip.close();
+				candidateZip.close();
 			}
 			catch (Exception ex)
 			{
-				LiteLoaderEnumerator.logInfo("Error enumerating '%s': Invalid zip file or error reading file", modFile.getAbsolutePath());
+				LiteLoaderEnumerator.logInfo("Error enumerating '%s': Invalid zip file or error reading file", candidateFile.getAbsolutePath());
 			}
 		}
 
@@ -441,7 +441,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 			ModFile newestVersion = modFileEntry.getValue().iterator().next();
 
 			LiteLoaderEnumerator.logInfo("Adding newest valid mod file '%s' at revision %.4f: ", newestVersion.getAbsolutePath(), newestVersion.getRevision());
-			this.allModFiles.add(newestVersion);
+			this.allLoadableMods.add(newestVersion);
 			
 			if (this.loadTweaks)
 			{
@@ -653,11 +653,11 @@ class LiteLoaderEnumerator implements FilenameFilter
 	@SuppressWarnings("unchecked")
 	private void findModsInFiles()
 	{
-		for (ModFile modFile : this.allModFiles)
+		for (LoadableMod<File> modFile : this.allLoadableMods)
 		{
-			LiteLoaderEnumerator.logInfo("Searching %s...", modFile.getAbsolutePath());
+			LiteLoaderEnumerator.logInfo("Searching %s...", modFile.getLocation());
 			
-			LinkedList<Class<?>> modClasses = LiteLoaderEnumerator.getSubclassesFor(modFile, this.classLoader, LiteMod.class, "LiteMod");
+			LinkedList<Class<?>> modClasses = LiteLoaderEnumerator.getSubclassesFor(modFile.getTarget(), this.classLoader, LiteMod.class, "LiteMod");
 			
 			for (Class<?> mod : modClasses)
 			{

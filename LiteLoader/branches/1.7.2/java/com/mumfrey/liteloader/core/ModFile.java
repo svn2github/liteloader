@@ -7,9 +7,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -115,6 +117,8 @@ public class ModFile extends TweakContainer implements LoadableMod<File>
 		}
 		
 		this.modName = this.metaData.get("name");
+		this.version = this.getMetaValue("version", "Unknown");
+		this.author = this.getMetaValue("author", "Unknown");
 		this.targetVersion = this.metaData.get("mcversion");
 		if (this.targetVersion == null)
 		{
@@ -190,13 +194,13 @@ public class ModFile extends TweakContainer implements LoadableMod<File>
 	}
 	
 	@Override
-	public boolean isValid()
+	public boolean hasValidMetaData()
 	{
 		return this.valid;
 	}
 	
 	@Override
-	public String getVersion()
+	public String getTargetVersion()
 	{
 		return this.targetVersion;
 	}
@@ -214,9 +218,9 @@ public class ModFile extends TweakContainer implements LoadableMod<File>
 	}
 
 	@Override
-	public Map<String, String> getMetaData()
+	public Set<String> getMetaDataKeys()
 	{
-		return this.metaData;
+		return Collections.unmodifiableSet(this.metaData.keySet());
 	}
 	
 	@Override
@@ -238,23 +242,23 @@ public class ModFile extends TweakContainer implements LoadableMod<File>
 		{
 			if ("top".equals(this.injectAt))
 			{
-				ClassPathInjector.injectIntoClassPath(classLoader, this.toURI().toURL());
+				ClassPathInjector.injectIntoClassPath(classLoader, this.getURL());
 			}
 			else if ("base".equals(this.injectAt))
 			{
-				ClassPathInjector.injectIntoClassPath(classLoader, this.toURI().toURL(), LiteLoaderTweaker.getJarUrl());
+				ClassPathInjector.injectIntoClassPath(classLoader, this.getURL(), LiteLoaderTweaker.getJarUrl());
 			}
 			else if (this.injectAt != null && this.injectAt.startsWith("above:"))
 			{
-				ClassPathInjector.injectIntoClassPath(classLoader, this.toURI().toURL(), this.injectAt.substring(6));
+				ClassPathInjector.injectIntoClassPath(classLoader, this.getURL(), this.injectAt.substring(6));
 			}
 
 			if (injectIntoParent)
 			{
-				LiteLoaderTweaker.addURLToParentClassLoader(this.toURI().toURL());
+				LiteLoaderTweaker.addURLToParentClassLoader(this.getURL());
 			}
 			
-			classLoader.addURL(this.toURI().toURL());
+			classLoader.addURL(this.getURL());
 			this.injected = true;
 			return true;
 		}

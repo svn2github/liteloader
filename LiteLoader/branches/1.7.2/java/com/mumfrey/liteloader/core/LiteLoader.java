@@ -583,7 +583,7 @@ public final class LiteLoader
 	/**
 	 * Get the list of injected tweak containers
 	 */
-	public Collection<TweakContainer> getInjectedTweaks()
+	public Collection<Loadable<File>> getInjectedTweaks()
 	{
 		return Collections.unmodifiableCollection(this.enumerator.getInjectedTweaks());
 	}
@@ -869,19 +869,19 @@ public final class LiteLoader
 		LiteLoader.logInfo("Successfully added mod %s version %s", modName, newMod.getVersion());
 		
 		// Get the mod file and register it as a resource pack if it exists
-		ModFile modFile = this.enumerator.getModFile(mod);
+		LoadableMod<File> modFile = this.enumerator.getModFile(mod);
 		if (modFile != null)
 		{
 			this.disabledMods.remove(modFile);
 			
-			LiteLoader.logInfo("Adding \"%s\" to active resource pack set", modFile.getAbsolutePath());
+			LiteLoader.logInfo("Adding \"%s\" to active resource pack set", modFile.getLocation());
 			if (modName != null)
 			{
 				modFile.initResourcePack(modName);
 				
 				if (modFile.hasResourcePack() && this.registerModResourcePack((IResourcePack)modFile.getResourcePack()))
 				{
-					LiteLoader.logInfo("Successfully added \"%s\" to active resource pack set", modFile.getAbsolutePath());
+					LiteLoader.logInfo("Successfully added \"%s\" to active resource pack set", modFile.getLocation());
 				}
 			}
 		}

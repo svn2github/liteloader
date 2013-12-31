@@ -27,7 +27,6 @@ import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.core.EnabledModsList;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.core.Loadable;
-import com.mumfrey.liteloader.core.TweakContainer;
 import com.mumfrey.liteloader.modconfig.ConfigManager;
 import com.mumfrey.liteloader.modconfig.ConfigPanel;
 
@@ -172,7 +171,7 @@ public class GuiScreenModInfo extends GuiScreen
 			catch (Exception ex) {}
 		}
 		
-		this.enumerateMods(loader, enabledModsList);
+		this.populateModList(loader, enabledModsList);
 	}
 	
 	/**
@@ -181,7 +180,7 @@ public class GuiScreenModInfo extends GuiScreen
 	 * @param loader
 	 * @param enabledModsList
 	 */
-	private void enumerateMods(LiteLoader loader, EnabledModsList enabledModsList)
+	private void populateModList(LiteLoader loader, EnabledModsList enabledModsList)
 	{
 		this.activeModText = String.format("%d mod(s) loaded", loader.getLoadedMods().size());
 		
@@ -203,7 +202,7 @@ public class GuiScreenModInfo extends GuiScreen
 		}
 
 		// Injected tweaks
-		for (TweakContainer injectedTweak : loader.getInjectedTweaks())
+		for (Loadable<?> injectedTweak : loader.getInjectedTweaks())
 		{
 			GuiModListEntry modListEntry = new GuiModListEntry(loader, enabledModsList, this.mc.fontRenderer, injectedTweak);
 			sortedMods.put(modListEntry.getKey(), modListEntry);

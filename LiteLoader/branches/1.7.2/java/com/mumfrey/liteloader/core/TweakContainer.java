@@ -3,11 +3,14 @@ package com.mumfrey.liteloader.core;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.mumfrey.liteloader.launch.LiteLoaderTweaker;
 
@@ -15,6 +18,8 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
 
 public class TweakContainer extends File implements Loadable<File>, Injectable
 {
+	private static final Pattern versionPattern = Pattern.compile("([0-9]+\\.)+[0-9]+([_A-Z0-9]+)?");
+
 	private static final long serialVersionUID = 1L;
 
 	/**
@@ -44,13 +49,21 @@ public class TweakContainer extends File implements Loadable<File>, Injectable
 	 */
 	protected String[] classPathEntries = null;
 
+	protected String displayName;
+
+	protected String version = "Unknown";
+
+	protected String author;
+
 	/**
 	 * Create a new tweak container wrapping the specified file
 	 */
 	public TweakContainer(File parent)
 	{
 		super(parent.getAbsolutePath());
-		this.findTweaks();
+		this.displayName = this.getName();
+		this.guessVersionFromName();
+		this.readMetaData();
 	}
 
 	/**
@@ -59,12 +72,20 @@ public class TweakContainer extends File implements Loadable<File>, Injectable
 	protected TweakContainer(String pathname)
 	{
 		super(pathname);
+		this.displayName = this.getName();
+	}
+	
+	private void guessVersionFromName()
+	{
+		Matcher versionPatternMatcher = TweakContainer.versionPattern.matcher(this.getName());
+		while (versionPatternMatcher.find())
+			this.version = versionPatternMatcher.group();
 	}
 	
 	/**
 	 * Search for tweaks in this file
 	 */
-	private void findTweaks()
+	private void readMetaData()
 	{
 		JarFile jar = null;
 		
@@ -85,11 +106,20 @@ public class TweakContainer extends File implements Loadable<File>, Injectable
 						this.classPathEntries = classPath.split(" ");
 					}
 				}
+				
+				if (manifestAttributes.getValue("TweakName") != null)
+					this.displayName = manifestAttributes.getValue("TweakName");
+				
+				if (manifestAttributes.getValue("TweakVersion") != null)
+					this.version = manifestAttributes.getValue("TweakVersion");
+				
+				if (manifestAttributes.getValue("TweakAuthor") != null)
+					this.version = manifestAttributes.getValue("TweakAuthor");
 			}
 		}
 		catch (Exception ex)
 		{
-			TweakContainer.logWarning("Error parsing tweak class manifest entry in '%s'", this.getAbsolutePath());
+			TweakContainer.logWarning("Error parsing manifest entries in '%s'", this.getAbsolutePath());
 		}
 		finally
 		{
@@ -99,6 +129,24 @@ public class TweakContainer extends File implements Loadable<File>, Injectable
 			}
 			catch (IOException ex) {}
 		}
+	}
+	
+	@Override
+	public File getTarget()
+	{
+		return this;
+	}
+	
+	@Override
+	public String getLocation()
+	{
+		return this.getAbsolutePath();
+	}
+	
+	@Override
+	public URL getURL() throws MalformedURLException
+	{
+		return this.toURI().toURL();
 	}
 	
 	@Override
@@ -146,10 +194,10 @@ public class TweakContainer extends File implements Loadable<File>, Injectable
 		{
 			if (injectIntoParent)
 			{
-				LiteLoaderTweaker.addURLToParentClassLoader(this.toURI().toURL());
+				LiteLoaderTweaker.addURLToParentClassLoader(this.getURL());
 			}
 			
-			classLoader.addURL(this.toURI().toURL());
+			classLoader.addURL(this.getURL());
 			this.injected = true;
 			return true;
 		}
@@ -160,19 +208,19 @@ public class TweakContainer extends File implements Loadable<File>, Injectable
 	@Override
 	public String getDisplayName()
 	{
-		return this.getName();
+		return this.displayName;
 	}
 
 	@Override
 	public String getVersion()
 	{
-		return "Unknown";
+		return this.version;
 	}
-
+	
 	@Override
-	public float getRevision()
+	public String getAuthor()
 	{
-		return 0;
+		return this.author;
 	}
 	
 	@Override
