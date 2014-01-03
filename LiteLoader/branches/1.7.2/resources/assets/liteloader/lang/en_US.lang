@@ -1,0 +1,27 @@
+# This file MUST be saved as UTF-8
+
+gui.about.modsloaded=%d mod(s) loaded
+gui.about.versiontext=Version %s
+
+gui.about.showtabmessage=Show LiteLoader tab on main menu
+gui.about.keystrokehint= §e(use §9CTRL§e+§9SHIFT§e+§9TAB§e)
+
+gui.about.authors=Authors
+
+gui.disablemod=Disable mod
+gui.enablemod=Enable mod
+gui.modsettings=Settings...
+
+gui.unknown=Unknown
+
+gui.status.loaded=Loaded
+gui.status.active=Active
+gui.status.disabled=Disabled
+gui.status.pending.enabled=Enabled on next startup 
+gui.status.pending.disabled=Disabled on next startup
+
+gui.mod.providestweak=Provides Tweak            
+gui.mod.providestransformer=Provides Transformer
+
+gui.settings.title=%s Settings
+gui.saveandclose=Save & Close

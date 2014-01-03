@@ -20,7 +20,7 @@ public interface Loadable<L> extends Comparable<L>
 	public abstract String getName();
 	
 	/**
-	 * Get the name to use when displaying this loadable, such as file name, meta name or friendly name
+	 * Get the name to use when displaying this loadable, such as file name, identifier or friendly name
 	 */
 	public abstract String getDisplayName();
 	
@@ -30,7 +30,7 @@ public interface Loadable<L> extends Comparable<L>
 	public abstract String getLocation();
 	
 	/**
-	 * Get the identifier (meta name) of this loadable, used as the exclusivity key for mods and also the metadata key
+	 * Get the identifier (usually "name" from metadata) of this loadable, used as the exclusivity key for mods and also the metadata key
 	 */
 	public abstract String getIdentifier();
 	

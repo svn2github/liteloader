@@ -90,9 +90,9 @@ class LiteLoaderEnumerator implements FilenameFilter
 	private final List<Loadable<File>> injectedTweaks = new ArrayList<Loadable<File>>();
 	
 	/**
-	 * Mod metadata from version file 
+	 * Mapping of mods to mod containers 
 	 */
-	private final Map<String, LoadableMod<File>> modFiles = new HashMap<String, LoadableMod<File>>();
+	private final Map<String, LoadableMod<File>> modContainers = new HashMap<String, LoadableMod<File>>();
 	
 	/**
 	 * True if the loader is allowed to load tweak classes from mod files 
@@ -179,30 +179,29 @@ class LiteLoaderEnumerator implements FilenameFilter
 	 */
 	public String getModMetaData(Class<? extends LiteMod> modClass, String metaDataKey, String defaultValue)
 	{
-		LoadableMod<File> modFile = this.getModFile(modClass);
-		return modFile != null ? modFile.getMetaValue(metaDataKey, defaultValue) : defaultValue;
+		return this.getModContainer(modClass).getMetaValue(metaDataKey, defaultValue);
 	}
 	
 	/**
 	 * @param mod
 	 * @return
 	 */
-	public LoadableMod<File> getModFile(Class<? extends LiteMod> modClass)
+	public LoadableMod<File> getModContainer(Class<? extends LiteMod> modClass)
 	{
-		return this.modFiles.get(modClass.getSimpleName());
+		return this.modContainers.containsKey(modClass.getSimpleName()) ? this.modContainers.get(modClass.getSimpleName()) : LoadableMod.NONE;
 	}
 
 	/**
-	 * Get the mod "name" metadata key, this is used for versioning, exclusivity, and enablement checks
+	 * Get the mod identifier (metadata key), this is used for versioning, exclusivity, and enablement checks
 	 * 
 	 * @param modClass
 	 * @return
 	 */
-	public String getModMetaName(Class<? extends LiteMod> modClass)
+	public String getModIdentifier(Class<? extends LiteMod> modClass)
 	{
 		String modClassName = modClass.getSimpleName();
-		if (!this.modFiles.containsKey(modClassName)) return null;
-		return this.modFiles.get(modClassName).getIdentifier();
+		if (!this.modContainers.containsKey(modClassName)) return null;
+		return this.modContainers.get(modClassName).getIdentifier();
 	}
 	
 	/**
@@ -426,7 +425,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 				}
 				else if (isVersionedModFolder && this.loadTweaks && this.readJarFiles && candidateFile.getName().toLowerCase().endsWith(".jar"))
 				{
-					TweakContainer container = new TweakContainer(candidateFile);
+					LoadableFile container = new LoadableFile(candidateFile);
 					this.addTweaksFrom(container);
 				}
 				
@@ -460,7 +459,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 		}
 	}
 	
-	private void addTweaksFrom(TweakContainer container)
+	private void addTweaksFrom(LoadableFile container)
 	{
 		if (!container.isEnabled(this.enabledModsList, this.bootstrap.getProfile()))
 		{
@@ -479,23 +478,23 @@ class LiteLoaderEnumerator implements FilenameFilter
 		}
 	}
 
-	private void addTweakFrom(TweakContainer container)
+	private void addTweakFrom(LoadableFile loadable)
 	{
 		try
 		{
-			String tweakClass = container.getTweakClassName();
-			LiteLoaderEnumerator.logInfo("Mod file '%s' provides tweakClass '%s', adding to Launch queue", container.getName(), tweakClass);
+			String tweakClass = loadable.getTweakClassName();
+			LiteLoaderEnumerator.logInfo("Mod file '%s' provides tweakClass '%s', adding to Launch queue", loadable.getName(), tweakClass);
 			if (LiteLoaderTweaker.addTweaker(tweakClass))
 			{
 				LiteLoaderEnumerator.logInfo("tweakClass '%s' was successfully added", tweakClass);
-				container.injectIntoClassPath(this.classLoader, true);
+				loadable.injectIntoClassPath(this.classLoader, true);
 				
-				if (container.isExternalJar())
+				if (loadable.isExternalJar())
 				{
-					this.injectedTweaks.add(container);
+					this.injectedTweaks.add(loadable);
 				}
 				
-				String[] classPathEntries = container.getClassPathEntries();
+				String[] classPathEntries = loadable.getClassPathEntries();
 				if (classPathEntries != null)
 				{
 					for (String classPathEntry : classPathEntries)
@@ -519,17 +518,17 @@ class LiteLoaderEnumerator implements FilenameFilter
 		}
 	}
 
-	private void addClassTransformersFrom(TweakContainer container, List<String> classTransformerClasses)
+	private void addClassTransformersFrom(LoadableFile loadable, List<String> classTransformerClasses)
 	{
 		try
 		{
 			for (String classTransformerClass : classTransformerClasses)
 			{
-				LiteLoaderEnumerator.logInfo("Mod file '%s' provides classTransformer '%s', adding to class loader", container.getName(), classTransformerClass);
+				LiteLoaderEnumerator.logInfo("Mod file '%s' provides classTransformer '%s', adding to class loader", loadable.getName(), classTransformerClass);
 				if (LiteLoaderTweaker.addClassTransformer(classTransformerClass))
 				{
 					LiteLoaderEnumerator.logInfo("classTransformer '%s' was successfully added", classTransformerClass);
-					container.injectIntoClassPath(this.classLoader, true);
+					loadable.injectIntoClassPath(this.classLoader, true);
 				}
 			}
 		}
@@ -643,7 +642,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 				}
 				
 				this.modsToLoad.put(mod.getSimpleName(), (Class<? extends LiteMod>)mod);
-				this.modFiles.put(mod.getSimpleName(), new ClassPathMod(packagePath, mod.getSimpleName().substring(7).toLowerCase()));
+				this.modContainers.put(mod.getSimpleName(), new ClassPathMod(packagePath, mod.getSimpleName().substring(7).toLowerCase()));
 			}
 			
 			if (modClasses.size() > 0)
@@ -670,7 +669,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 				}
 				
 				this.modsToLoad.put(mod.getSimpleName(), (Class<? extends LiteMod>)mod);
-				this.modFiles.put(mod.getSimpleName(), modFile);
+				this.modContainers.put(mod.getSimpleName(), modFile);
 			}
 			
 			if (modClasses.size() > 0)

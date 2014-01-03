@@ -33,7 +33,7 @@ import com.mumfrey.liteloader.resources.ModResourcePack;
  *
  * @author Adam Mummery-Smith
  */
-public class ModFile extends TweakContainer implements LoadableMod<File>
+public class ModFile extends LoadableFile implements LoadableMod<File>
 {
 	private static final long serialVersionUID = -7952147161905688459L;
 

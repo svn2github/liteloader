@@ -2,21 +2,19 @@ package com.mumfrey.liteloader.gui;
 
 import static org.lwjgl.opengl.GL11.*;
 
-import java.awt.image.BufferedImage;
 import java.nio.DoubleBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import javax.imageio.ImageIO;
-
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.BufferUtils;
@@ -57,9 +55,8 @@ public class GuiScreenModInfo extends GuiScreen
 	 */
 	private static DoubleBuffer doubleBuffer = BufferUtils.createByteBuffer(64).asDoubleBuffer();
 	
-	// Texture resources for the "about mods" screen, we load the texture directly anyway so it won't be from an RP
-	public static ResourceLocation aboutTextureResource;
-	private static DynamicTexture aboutTexture;
+	// Texture resources for the "about mods" screen
+	public static ResourceLocation aboutTextureResource = new ResourceLocation("liteloader", "textures/gui/about.png");
 
 	/**
 	 * Reference to the main menu which this screen is either overlaying or using as its background
@@ -111,7 +108,7 @@ public class GuiScreenModInfo extends GuiScreen
 	/**
 	 * Text to display under the header
 	 */
-	private String activeModText = "0 mod(s) loaded";
+	private String activeModText;
 	
 	/**
 	 * Height of all the items in the list
@@ -159,17 +156,7 @@ public class GuiScreenModInfo extends GuiScreen
 		this.configManager = configManager;
 		this.hideTab = hideTab;
 		
-		// Spawn the texture resource if we haven't already
-		if (aboutTexture == null)
-		{
-			try
-			{
-				BufferedImage aboutImage = ImageIO.read(GuiScreenModInfo.class.getResourceAsStream("/assets/liteloader/textures/gui/about.png"));
-				aboutTexture = new DynamicTexture(aboutImage);
-				aboutTextureResource = minecraft.getTextureManager().getDynamicTextureLocation("about_assets", aboutTexture);
-			}
-			catch (Exception ex) {}
-		}
+		aboutTextureResource = new ResourceLocation("liteloader", "textures/gui/about.png");
 		
 		this.populateModList(loader, enabledModsList);
 	}
@@ -182,7 +169,7 @@ public class GuiScreenModInfo extends GuiScreen
 	 */
 	private void populateModList(LiteLoader loader, EnabledModsList enabledModsList)
 	{
-		this.activeModText = String.format("%d mod(s) loaded", loader.getLoadedMods().size());
+		this.activeModText = I18n.getStringParams("gui.about.modsloaded", loader.getLoadedMods().size());
 		
 		// Add mods to this treeset first, in order to sort them
 		Map<String, GuiModListEntry> sortedMods = new TreeMap<String, GuiModListEntry>();
@@ -255,11 +242,11 @@ public class GuiScreenModInfo extends GuiScreen
 		int rightPanelLeftEdge = LEFT_EDGE + MARGIN + 4 + (this.width - LEFT_EDGE - MARGIN - MARGIN - 4) / 2;
 		
 		this.buttonList.clear();
-		this.buttonList.add(this.btnToggle = new GuiButton(0, rightPanelLeftEdge, this.height - PANEL_BOTTOM - 24, 90, 20, "Enable mod"));
-		this.buttonList.add(this.btnConfig = new GuiButton(1, rightPanelLeftEdge + 92, this.height - PANEL_BOTTOM - 24, 69, 20, "Settings..."));
+		this.buttonList.add(this.btnToggle = new GuiButton(0, rightPanelLeftEdge, this.height - PANEL_BOTTOM - 24, 90, 20, I18n.getStringParams("gui.enablemod")));
+		this.buttonList.add(this.btnConfig = new GuiButton(1, rightPanelLeftEdge + 92, this.height - PANEL_BOTTOM - 24, 69, 20, I18n.getStringParams("gui.modsettings")));
 		if (!this.hideTab)
 		{
-			this.buttonList.add(this.chkEnabled = new GuiCheckbox(2, LEFT_EDGE + MARGIN, this.height - PANEL_BOTTOM + 9, "Show LiteLoader tab on main menu"));
+			this.buttonList.add(this.chkEnabled = new GuiCheckbox(2, LEFT_EDGE + MARGIN, this.height - PANEL_BOTTOM + 9, I18n.getStringParams("gui.about.showtabmessage")));
 		}
 		
 		this.selectMod(this.selectedMod);
@@ -356,8 +343,8 @@ public class GuiScreenModInfo extends GuiScreen
 		
 		if (mouseOverTab && this.tweenAmount < 0.01)
 		{
-			this.drawTooltip(LiteLoader.getVersionDisplayString(), mouseX, mouseY, this.width, this.height, 0xFFFFFF, 0xB0000000);
-			this.drawTooltip(this.activeModText, mouseX, mouseY + 13, this.width, this.height, 0xCCCCCC, 0xB0000000);
+			GuiScreenModInfo.drawTooltip(this.fontRenderer, LiteLoader.getVersionDisplayString(), mouseX, mouseY, this.width, this.height, 0xFFFFFF, 0xB0000000);
+			GuiScreenModInfo.drawTooltip(this.fontRenderer, this.activeModText, mouseX, mouseY + 13, this.width, this.height, 0xCCCCCC, 0xB0000000);
 		}
 	}
 
@@ -446,7 +433,7 @@ public class GuiScreenModInfo extends GuiScreen
 		glDrawTexturedRect(this.width - 32 - MARGIN, 12, 32, 45, 0, 80, 64, 170, 1.0F); // chicken
 		
 		// Draw header text
-		this.fontRenderer.drawString("Version " + LiteLoader.getVersion(), LEFT_EDGE + MARGIN + 38, 50, 0xFFFFFFFF);
+		this.fontRenderer.drawString(I18n.getStringParams("gui.about.versiontext", LiteLoader.getVersion()), LEFT_EDGE + MARGIN + 38, 50, 0xFFFFFFFF);
 		this.fontRenderer.drawString(this.activeModText, LEFT_EDGE + MARGIN + 38, 60, 0xFFAAAAAA);
 		
 		// Draw top and bottom horizontal rules
@@ -486,6 +473,12 @@ public class GuiScreenModInfo extends GuiScreen
 		{
 			// drawListEntry returns a value indicating the height of the item drawn
 			yPos += mod.drawListEntry(mouseX, mouseY, partialTicks, LEFT_EDGE + MARGIN, yPos, width - 6, mod == this.selectedMod);
+		}
+		
+		yPos = 0;
+		for (GuiModListEntry mod : this.mods)
+		{
+			yPos += mod.postRenderListEntry(mouseX, mouseY, partialTicks, LEFT_EDGE + MARGIN, yPos, width - 6, mod == this.selectedMod);
 		}
 		
 		glPopMatrix();
@@ -528,7 +521,7 @@ public class GuiScreenModInfo extends GuiScreen
 		if (this.selectedMod != null && this.selectedMod.canBeToggled())
 		{
 			this.btnToggle.drawButton = true;
-			this.btnToggle.displayString = this.selectedMod.willBeEnabled() ? "Disable mod" : "Enable mod";
+			this.btnToggle.displayString = this.selectedMod.willBeEnabled() ? I18n.getStringParams("gui.disablemod") : I18n.getStringParams("gui.enablemod");
 			
 			this.btnConfig.drawButton = this.configManager.hasPanel(this.selectedMod.getModClass());
 		}
@@ -569,7 +562,7 @@ public class GuiScreenModInfo extends GuiScreen
 			
 			if (!this.chkEnabled.checked)
 			{
-				this.chkEnabled.displayString = "Show LiteLoader tab on main menu \247e(use \2479CTRL\247e+\2479SHIFT\247e+\2479TAB\247e)";
+				this.chkEnabled.displayString = I18n.getStringParams("gui.about.showtabmessage") + I18n.getStringParams("gui.about.keystrokehint");
 			}
 		}
 	}
@@ -819,13 +812,13 @@ public class GuiScreenModInfo extends GuiScreen
 	 * @param colour
 	 * @param backgroundColour
 	 */
-	protected void drawTooltip(String tooltipText, int mouseX, int mouseY, int screenWidth, int screenHeight, int colour, int backgroundColour)
+	protected static void drawTooltip(FontRenderer fontRenderer, String tooltipText, int mouseX, int mouseY, int screenWidth, int screenHeight, int colour, int backgroundColour)
 	{
-		int textSize = this.fontRenderer.getStringWidth(tooltipText);
+		int textSize = fontRenderer.getStringWidth(tooltipText);
 		mouseX = Math.max(0, Math.min(screenWidth - 4, mouseX - 4));
 		mouseY = Math.max(0, Math.min(screenHeight - 16, mouseY));
 		drawRect(mouseX - textSize - 2, mouseY, mouseX + 2, mouseY + 12, backgroundColour);
-		this.fontRenderer.drawStringWithShadow(tooltipText, mouseX - textSize, mouseY + 2, colour);
+		fontRenderer.drawStringWithShadow(tooltipText, mouseX - textSize, mouseY + 2, colour);
 	}
 
 	

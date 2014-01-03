@@ -41,6 +41,7 @@ import com.mumfrey.liteloader.gui.GuiScreenModInfo;
 import com.mumfrey.liteloader.modconfig.ConfigManager;
 import com.mumfrey.liteloader.modconfig.Exposable;
 import com.mumfrey.liteloader.permissions.PermissionsManagerClient;
+import com.mumfrey.liteloader.resources.InternalResourcePack;
 import com.mumfrey.liteloader.util.PrivateFields;
 
 /**
@@ -333,6 +334,9 @@ public final class LiteLoader
 		// Cache local minecraft reference
 		this.minecraft = minecraft;
 		
+		// Add self as a resource pack for texture/lang resources
+		this.registerModResourcePack(new InternalResourcePack("LiteLoader", LiteLoader.class, "liteloader"));
+		
 		// Create the event broker
 		this.events = new Events(this, this.minecraft, this.pluginChannels);
 		
@@ -346,6 +350,7 @@ public final class LiteLoader
 		this.events.initHooks();
 		this.startupComplete = true;
 		
+		// Save stuff
 		this.enabledModsList.save();
 		this.bootstrap.writeProperties();
 	}
@@ -591,7 +596,7 @@ public final class LiteLoader
 	/**
 	 * Get a reference to a loaded mod, if the mod exists
 	 * 
-	 * @param modName Mod's name, meta name or class name
+	 * @param modName Mod's name, identifier or class name
 	 * @return
 	 * @throws InvalidActivityException
 	 */
@@ -610,9 +615,10 @@ public final class LiteLoader
 		
 		for (LiteMod mod : this.mods)
 		{
-			String metaName = this.getModMetaName(mod.getClass());
+			Class<? extends LiteMod> modClass = mod.getClass();
+			String modId = this.getModIdentifier(modClass);
 			
-			if (modName.equalsIgnoreCase(mod.getName()) || modName.equalsIgnoreCase(metaName) || modName.equalsIgnoreCase(mod.getClass().getSimpleName()))
+			if (modName.equalsIgnoreCase(mod.getName()) || modName.equalsIgnoreCase(modId) || modName.equalsIgnoreCase(modClass.getSimpleName()))
 				return (T)mod;
 		}
 		
@@ -664,16 +670,16 @@ public final class LiteLoader
 	/**
 	 * Get a metadata value for the specified mod
 	 * 
-	 * @param mod
+	 * @param modNameOrId
 	 * @param metaDataKey
 	 * @param defaultValue
 	 * @return
 	 * @throws InvalidActivityException Thrown by getMod if init is not complete 
 	 * @throws IllegalArgumentException Thrown by getMod if argument is null
 	 */
-	public String getModMetaData(String mod, String metaDataKey, String defaultValue) throws InvalidActivityException, IllegalArgumentException
+	public String getModMetaData(String modNameOrId, String metaDataKey, String defaultValue) throws InvalidActivityException, IllegalArgumentException
 	{
-		return this.getModMetaData(this.getMod(mod), metaDataKey, defaultValue);
+		return this.getModMetaData(this.getMod(modNameOrId), metaDataKey, defaultValue);
 	}
 	
 	/**
@@ -693,40 +699,52 @@ public final class LiteLoader
 	/**
 	 * Get a metadata value for the specified mod
 	 * 
-	 * @param modClassName
+	 * @param modClass
 	 * @param metaDataKey
 	 * @param defaultValue
 	 * @return
 	 */
 	public String getModMetaData(Class<? extends LiteMod> modClass, String metaDataKey, String defaultValue)
 	{
+		if (modClass == null || metaDataKey == null) return defaultValue;
 		return this.enumerator.getModMetaData(modClass, metaDataKey, defaultValue);
 	}
 
 	/**
-	 * Get the mod "name" metadata key, this is used for versioning, exclusivity, and enablement checks
+	 * Get the mod identifier, this is used for versioning, exclusivity, and enablement checks
 	 * 
 	 * @param modClass
 	 * @return
 	 */
-	public String getModMetaName(Class<? extends LiteMod> modClass)
+	public String getModIdentifier(Class<? extends LiteMod> modClass)
 	{
-		return this.enumerator.getModMetaName(modClass);
+		return this.enumerator.getModIdentifier(modClass);
 	}
 	
 	/**
-	 * Get the mod "name" metadata key, this is used for versioning, exclusivity, and enablement checks
+	 * Get the container (mod file, classpath jar or folder) for the specified mod
 	 * 
 	 * @param modClass
 	 * @return
 	 */
-	public Class<? extends LiteMod> getModFromMetaName(String modName)
+	public LoadableMod<?> getModContainer(Class<? extends LiteMod> modClass)
 	{
-		if (modName == null) return null;
+		return this.enumerator.getModContainer(modClass);
+	}
+	
+	/**
+	 * Get the mod which matches the specified identifier
+	 * 
+	 * @param identifier
+	 * @return
+	 */
+	public Class<? extends LiteMod> getModFromIdentifier(String identifier)
+	{
+		if (identifier == null) return null;
 		
 		for (LiteMod mod : this.mods)
 		{
-			if (modName.equalsIgnoreCase(this.enumerator.getModMetaName(mod.getClass())))
+			if (identifier.equalsIgnoreCase(this.enumerator.getModIdentifier(mod.getClass())))
 			{
 				return mod.getClass();
 			}
@@ -736,28 +754,28 @@ public final class LiteLoader
 	}
 	
 	/**
-	 * @param modMetaName Mod meta name to enable
+	 * @param identifier Identifier of the mod to enable
 	 */
-	public void enableMod(String modMetaName)
+	public void enableMod(String identifier)
 	{
-		this.setModEnabled(modMetaName, true);
+		this.setModEnabled(identifier, true);
 	}
 
 	/**
-	 * @param modMetaName Mod meta name to disable
+	 * @param identifier Identifier of the mod to disable
 	 */
-	public void disableMod(String modMetaName)
+	public void disableMod(String identifier)
 	{
-		this.setModEnabled(modMetaName, false);
+		this.setModEnabled(identifier, false);
 	}
 	
 	/**
-	 * @param modMetaName Mod meta name to enable/disable
+	 * @param identifier Identifier of the mod to enable/disable
 	 * @param enabled
 	 */
-	public void setModEnabled(String modMetaName, boolean enabled)
+	public void setModEnabled(String identifier, boolean enabled)
 	{
-		this.enabledModsList.setEnabled(this.bootstrap.getProfile(), modMetaName, enabled);
+		this.enabledModsList.setEnabled(this.bootstrap.getProfile(), identifier, enabled);
 		this.enabledModsList.save();
 	}
 
@@ -780,7 +798,7 @@ public final class LiteLoader
 		
 		for (LiteMod mod : this.loadedMods)
 		{
-			if (modName.equalsIgnoreCase(this.enumerator.getModMetaName(mod.getClass())))
+			if (modName.equalsIgnoreCase(this.enumerator.getModIdentifier(mod.getClass())))
 			{
 				return true;
 			}
@@ -832,15 +850,16 @@ public final class LiteLoader
 		{
 			try
 			{
-				String metaName = this.getModMetaName(mod);
-				if (metaName == null || this.enabledModsList.isEnabled(this.bootstrap.getProfile(), metaName))
+				String identifier = this.getModIdentifier(mod);
+				if (identifier == null || this.enabledModsList.isEnabled(this.bootstrap.getProfile(), identifier))
 				{
-					this.loadMod(metaName, mod);
+					this.loadMod(identifier, mod);
 				}
 				else
 				{
-					LiteLoader.logInfo("Not loading mod %s, excluded by filter", metaName);
-					this.disabledMods.add(this.enumerator.getModFile(mod));
+					LiteLoader.logInfo("Not loading mod %s, excluded by filter", identifier);
+					LoadableMod<File> modContainer = this.enumerator.getModContainer(mod);
+					if (modContainer != LoadableMod.NONE) this.disabledMods.add(modContainer);
 				}
 			}
 			catch (Throwable th)
@@ -852,12 +871,12 @@ public final class LiteLoader
 	}
 
 	/**
-	 * @param metaName
+	 * @param identifier
 	 * @param mod
 	 * @throws InstantiationException
 	 * @throws IllegalAccessException
 	 */
-	protected void loadMod(String metaName, Class<? extends LiteMod> mod) throws InstantiationException, IllegalAccessException
+	protected void loadMod(String identifier, Class<? extends LiteMod> mod) throws InstantiationException, IllegalAccessException
 	{
 		LiteLoader.logInfo("Loading mod from %s", mod.getName());
 		
@@ -865,11 +884,11 @@ public final class LiteLoader
 		
 		this.mods.add(newMod);
 		String modName = newMod.getName();
-		if (modName == null && metaName != null) modName = metaName;
+		if (modName == null && identifier != null) modName = identifier;
 		LiteLoader.logInfo("Successfully added mod %s version %s", modName, newMod.getVersion());
 		
 		// Get the mod file and register it as a resource pack if it exists
-		LoadableMod<File> modFile = this.enumerator.getModFile(mod);
+		LoadableMod<File> modFile = this.enumerator.getModContainer(mod);
 		if (modFile != null)
 		{
 			this.disabledMods.remove(modFile);

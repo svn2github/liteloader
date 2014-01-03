@@ -9,6 +9,7 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.resources.I18n;
 
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.modconfig.ConfigPanel;
@@ -105,7 +106,7 @@ public class GuiConfigPanelContainer extends Gui implements ConfigPanelHost
 	protected String getPanelTitle()
 	{
 		String panelTitle = this.panel.getPanelTitle();
-		return panelTitle != null ? panelTitle : String.format("%s Settings", this.mod.getName());
+		return panelTitle != null ? panelTitle : I18n.getStringParams("gui.settings.title", this.mod.getName());
 	}
 
 	/* (non-Javadoc)
@@ -170,7 +171,7 @@ public class GuiConfigPanelContainer extends Gui implements ConfigPanelHost
 		this.panel.onPanelResize(this);
 		
 		this.controls.clear();
-		this.controls.add(new GuiButton(0, this.width - 99 - MARGIN, this.height - BOTTOM + 9, 100, 20, "Save & Close"));
+		this.controls.add(new GuiButton(0, this.width - 99 - MARGIN, this.height - BOTTOM + 9, 100, 20, I18n.getStringParams("gui.saveandclose")));
 	}
 	
 	/**

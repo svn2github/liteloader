@@ -1,13 +1,17 @@
 package com.mumfrey.liteloader.gui;
 
+import static org.lwjgl.opengl.GL11.*;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.client.resources.I18n;
 
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.core.EnabledModsList;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.core.Loadable;
 import com.mumfrey.liteloader.core.LoadableMod;
+import com.mumfrey.liteloader.core.TweakContainer;
 
 /**
  * Represents a mod in the mod info screen, keeps track of mod information and provides methods
@@ -30,9 +34,9 @@ public class GuiModListEntry extends Gui
 	private Class<? extends LiteMod> modClass;
 
 	/**
-	 * The metadata name (id) of the mod, used as the enablement/disablement key
+	 * The identifier of the mod, used as the enablement/disablement key
 	 */
-	private String metaName;
+	private String identifier;
 	
 	/**
 	 * Display name of the mod, disabled mods use the file/folder name
@@ -47,7 +51,7 @@ public class GuiModListEntry extends Gui
 	/**
 	 * Mod author, from the metadata
 	 */
-	private String author = "Unknown";
+	private String author = I18n.getStringParams("gui.unknown");
 	
 	/**
 	 * Mod URL, from the metadata
@@ -80,7 +84,12 @@ public class GuiModListEntry extends Gui
 	 */
 	private boolean mouseOver;
 	
+	/**
+	 * True if this is not a mod but an external jar 
+	 */
 	private boolean external;
+	
+	private boolean providesTweak, providesTransformer;
 	
 	/**
 	 * Mod list entry for an ACTIVE mod
@@ -95,15 +104,24 @@ public class GuiModListEntry extends Gui
 		this.fontRenderer    = fontRenderer;
 		this.modInstance     = modInstance;
 		this.modClass        = modInstance.getClass();
-		this.metaName        = loader.getModMetaName(this.modClass);
+		this.identifier      = loader.getModIdentifier(this.modClass);
 		this.name            = modInstance.getName();
 		this.version         = modInstance.getVersion();
-		this.author          = loader.getModMetaData(this.modClass, "author", "Unknown");
-		this.url             = loader.getModMetaData(this.modClass, "url", null);
-		this.description     = loader.getModMetaData(this.modClass, "description", "");
 		this.enabled         = true;
-		this.canBeToggled    = this.metaName != null && enabledMods.saveAllowed();
+		this.canBeToggled    = this.identifier != null && enabledMods.saveAllowed();
 		this.willBeEnabled   = true;
+		
+		LoadableMod<?> modContainer = loader.getModContainer(this.modClass);
+		
+		this.author          = modContainer.getAuthor();
+		this.url             = modContainer.getMetaValue("url", null);
+		this.description     = modContainer.getMetaValue("description", "");
+		
+		if (modContainer instanceof TweakContainer)
+		{
+			this.providesTweak = ((TweakContainer<?>)modContainer).hasTweakClass();
+			this.providesTransformer = ((TweakContainer<?>)modContainer).hasClassTransformers();
+		}
 	}
 	
 	/**
@@ -112,24 +130,30 @@ public class GuiModListEntry extends Gui
 	 * @param loader
 	 * @param enabledMods
 	 * @param fontRenderer
-	 * @param mod
+	 * @param modContainer
 	 */
-	GuiModListEntry(LiteLoader loader, EnabledModsList enabledMods, FontRenderer fontRenderer, Loadable<?> mod)
+	GuiModListEntry(LiteLoader loader, EnabledModsList enabledMods, FontRenderer fontRenderer, Loadable<?> modContainer)
 	{
 		this.fontRenderer    = fontRenderer;
-		this.metaName        = mod.getIdentifier().toLowerCase();
-		this.name            = mod.getDisplayName();
-		this.version         = mod.getVersion();
-		this.author          = mod.getAuthor();
-		this.enabled         = mod.isEnabled(enabledMods, LiteLoader.getProfile());
-		this.canBeToggled    = mod.isToggleable() && enabledMods.saveAllowed();
-		this.willBeEnabled   = enabledMods.isEnabled(loader.getProfile(), this.metaName);
-		this.external        = mod.isExternalJar();
+		this.identifier      = modContainer.getIdentifier().toLowerCase();
+		this.name            = modContainer.getDisplayName();
+		this.version         = modContainer.getVersion();
+		this.author          = modContainer.getAuthor();
+		this.enabled         = modContainer.isEnabled(enabledMods, LiteLoader.getProfile());
+		this.canBeToggled    = modContainer.isToggleable() && enabledMods.saveAllowed();
+		this.willBeEnabled   = enabledMods.isEnabled(loader.getProfile(), this.identifier);
+		this.external        = modContainer.isExternalJar();
 		
-		if (mod instanceof LoadableMod<?>)
+		if (modContainer instanceof LoadableMod<?>)
 		{
-			this.url             = ((LoadableMod<?>)mod).getMetaValue("url", null);
-			this.description     = ((LoadableMod<?>)mod).getMetaValue("description", "");
+			this.url             = ((LoadableMod<?>)modContainer).getMetaValue("url", null);
+			this.description     = ((LoadableMod<?>)modContainer).getMetaValue("description", "");
+		}
+		
+		if (modContainer instanceof TweakContainer)
+		{
+			this.providesTweak = ((TweakContainer<?>)modContainer).hasTweakClass();
+			this.providesTransformer = ((TweakContainer<?>)modContainer).hasClassTransformers();
 		}
 	}
 	
@@ -151,15 +175,15 @@ public class GuiModListEntry extends Gui
 		drawGradientRect(xPosition, yPosition, xPosition + width, yPosition + PANEL_HEIGHT, colour1, 0xB0333333);
 		
 		this.fontRenderer.drawString(this.name, xPosition + 5, yPosition + 2, this.enabled ? (this.external ? 0xFF47d1aa : 0xFFFFFFFF) : 0xFF999999);
-		this.fontRenderer.drawString("Version " + this.version, xPosition + 5, yPosition + 12, 0xFF999999);
+		this.fontRenderer.drawString(I18n.getStringParams("gui.about.versiontext", this.version), xPosition + 5, yPosition + 12, 0xFF999999);
 		
-		String status = this.external ? "Loaded" : "Active";
+		String status = this.external ? I18n.getStringParams("gui.status.loaded") : I18n.getStringParams("gui.status.active");
 		
 		if (this.canBeToggled)
 		{
-			if (!this.enabled && !this.willBeEnabled) status = "\2477Disabled";
-			if (!this.enabled &&  this.willBeEnabled) status = "\247aEnabled on next startup"; 
-			if ( this.enabled && !this.willBeEnabled) status = "\247cDisabled on next startup";
+			if (!this.enabled && !this.willBeEnabled) status = "\2477" + I18n.getStringParams("gui.status.disabled");
+			if (!this.enabled &&  this.willBeEnabled) status = "\247a" + I18n.getStringParams("gui.status.pending.enabled"); 
+			if ( this.enabled && !this.willBeEnabled) status = "\247c" + I18n.getStringParams("gui.status.pending.disabled");
 		}
 		
 		this.fontRenderer.drawString(status, xPosition + 5, yPosition + 22, this.external ? 0xB047d1aa : 0xFF4785D1);
@@ -168,6 +192,39 @@ public class GuiModListEntry extends Gui
 		drawRect(xPosition, yPosition, xPosition + 1, yPosition + PANEL_HEIGHT, this.mouseOver ? 0xFFFFFFFF : 0xFF999999);
 		
 		return PANEL_HEIGHT + PANEL_SPACING;
+	}
+
+	public int postRenderListEntry(int mouseX, int mouseY, float partialTicks, int xPosition, int yPosition, int width, boolean selected)
+	{
+		int iconX = xPosition + width - 14;
+		if (this.providesTweak)       iconX = this.drawPropertyIcon(iconX, yPosition + PANEL_HEIGHT - 14, mouseX, mouseY, 158, 80, I18n.getStringParams("gui.mod.providestweak"));
+		if (this.providesTransformer) iconX = this.drawPropertyIcon(iconX, yPosition + PANEL_HEIGHT - 14, mouseX, mouseY, 170, 80, I18n.getStringParams("gui.mod.providestransformer"));
+		
+		return PANEL_HEIGHT + PANEL_SPACING;
+	}
+
+	/**
+	 * @param iconX
+	 * @param yPosition
+	 * @param mouseX
+	 * @param mouseY
+	 * @param u
+	 * @param v
+	 * @param tooltip
+	 * @return
+	 */
+	protected int drawPropertyIcon(int iconX, int yPosition, int mouseX, int mouseY, int u, int v, String tooltipText)
+	{
+		glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+		Minecraft.getMinecraft().getTextureManager().bindTexture(GuiScreenModInfo.aboutTextureResource);
+		this.drawTexturedModalRect(iconX, yPosition, u, v, 12, 12);
+
+		if (mouseX >= iconX && mouseX <= iconX + 12 && mouseY >= yPosition && mouseY <= yPosition + 12)
+		{
+			GuiScreenModInfo.drawTooltip(this.fontRenderer, tooltipText, mouseX, mouseY, 999, 999, 0xFFFFFFFF, 0x80000000);
+		}
+		
+		return iconX - 14;
 	}
 	
 	public int getHeight()
@@ -190,11 +247,11 @@ public class GuiModListEntry extends Gui
 		yPosition += 2;
 
 		this.fontRenderer.drawString(this.name, xPosition + 5, yPosition, 0xFFFFFFFF); yPosition += 10;
-		this.fontRenderer.drawString("Version " + this.version, xPosition + 5, yPosition, 0xFF999999); yPosition += 10;
+		this.fontRenderer.drawString(I18n.getStringParams("gui.about.versiontext", this.version), xPosition + 5, yPosition, 0xFF999999); yPosition += 10;
 
 		drawRect(xPosition + 5, yPosition, xPosition + width, yPosition + 1, 0xFF999999); yPosition += 4;
 
-		this.fontRenderer.drawString("Authors: \2477" + this.author, xPosition + 5, yPosition, 0xFFFFFFFF); yPosition += 10;
+		this.fontRenderer.drawString(I18n.getStringParams("gui.about.authors") + ": \2477" + this.author, xPosition + 5, yPosition, 0xFFFFFFFF); yPosition += 10;
 		if (this.url != null)
 		{
 			this.fontRenderer.drawString(this.url, xPosition + 5, yPosition, 0xB04785D1); yPosition += 10;
@@ -213,13 +270,13 @@ public class GuiModListEntry extends Gui
 		if (this.canBeToggled)
 		{
 			this.willBeEnabled = !this.willBeEnabled;
-			LiteLoader.getInstance().setModEnabled(this.metaName, this.willBeEnabled);
+			LiteLoader.getInstance().setModEnabled(this.identifier, this.willBeEnabled);
 		}
 	}
 	
 	public String getKey()
 	{
-		return this.metaName + Integer.toHexString(this.hashCode());
+		return this.identifier + Integer.toHexString(this.hashCode());
 	}
 	
 	public LiteMod getModInstance()
