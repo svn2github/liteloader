@@ -1,9 +1,14 @@
 package com.mumfrey.liteloader.launch;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
@@ -19,6 +24,7 @@ import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.google.gson.Gson;
 import com.mumfrey.liteloader.core.hooks.asm.PacketTransformer;
 import com.mumfrey.liteloader.core.hooks.asm.PacketTransformerInfo;
 
@@ -162,8 +168,38 @@ public class LiteLoaderTweaker implements ITweaker
 		}
 		else
 		{
+			String resource = "/jarfile.ref";
+			InputStream refResource = LiteLoaderTweaker.class.getResourceAsStream(resource);
+			File refContainer = LiteLoaderTweaker.getPathToResource(resource);
+			if (refResource != null && refContainer != null)
+			{
+				InputStreamReader refReader = new InputStreamReader(refResource);
+				
+				try
+				{
+					@SuppressWarnings("unchecked")
+					Map<String, String> refMap = new Gson().fromJson(refReader, HashMap.class);
+					if (refMap.containsKey("jarfile"))
+					{
+						this.jarFile = new File(refContainer.getParentFile(), refMap.get("jarfile"));
+						this.jarUrl = this.jarFile.toURI().toURL();
+						return;
+					}
+				}
+				catch (IOException ex) {}
+				finally
+				{
+					try
+					{
+						refReader.close();
+						refResource.close();
+					}
+					catch (IOException ex) {}
+				}
+			}
+				
 			URL[] urls = Launch.classLoader.getURLs();
-			this.jarUrl = urls[urls.length - 1];
+			this.jarUrl = urls[urls.length - 1]; // probably?
 		}
 	}
 
@@ -485,5 +521,37 @@ public class LiteLoaderTweaker implements ITweaker
 	public static boolean isPrimary()
 	{
 		return LiteLoaderTweaker.instance.isPrimary;
+	}
+
+	/**
+	 * Gets the file containing the specified resource
+	 * 
+	 * @param resource
+	 * @return
+	 */
+	private static File getPathToResource(String resource)
+	{
+		URL res = LiteLoaderTweaker.class.getResource(resource);
+		if (res == null) return null;
+
+		boolean returnParent = true;
+		String jarPath = res.toString();
+		if (jarPath.startsWith("jar:") && jarPath.indexOf('!') > -1)
+		{
+			jarPath = jarPath.substring(4, jarPath.indexOf('!'));
+			returnParent = false;
+		}
+		
+		if (jarPath.startsWith("file:"))
+		{
+			try
+			{
+				File targetFile = new File(new URI(jarPath));
+				return returnParent ? targetFile.getParentFile() : targetFile;
+			}
+			catch (URISyntaxException ex) { }
+		}
+		
+		return null;
 	}
 }
