@@ -287,7 +287,8 @@ public class LiteLoaderTweaker implements ITweaker
 
 	private void injectModTransformers()
 	{
-		LiteLoaderTweaker.logger.info("Injecting downstream transformers");
+		if (LiteLoaderTweaker.instance.injectTransformers.size() > 0)
+			LiteLoaderTweaker.logger.info("Injecting downstream transformers");
 
 		for (String transformerClassName : LiteLoaderTweaker.instance.injectTransformers)
 		{

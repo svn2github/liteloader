@@ -11,6 +11,7 @@ import java.util.TreeMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.GuiIngameMenu;
 import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.Tessellator;
@@ -61,7 +62,7 @@ public class GuiScreenModInfo extends GuiScreen
 	/**
 	 * Reference to the main menu which this screen is either overlaying or using as its background
 	 */
-	private GuiMainMenu mainMenu;
+	private GuiScreen mainMenu;
 	
 	/**
 	 * Tick number (update counter) used for tweening
@@ -148,7 +149,7 @@ public class GuiScreenModInfo extends GuiScreen
 	 * @param loader
 	 * @param enabledModsList
 	 */
-	public GuiScreenModInfo(Minecraft minecraft, GuiMainMenu mainMenu, LiteLoader loader, EnabledModsList enabledModsList, ConfigManager configManager, boolean hideTab)
+	public GuiScreenModInfo(Minecraft minecraft, GuiScreen mainMenu, LiteLoader loader, EnabledModsList enabledModsList, ConfigManager configManager, boolean hideTab)
 	{
 		this.mc = minecraft;
 		this.fontRenderer = minecraft.fontRenderer;
@@ -214,7 +215,7 @@ public class GuiScreenModInfo extends GuiScreen
 	/**
 	 * Get the parent menu
 	 */
-	public GuiMainMenu getMenu()
+	public GuiScreen getScreen()
 	{
 		return this.mainMenu;
 	}
@@ -798,6 +799,14 @@ public class GuiScreenModInfo extends GuiScreen
 			this.configPanel.onHidden();
 			this.configPanel = null;
 		}
+	}
+	
+	public final static boolean isSupportedOnScreen(GuiScreen guiScreen)
+	{
+		return (
+			guiScreen instanceof GuiMainMenu ||
+			guiScreen instanceof GuiIngameMenu
+		);
 	}
 	
 	/**

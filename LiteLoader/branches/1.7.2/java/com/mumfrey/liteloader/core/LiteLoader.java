@@ -21,7 +21,7 @@ import java.util.logging.Logger;
 import javax.activity.InvalidActivityException;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiMainMenu;
+import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.resources.IResourcePack;
 import net.minecraft.client.resources.SimpleReloadableResourceManager;
 import net.minecraft.client.settings.KeyBinding;
@@ -1064,12 +1064,12 @@ public final class LiteLoader
 	 */
 	void postRender(int mouseX, int mouseY, float partialTicks)
 	{
-		if (this.minecraft.currentScreen instanceof GuiMainMenu && ((this.displayModInfoScreenTab && !this.hideModInfoScreenTab) || (this.modInfoScreen != null && this.modInfoScreen.isTweeningOrOpen())))
+		if (GuiScreenModInfo.isSupportedOnScreen(this.minecraft.currentScreen) && ((this.displayModInfoScreenTab && !this.hideModInfoScreenTab) || (this.modInfoScreen != null && this.modInfoScreen.isTweeningOrOpen())))
 		{
 			// If we're at the main menu, prepare the overlay
-			if (this.modInfoScreen == null || this.modInfoScreen.getMenu() != this.minecraft.currentScreen)
+			if (this.modInfoScreen == null || this.modInfoScreen.getScreen() != this.minecraft.currentScreen)
 			{
-				this.modInfoScreen = new GuiScreenModInfo(this.minecraft, (GuiMainMenu)this.minecraft.currentScreen, this, this.enabledModsList, this.configManager, this.hideModInfoScreenTab);
+				this.modInfoScreen = new GuiScreenModInfo(this.minecraft, this.minecraft.currentScreen, this, this.enabledModsList, this.configManager, this.hideModInfoScreenTab);
 			}
 
 			this.modInfoScreen.drawScreen(mouseX, mouseY, partialTicks);
@@ -1080,9 +1080,9 @@ public final class LiteLoader
 			this.modInfoScreen.release();
 			this.modInfoScreen = null;
 		}
-		else if (this.minecraft.currentScreen instanceof GuiMainMenu && Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) && Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) && Keyboard.isKeyDown(Keyboard.KEY_TAB))
+		else if (GuiScreenModInfo.isSupportedOnScreen(this.minecraft.currentScreen) && Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) && Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) && Keyboard.isKeyDown(Keyboard.KEY_TAB))
 		{
-			this.displayModInfoScreen((GuiMainMenu)this.minecraft.currentScreen);
+			this.displayModInfoScreen(this.minecraft.currentScreen);
 		}			
 	}
 
@@ -1217,14 +1217,17 @@ public final class LiteLoader
 	}
 
 	/**
-	 * Display the "mod info" overlay over the specified main menu GUI
+	 * Display the "mod info" overlay over the specified GUI
 	 * 
 	 * @param parentScreen
 	 */
-	public void displayModInfoScreen(GuiMainMenu parentScreen)
+	public void displayModInfoScreen(GuiScreen parentScreen)
 	{
-		this.modInfoScreen = new GuiScreenModInfo(this.minecraft, parentScreen, this, this.enabledModsList, this.configManager, this.hideModInfoScreenTab);
-		this.minecraft.displayGuiScreen(this.modInfoScreen);
+		if (GuiScreenModInfo.isSupportedOnScreen(parentScreen))
+		{
+			this.modInfoScreen = new GuiScreenModInfo(this.minecraft, parentScreen, this, this.enabledModsList, this.configManager, this.hideModInfoScreenTab);
+			this.minecraft.displayGuiScreen(this.modInfoScreen);
+		}
 	}
 
 	private static void logInfo(String string, Object... args)
