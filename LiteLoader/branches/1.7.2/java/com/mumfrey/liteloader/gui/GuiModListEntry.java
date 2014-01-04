@@ -221,7 +221,7 @@ public class GuiModListEntry extends Gui
 
 		if (mouseX >= iconX && mouseX <= iconX + 12 && mouseY >= yPosition && mouseY <= yPosition + 12)
 		{
-			GuiScreenModInfo.drawTooltip(this.fontRenderer, tooltipText, mouseX, mouseY, 999, 999, 0xFFFFFFFF, 0x80000000);
+			GuiScreenModInfo.drawTooltip(this.fontRenderer, tooltipText, mouseX, mouseY, 4096, 4096, 0xFFFFFFFF, 0x80000000);
 		}
 		
 		return iconX - 14;
