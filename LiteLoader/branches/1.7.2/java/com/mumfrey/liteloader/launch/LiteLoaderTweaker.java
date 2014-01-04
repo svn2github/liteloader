@@ -158,6 +158,7 @@ public class LiteLoaderTweaker implements ITweaker
 			{
 				String jarPath = this.jarOption.value(this.parsedOptions);
 				if (jarPath.matches("^[0-9\\.]+$")) jarPath = String.format("versions/%1$s/%1$s.jar", jarPath);
+				LiteLoaderTweaker.logger.info(String.format("Version jar '%s' was specified on the command line", jarPath));
 				this.jarFile = new File(jarPath);
 				this.jarUrl = this.jarFile.toURI().toURL();
 			}
@@ -181,7 +182,9 @@ public class LiteLoaderTweaker implements ITweaker
 					Map<String, String> refMap = new Gson().fromJson(refReader, HashMap.class);
 					if (refMap.containsKey("jarfile"))
 					{
-						this.jarFile = new File(refContainer.getParentFile(), refMap.get("jarfile"));
+						String jarPath = refMap.get("jarfile");
+						LiteLoaderTweaker.logger.info(String.format("Version jar '%s' specified via jarfile.ref", jarPath));
+						this.jarFile = new File(refContainer.getParentFile(), jarPath);
 						this.jarUrl = this.jarFile.toURI().toURL();
 						return;
 					}
