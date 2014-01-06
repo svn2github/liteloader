@@ -26,7 +26,7 @@ import java.util.logging.Logger;
 
 import com.google.gson.Gson;
 import com.mumfrey.liteloader.core.hooks.asm.PacketTransformer;
-import com.mumfrey.liteloader.core.hooks.asm.PacketTransformerInfo;
+import com.mumfrey.liteloader.util.SortableValue;
 
 import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.NonOptionArgumentSpec;
@@ -79,7 +79,13 @@ public class LiteLoaderTweaker implements ITweaker
 	
 	private Set<String> injectTransformers = new HashSet<String>();
 	
-	private Map<String, TreeSet<PacketTransformerInfo>> packetTransformers = new HashMap<String, TreeSet<PacketTransformerInfo>>();
+	private Map<String, TreeSet<SortableValue<String>>> packetTransformers = new HashMap<String, TreeSet<SortableValue<String>>>();
+	
+	private int tweakOrder = 0;
+	
+	private Set<String> allTweaks = new HashSet<String>();
+	
+	private Set<SortableValue<String>> sortedTweaks = new TreeSet<SortableValue<String>>();
 
 	private boolean isPrimary;
 	
@@ -273,14 +279,14 @@ public class LiteLoaderTweaker implements ITweaker
 			classLoader.registerTransformer(requiredTransformerClassName);
 		}
 		
-		for (Entry<String, TreeSet<PacketTransformerInfo>> packetClassTransformers : this.packetTransformers.entrySet())
+		for (Entry<String, TreeSet<SortableValue<String>>> packetClassTransformers : this.packetTransformers.entrySet())
 		{
-			for (PacketTransformerInfo transformerInfo : packetClassTransformers.getValue())
+			for (SortableValue<String> transformerInfo : packetClassTransformers.getValue())
 			{
 				String packetClass = packetClassTransformers.getKey();
 				if (packetClass.lastIndexOf('.') != -1) packetClass = packetClass.substring(packetClass.lastIndexOf('.') + 1);
-				LiteLoaderTweaker.logger.info(String.format("Injecting packet class transformer '%s' for packet class '%s' with priority %d", transformerInfo.getTransformerClassName(), packetClass, transformerInfo.getPriority()));
-				classLoader.registerTransformer(transformerInfo.getTransformerClassName());
+				LiteLoaderTweaker.logger.info(String.format("Injecting packet class transformer '%s' for packet class '%s' with priority %d", transformerInfo.getValue(), packetClass, transformerInfo.getPriority()));
+				classLoader.registerTransformer(transformerInfo.getValue());
 			}
 		}
 	}
@@ -323,7 +329,7 @@ public class LiteLoaderTweaker implements ITweaker
 					PacketTransformer transformer = (PacketTransformer)transformerClass.newInstance();
 					String packetClass = transformer.getPacketClass();
 					if (!this.packetTransformers.containsKey(packetClass))
-						this.packetTransformers.put(packetClass, new TreeSet<PacketTransformerInfo>());
+						this.packetTransformers.put(packetClass, new TreeSet<SortableValue<String>>());
 					this.packetTransformers.get(packetClass).add(transformer.getInfo(transformerClassName));
 					registeredTransformers++;
 					iter.remove();
@@ -381,33 +387,70 @@ public class LiteLoaderTweaker implements ITweaker
 		return args.toArray(new String[args.size()]);
 	}
 	
-	@SuppressWarnings("unchecked")
-	public static boolean addTweaker(String tweakClass)
+	public static boolean addTweaker(String tweakClass, int priority)
 	{
-		List<String> tweakClasses = (List<String>)Launch.blackboard.get("TweakClasses");
-		List<ITweaker> tweakers = (List<ITweaker>)Launch.blackboard.get("Tweaks");
-		if (tweakClasses != null && tweakers != null)
+		return LiteLoaderTweaker.instance.addTweakToSortedList(tweakClass, priority);
+	}
+
+	private boolean addTweakToSortedList(String tweakClass, int priority)
+	{
+		if (tweakClass != null && !this.allTweaks.contains(tweakClass))
 		{
-			if (!tweakClasses.contains(tweakClass))
-			{
-				if (!LiteLoaderTweaker.instance.preInit)
-				{
-					LiteLoaderTweaker.logger.warning(String.format("Failed to add tweak class %s because preInit is already complete", tweakClass));
-					return false;
-				}
-				
-				for (ITweaker existingTweaker : tweakers)
-				{
-					if (tweakClass.equals(existingTweaker.getClass().getName()))
-						return false;
-				}
-				
-				tweakClasses.add(tweakClass);
-				return true;
-			}
+			this.allTweaks.add(tweakClass);
+			this.sortedTweaks.add(new SortableValue<String>(priority, this.tweakOrder++, tweakClass));
+			return true;
 		}
 		
 		return false;
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void injectDiscoveredTweakClasses()
+	{
+		if (!LiteLoaderTweaker.instance.preInit)
+		{
+			LiteLoaderTweaker.logger.warning("Failed to inject cascaded tweak classes because preInit is already complete");
+			return;
+		}
+		
+		if (this.sortedTweaks.size() > 0)
+		{
+			LiteLoaderTweaker.logger.info("Injecting cascaded tweakers...");
+
+			List<String> tweakClasses = (List<String>)Launch.blackboard.get("TweakClasses");
+			List<ITweaker> tweakers = (List<ITweaker>)Launch.blackboard.get("Tweaks");
+			if (tweakClasses != null && tweakers != null)
+			{
+				for (SortableValue<String> tweak : this.sortedTweaks)
+				{
+					String tweakClass = tweak.getValue();
+					LiteLoaderTweaker.logger.info(String.format("Injecting tweak class %s with priority %d", tweakClass, tweak.getPriority()));
+					this.injectTweakClass(tweakClass, tweakClasses, tweakers);
+				}
+			}
+			
+			// Clear sortedTweaks but not allTweaks
+			this.sortedTweaks.clear();
+		}
+	}
+
+	/**
+	 * @param tweakClass
+	 * @param tweakClasses
+	 * @param tweakers
+	 */
+	private void injectTweakClass(String tweakClass, List<String> tweakClasses, List<ITweaker> tweakers)
+	{
+		if (!tweakClasses.contains(tweakClass))
+		{
+			for (ITweaker existingTweaker : tweakers)
+			{
+				if (tweakClass.equals(existingTweaker.getClass().getName()))
+					return;
+			}
+			
+			tweakClasses.add(tweakClass);
+		}
 	}
 
 	public static boolean addClassTransformer(String transfomerClass)
@@ -468,6 +511,9 @@ public class LiteLoaderTweaker implements ITweaker
 			LiteLoaderTweaker.spawnBootstrap();
 			LiteLoaderTweaker.logger.info("Beginning LiteLoader PreInit...");
 			this.bootstrap.preInit(Launch.classLoader, true, this.modsToLoad);
+			
+			this.injectDiscoveredTweakClasses();
+			
 			this.preInit = false;
 		}
 		catch (Throwable th)

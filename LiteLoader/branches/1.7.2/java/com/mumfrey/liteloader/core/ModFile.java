@@ -136,6 +136,7 @@ public class ModFile extends LoadableFile implements LoadableMod<File>
 		this.valid = true;
 		
 		this.tweakClassName = this.metaData.get("tweakClass");
+		this.tweakPriority = 0;
 		
 		for (String name : this.getMetaValues("classTransformerClasses", ","))
 		{

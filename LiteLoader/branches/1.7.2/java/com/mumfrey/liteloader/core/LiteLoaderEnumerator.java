@@ -483,8 +483,9 @@ class LiteLoaderEnumerator implements FilenameFilter
 		try
 		{
 			String tweakClass = loadable.getTweakClassName();
-			LiteLoaderEnumerator.logInfo("Mod file '%s' provides tweakClass '%s', adding to Launch queue", loadable.getName(), tweakClass);
-			if (LiteLoaderTweaker.addTweaker(tweakClass))
+			int tweakPriority = loadable.getTweakPriority();
+			LiteLoaderEnumerator.logInfo("Mod file '%s' provides tweakClass '%s', adding to Launch queue with priority %d", loadable.getName(), tweakClass, tweakPriority);
+			if (LiteLoaderTweaker.addTweaker(tweakClass, tweakPriority))
 			{
 				LiteLoaderEnumerator.logInfo("tweakClass '%s' was successfully added", tweakClass);
 				loadable.injectIntoClassPath(this.classLoader, true);

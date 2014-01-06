@@ -20,6 +20,11 @@ public interface TweakContainer<L> extends Loadable<L>, Injectable
 	public abstract String getTweakClassName();
 	
 	/**
+	 * Get the priority value for this tweak
+	 */
+	public abstract int getTweakPriority();
+	
+	/**
 	 * Get classpath entries defined in the metadata
 	 */
 	public abstract String[] getClassPathEntries();

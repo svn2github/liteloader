@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.primitives.Ints;
 import com.mumfrey.liteloader.launch.ClassPathInjector;
 import com.mumfrey.liteloader.launch.InjectionStrategy;
 import com.mumfrey.liteloader.launch.LiteLoaderTweaker;
@@ -45,6 +46,11 @@ public class LoadableFile extends File implements TweakContainer<File>
 	 * Name of the tweak class
 	 */
 	protected String tweakClassName;
+	
+	/**
+	 * Priority for this tweaker 
+	 */
+	protected int tweakPriority = 1000;
 	
 	/**
 	 * Class path entries read from jar metadata
@@ -107,6 +113,12 @@ public class LoadableFile extends File implements TweakContainer<File>
 					{
 						this.classPathEntries = classPath.split(" ");
 					}
+				}
+				
+				Integer tweakOrder = Ints.tryParse(manifestAttributes.getValue("TweakOrder"));
+				if (tweakOrder != null)
+				{
+					this.tweakPriority = tweakOrder.intValue();
 				}
 				
 				if (manifestAttributes.getValue("Implementation-Title") != null)
@@ -184,6 +196,15 @@ public class LoadableFile extends File implements TweakContainer<File>
 	public String getTweakClassName()
 	{
 		return this.tweakClassName;
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.mumfrey.liteloader.core.TweakContainer#getTweakPriority()
+	 */
+	@Override
+	public int getTweakPriority()
+	{
+		return this.tweakPriority;
 	}
 	
 	/* (non-Javadoc)

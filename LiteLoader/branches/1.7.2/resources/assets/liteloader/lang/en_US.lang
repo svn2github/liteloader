@@ -1,5 +1,7 @@
 # This file MUST be saved as UTF-8
 
+key.categories.litemods=§eMod Keys
+
 gui.about.modsloaded=%d mod(s) loaded
 gui.about.versiontext=Version %s
 

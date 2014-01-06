@@ -19,6 +19,8 @@ import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TryCatchBlockNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
+import com.mumfrey.liteloader.util.SortableValue;
+
 /**
  * Class transformer which transforms a Packet class and alters the "processPacket" function to call the specified
  * callback method in the specified callback class instead of the usual behaviour of calling the relevant synthetic bridge
@@ -264,8 +266,8 @@ public abstract class PacketTransformer implements IClassTransformer
 	 * @param className
 	 * @return
 	 */
-	public final PacketTransformerInfo getInfo(String className)
+	public final SortableValue<String> getInfo(String className)
 	{
-		return new PacketTransformerInfo(this.priority, this.order, className);
+		return new SortableValue<String>(this.priority, this.order, className);
 	}
 }
