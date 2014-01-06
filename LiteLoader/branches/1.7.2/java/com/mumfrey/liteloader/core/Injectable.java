@@ -3,6 +3,8 @@ package com.mumfrey.liteloader.core;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+import com.mumfrey.liteloader.launch.InjectionStrategy;
+
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
@@ -30,4 +32,6 @@ public interface Injectable
 	 * @throws MalformedURLException
 	 */
 	public abstract boolean injectIntoClassPath(LaunchClassLoader classLoader, boolean injectIntoParent) throws MalformedURLException;
+	
+	public abstract InjectionStrategy getInjectionStrategy();
 }

@@ -6,6 +6,8 @@ import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.mumfrey.liteloader.launch.InjectionStrategy;
+
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
@@ -163,6 +165,12 @@ public interface LoadableMod<L> extends Loadable<L>, Injectable
 		public boolean injectIntoClassPath(LaunchClassLoader classLoader, boolean injectIntoParent) throws MalformedURLException
 		{
 			return false;
+		}
+		
+		@Override
+		public InjectionStrategy getInjectionStrategy()
+		{
+			return null;
 		}
 
 		@Override

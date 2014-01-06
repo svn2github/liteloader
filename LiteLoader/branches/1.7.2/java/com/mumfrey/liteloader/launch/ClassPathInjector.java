@@ -1,12 +1,15 @@
 package com.mumfrey.liteloader.launch;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Stack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import com.mumfrey.liteloader.launch.InjectionStrategy.InjectionPosition;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 import sun.misc.URLClassPath;
@@ -57,6 +60,42 @@ public abstract class ClassPathInjector
 	}
 	
 	/**
+	 * Injects a URL into the classpath based on the specified injection strategy
+	 * 
+	 * @param classLoader
+	 * @param url
+	 */
+	public static void injectIntoClassPath(URLClassLoader classLoader, URL url, InjectionStrategy strategy)
+	{
+		if (strategy == null || strategy.getPosition() == null)
+		{
+			ClassPathInjector.addURL(classLoader, url);
+			return;
+		}
+		
+		if (strategy.getPosition() == InjectionPosition.Top)
+		{
+			ClassPathInjector.injectIntoClassPath(classLoader, url);
+		}
+		else if (strategy.getPosition() == InjectionPosition.Base)
+		{
+			ClassPathInjector.injectIntoClassPath(classLoader, url, LiteLoaderTweaker.getJarUrl());
+		}
+		else if (strategy.getPosition() == InjectionPosition.Above)
+		{
+			String[] params = strategy.getParams();
+			if (params.length > 0)
+			{
+				ClassPathInjector.injectIntoClassPath(classLoader, url, params[0]);
+			}
+		}
+		else
+		{
+			ClassPathInjector.addURL(classLoader, url);
+		}
+	}
+	
+	/**
 	 * Injects a URL into the classpath at the TOP of the stack
 	 * 
 	 * @param classLoader
@@ -64,7 +103,7 @@ public abstract class ClassPathInjector
 	 */
 	public static void injectIntoClassPath(URLClassLoader classLoader, URL url)
 	{
-		ClassPathInjector.injectIntoClassPath(classLoader, url, null);
+		ClassPathInjector.injectIntoClassPath(classLoader, url, (URL)null);
 	}
 	
 	/**
@@ -115,10 +154,7 @@ public abstract class ClassPathInjector
 			}
 		}
 		
-		if (classLoader instanceof LaunchClassLoader)
-		{
-			((LaunchClassLoader)classLoader).addURL(url);
-		}
+		ClassPathInjector.addURL(classLoader, url);
 	}
 
 	/**
@@ -126,7 +162,7 @@ public abstract class ClassPathInjector
 	 * @param url
 	 * @param above
 	 */
-	public static void injectIntoClassPath(LaunchClassLoader classLoader, URL url, String above)
+	public static void injectIntoClassPath(URLClassLoader classLoader, URL url, String above)
 	{
 		above = above.trim().toLowerCase();
 		if (above.length() < 1) return;
@@ -138,6 +174,28 @@ public abstract class ClassPathInjector
 				ClassPathInjector.injectIntoClassPath(classLoader, url, classPathUrl);
 				return;
 			}
+		}
+	}
+
+	/**
+	 * @param classLoader
+	 * @param url
+	 */
+	private static void addURL(URLClassLoader classLoader, URL url)
+	{
+		if (classLoader instanceof LaunchClassLoader)
+		{
+			((LaunchClassLoader)classLoader).addURL(url);
+		}
+		else
+		{
+			try
+			{
+				Method mAddUrl = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+				mAddUrl.setAccessible(true);
+				mAddUrl.invoke(classLoader, url);
+			}
+			catch (Exception ex) {}
 		}
 	}
 }

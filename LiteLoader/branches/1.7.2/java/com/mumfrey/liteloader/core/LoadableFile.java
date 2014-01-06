@@ -12,6 +12,8 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.mumfrey.liteloader.launch.ClassPathInjector;
+import com.mumfrey.liteloader.launch.InjectionStrategy;
 import com.mumfrey.liteloader.launch.LiteLoaderTweaker;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
@@ -37,7 +39,7 @@ public class LoadableFile extends File implements TweakContainer<File>
 	 * the developer can specify "top" to inject at the top, "base" to inject above the game jar, or "above: name" to
 	 * inject above a specified other library matching "name".
 	 */
-	protected String injectAt;
+	protected InjectionStrategy injectionStrategy = null;
 
 	/**
 	 * Name of the tweak class
@@ -107,14 +109,25 @@ public class LoadableFile extends File implements TweakContainer<File>
 					}
 				}
 				
+				if (manifestAttributes.getValue("Implementation-Title") != null)
+					this.displayName = manifestAttributes.getValue("Implementation-Title");
+				
 				if (manifestAttributes.getValue("TweakName") != null)
 					this.displayName = manifestAttributes.getValue("TweakName");
+				
+				if (manifestAttributes.getValue("Implementation-Version") != null)
+					this.version = manifestAttributes.getValue("Implementation-Version");
 				
 				if (manifestAttributes.getValue("TweakVersion") != null)
 					this.version = manifestAttributes.getValue("TweakVersion");
 				
+				if (manifestAttributes.getValue("Implementation-Vendor") != null)
+					this.author = manifestAttributes.getValue("Implementation-Vendor");
+				
 				if (manifestAttributes.getValue("TweakAuthor") != null)
 					this.author = manifestAttributes.getValue("TweakAuthor");
+				
+				this.injectionStrategy = InjectionStrategy.parseStrategy(manifestAttributes.getValue("TweakInjectionStrategy"), InjectionStrategy.TOP);
 			}
 		}
 		catch (Exception ex)
@@ -212,17 +225,24 @@ public class LoadableFile extends File implements TweakContainer<File>
 	{
 		if (!this.injected)
 		{
+			ClassPathInjector.injectIntoClassPath(classLoader, this.getURL(), this.getInjectionStrategy());
+			
 			if (injectIntoParent)
 			{
 				LiteLoaderTweaker.addURLToParentClassLoader(this.getURL());
 			}
 			
-			classLoader.addURL(this.getURL());
 			this.injected = true;
 			return true;
 		}
 		
 		return false;
+	}
+	
+	@Override
+	public InjectionStrategy getInjectionStrategy()
+	{
+		return this.injectionStrategy;
 	}
 
 	@Override

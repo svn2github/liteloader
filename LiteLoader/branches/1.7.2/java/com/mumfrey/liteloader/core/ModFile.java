@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -16,14 +15,11 @@ import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import net.minecraft.launchwrapper.LaunchClassLoader;
-
 import joptsimple.internal.Strings;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
-import com.mumfrey.liteloader.launch.ClassPathInjector;
-import com.mumfrey.liteloader.launch.LiteLoaderTweaker;
+import com.mumfrey.liteloader.launch.InjectionStrategy;
 import com.mumfrey.liteloader.resources.ModResourcePack;
 
 /**
@@ -116,7 +112,7 @@ public class ModFile extends LoadableFile implements LoadableMod<File>
 			return;
 		}
 		
-		this.modName = this.metaData.get("name");
+		this.modName = this.getMetaValue("name", this.getDefaultName());
 		this.version = this.getMetaValue("version", "Unknown");
 		this.author = this.getMetaValue("author", "Unknown");
 		this.targetVersion = this.metaData.get("mcversion");
@@ -139,23 +135,15 @@ public class ModFile extends LoadableFile implements LoadableMod<File>
 
 		this.valid = true;
 		
-		if (this.modName == null)
+		this.tweakClassName = this.metaData.get("tweakClass");
+		
+		for (String name : this.getMetaValues("classTransformerClasses", ","))
 		{
-			this.modName = this.getDefaultName();
+			if (!Strings.isNullOrEmpty(name))
+				this.classTransformerClassNames.add(name);
 		}
 		
-		this.tweakClassName = this.metaData.get("tweakClass");
-		String classTransformerNames = this.metaData.get("classTransformerClasses");
-		if (classTransformerNames != null)
-		{
-			String[] names = classTransformerNames.split(",");
-			for (String name : names)
-			{
-				if (!Strings.isNullOrEmpty(name))
-					this.classTransformerClassNames.add(name);
-			}
-		}
-		this.injectAt = this.metaData.get("injectAt");
+		this.injectionStrategy = InjectionStrategy.parseStrategy(this.metaData.get("injectAt"));
 	}
 
 	protected String getDefaultName()
@@ -216,6 +204,11 @@ public class ModFile extends LoadableFile implements LoadableMod<File>
 	{
 		return this.metaData.containsKey(metaKey) ? this.metaData.get(metaKey) : defaultValue;
 	}
+	
+	public String[] getMetaValues(String metaKey, String separator)
+	{
+		return this.metaData.containsKey(metaKey) ? this.metaData.get(metaKey).split(separator) : new String[0];
+	}
 
 	@Override
 	public Set<String> getMetaDataKeys()
@@ -233,37 +226,6 @@ public class ModFile extends LoadableFile implements LoadableMod<File>
 	public List<String> getClassTransformerClassNames()
 	{
 		return this.classTransformerClassNames;
-	}
-	
-	@Override
-	public boolean injectIntoClassPath(LaunchClassLoader classLoader, boolean injectIntoParent) throws MalformedURLException
-	{
-		if (!this.injected)
-		{
-			if ("top".equals(this.injectAt))
-			{
-				ClassPathInjector.injectIntoClassPath(classLoader, this.getURL());
-			}
-			else if ("base".equals(this.injectAt))
-			{
-				ClassPathInjector.injectIntoClassPath(classLoader, this.getURL(), LiteLoaderTweaker.getJarUrl());
-			}
-			else if (this.injectAt != null && this.injectAt.startsWith("above:"))
-			{
-				ClassPathInjector.injectIntoClassPath(classLoader, this.getURL(), this.injectAt.substring(6));
-			}
-
-			if (injectIntoParent)
-			{
-				LiteLoaderTweaker.addURLToParentClassLoader(this.getURL());
-			}
-			
-			classLoader.addURL(this.getURL());
-			this.injected = true;
-			return true;
-		}
-		
-		return false;
 	}
 
 	@Override
