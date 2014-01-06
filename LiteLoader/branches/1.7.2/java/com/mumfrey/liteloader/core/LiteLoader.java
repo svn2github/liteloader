@@ -1146,6 +1146,8 @@ public final class LiteLoader
 			
 			this.updateBinding(binding);
 			this.storeBindings();
+			
+			KeyBinding.resetKeyBindingArrayAndHash();
 		}
 	}
 	
