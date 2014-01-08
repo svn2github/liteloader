@@ -256,7 +256,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 				LiteLoaderEnumerator.logInfo("Mods folder found, searching %s", modsFolder.getPath());
 				this.findModFiles(modsFolder, false);
 				
-				File versionedModsFolder = new File(modsFolder, LiteLoaderBootstrap.VERSION.getMinecraftVersion());
+				File versionedModsFolder = new File(modsFolder, LiteLoaderVersion.CURRENT.getMinecraftVersion());
 				if (versionedModsFolder.exists() && versionedModsFolder.isDirectory())
 				{
 					LiteLoaderEnumerator.logInfo("Versioned mods folder found, searching %s", versionedModsFolder.getPath());
@@ -402,7 +402,7 @@ class LiteLoaderEnumerator implements FilenameFilter
 						{
 							// Only add the mod if the version matches, we add candidates to the versionOrderingSets in
 							// order to determine the most recent version available.
-							if (LiteLoaderBootstrap.VERSION.isVersionSupported(modFile.getTargetVersion()))
+							if (LiteLoaderVersion.CURRENT.isVersionSupported(modFile.getTargetVersion()))
 							{
 								if (!versionOrderingSets.containsKey(modFile.getName()))
 								{

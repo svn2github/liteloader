@@ -39,7 +39,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	/**
 	 * Liteloader version
 	 */
-	public static final LiteLoaderVersion VERSION = LiteLoaderVersion.MC_1_7_2_R1;
+	public static final LiteLoaderVersion VERSION = LiteLoaderVersion.CURRENT;
 
 	/**
 	 * Local logger reference
@@ -147,7 +147,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		// Set up the bootstrap
 		if (!this.prepare()) return;
 		
-		LiteLoaderBootstrap.logInfo("LiteLoader %s starting up...", LiteLoaderBootstrap.VERSION.getLoaderVersion());
+		LiteLoaderBootstrap.logInfo("LiteLoader %s starting up...", LiteLoaderVersion.CURRENT.getLoaderVersion());
 		
 		// Print the branding version if any was provided
 		if (this.branding != null)
@@ -328,7 +328,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	{
 		try
 		{
-			this.localProperties.store(new FileWriter(this.propertiesFile), String.format("Properties for LiteLoader %s", LiteLoaderBootstrap.VERSION));
+			this.localProperties.store(new FileWriter(this.propertiesFile), String.format("Properties for LiteLoader %s", LiteLoaderVersion.CURRENT));
 		}
 		catch (Throwable th)
 		{
@@ -410,7 +410,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	{
 		if (this.localProperties != null)
 		{
-			this.localProperties.setProperty(modKey, String.valueOf(LiteLoaderBootstrap.VERSION.getLoaderRevision()));
+			this.localProperties.setProperty(modKey, String.valueOf(LiteLoaderVersion.CURRENT.getLoaderRevision()));
 			this.writeProperties();
 		}
 	}

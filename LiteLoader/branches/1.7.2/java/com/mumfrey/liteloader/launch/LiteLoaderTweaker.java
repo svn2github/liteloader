@@ -7,8 +7,6 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
@@ -177,7 +175,7 @@ public class LiteLoaderTweaker implements ITweaker
 		{
 			String resource = "/jarfile.ref";
 			InputStream refResource = LiteLoaderTweaker.class.getResourceAsStream(resource);
-			File refContainer = LiteLoaderTweaker.getPathToResource(resource);
+			File refContainer = ClassPathUtilities.getPathToResource(LiteLoaderTweaker.class, resource);
 			if (refResource != null && refContainer != null)
 			{
 				InputStreamReader refReader = new InputStreamReader(refResource);
@@ -571,37 +569,5 @@ public class LiteLoaderTweaker implements ITweaker
 	public static boolean isPrimary()
 	{
 		return LiteLoaderTweaker.instance.isPrimary;
-	}
-
-	/**
-	 * Gets the file containing the specified resource
-	 * 
-	 * @param resource
-	 * @return
-	 */
-	private static File getPathToResource(String resource)
-	{
-		URL res = LiteLoaderTweaker.class.getResource(resource);
-		if (res == null) return null;
-
-		boolean returnParent = true;
-		String jarPath = res.toString();
-		if (jarPath.startsWith("jar:") && jarPath.indexOf('!') > -1)
-		{
-			jarPath = jarPath.substring(4, jarPath.indexOf('!'));
-			returnParent = false;
-		}
-		
-		if (jarPath.startsWith("file:"))
-		{
-			try
-			{
-				File targetFile = new File(new URI(jarPath));
-				return returnParent ? targetFile.getParentFile() : targetFile;
-			}
-			catch (URISyntaxException ex) { }
-		}
-		
-		return null;
 	}
 }

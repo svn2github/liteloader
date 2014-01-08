@@ -272,7 +272,7 @@ public final class LiteLoader
 		this.configBaseFolder = bootstrap.getConfigBaseFolder();
 		
 		this.commonConfigFolder = new File(this.configBaseFolder, "common");
-		this.versionConfigFolder = this.inflectVersionedConfigPath(LiteLoaderBootstrap.VERSION);
+		this.versionConfigFolder = this.inflectVersionedConfigPath(LiteLoaderVersion.CURRENT);
 		
 		if (!this.modsFolder.exists()) this.modsFolder.mkdirs();
 		if (!this.configBaseFolder.exists()) this.configBaseFolder.mkdirs();
@@ -443,7 +443,7 @@ public final class LiteLoader
 	 */
 	public static final String getVersion()
 	{
-		return LiteLoaderBootstrap.VERSION.getLoaderVersion();
+		return LiteLoaderVersion.CURRENT.getLoaderVersion();
 	}
 	
 	/**
@@ -453,7 +453,7 @@ public final class LiteLoader
 	 */
 	public static final String getVersionDisplayString()
 	{
-		return String.format("LiteLoader %s", LiteLoaderBootstrap.VERSION.getLoaderVersion());
+		return String.format("LiteLoader %s", LiteLoaderVersion.CURRENT.getLoaderVersion());
 	}
 	
 	/**
@@ -463,7 +463,7 @@ public final class LiteLoader
 	 */
 	public static final int getRevision()
 	{
-		return LiteLoaderBootstrap.VERSION.getLoaderRevision();
+		return LiteLoaderVersion.CURRENT.getLoaderRevision();
 	}
 	
 	/**
@@ -976,15 +976,15 @@ public final class LiteLoader
 		String modKey = this.getModNameForConfig(mod.getClass(), mod.getName());
 		LiteLoaderVersion lastModVersion = LiteLoaderVersion.getVersionFromRevision(this.bootstrap.getLastKnownModRevision(modKey));
 		
-		if (LiteLoaderBootstrap.VERSION.getLoaderRevision() > lastModVersion.getLoaderRevision())
+		if (LiteLoaderVersion.CURRENT.getLoaderRevision() > lastModVersion.getLoaderRevision())
 		{
-			LiteLoader.logInfo("Performing config upgrade for mod %s. Upgrading %s to %s...", mod.getName(), lastModVersion, LiteLoaderBootstrap.VERSION);
+			LiteLoader.logInfo("Performing config upgrade for mod %s. Upgrading %s to %s...", mod.getName(), lastModVersion, LiteLoaderVersion.CURRENT);
 			
 			// Migrate versioned config if any is present
 			this.configManager.migrateModConfig(mod, this.versionConfigFolder, this.inflectVersionedConfigPath(lastModVersion));
 			
 			// Let the mod upgrade
-			mod.upgradeSettings(LiteLoaderBootstrap.VERSION.getMinecraftVersion(), this.versionConfigFolder, this.inflectVersionedConfigPath(lastModVersion));
+			mod.upgradeSettings(LiteLoaderVersion.CURRENT.getMinecraftVersion(), this.versionConfigFolder, this.inflectVersionedConfigPath(lastModVersion));
 			
 			this.bootstrap.storeLastKnownModRevision(modKey);
 			LiteLoader.logInfo("Config upgrade succeeded for mod %s", mod.getName());

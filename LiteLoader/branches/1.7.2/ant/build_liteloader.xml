@@ -4,7 +4,7 @@
 	<taskdef resource="net/sf/antcontrib/antcontrib.properties" classpath="tasks/ant-contrib.jar" />
 
 	<!-- Versions !!IMPORTANT -->
-	<property name="version" value="1.7.2_01" />
+	<property name="version" value="1.7.2_02" />
 	<property name="mcversion" value="1.7.2" />
 	<property name="author" value="Mumfrey" />
 
@@ -48,7 +48,7 @@
 	<target name="setdirsold" description="Set the MCP source directories for the old layout" if="mcpsrc.exists">
         <echo level="warning" message="--------------------------------------------------------------------------------" />
         <echo level="warning" message=" "                                                                                />
-        <echo level="warning" message=" Setting MCP source directories for OLD configuration!"                            />
+        <echo level="warning" message=" Setting MCP source directories for OLD configuration!"                           />
         <echo level="warning" message=" "                                                                                />
         <echo level="warning" message=" Renaming the MCP 'src' directory is no longer required and support for this"     />
         <echo level="warning" message=" be removed in a future version."                                                 />

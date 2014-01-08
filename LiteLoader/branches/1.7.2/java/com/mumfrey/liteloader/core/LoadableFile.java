@@ -13,7 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.primitives.Ints;
-import com.mumfrey.liteloader.launch.ClassPathInjector;
+import com.mumfrey.liteloader.launch.ClassPathUtilities;
 import com.mumfrey.liteloader.launch.InjectionStrategy;
 import com.mumfrey.liteloader.launch.LiteLoaderTweaker;
 
@@ -246,7 +246,7 @@ public class LoadableFile extends File implements TweakContainer<File>
 	{
 		if (!this.injected)
 		{
-			ClassPathInjector.injectIntoClassPath(classLoader, this.getURL(), this.getInjectionStrategy());
+			ClassPathUtilities.injectIntoClassPath(classLoader, this.getURL(), this.getInjectionStrategy());
 			
 			if (injectIntoParent)
 			{

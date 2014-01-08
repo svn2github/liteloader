@@ -30,7 +30,7 @@ public class ClassPathMod extends ModFile
 		super(file, ClassPathMod.getVersionMetaDataString(file));
 
 		if (this.modName == null) this.modName = fallbackName;
-		if (this.targetVersion == null) this.targetVersion = LiteLoaderBootstrap.VERSION.getMinecraftVersion();
+		if (this.targetVersion == null) this.targetVersion = LiteLoaderVersion.CURRENT.getMinecraftVersion();
 	}
 	
 	@Override
