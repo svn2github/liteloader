@@ -19,24 +19,24 @@ public class LiteLoaderTransformer implements IClassTransformer
 	
 	private static final String METHOD_POSTINIT = "postInit";
 
-	private static final String classMappingRenderLightningBolt = "net.minecraft.client.renderer.entity.RenderLightningBolt";
+	private static final String renderLightningBoltClass = "net.minecraft.client.renderer.entity.RenderLightningBolt";
 	
-	private static final String classMappingMain = "net.minecraft.client.main.Main";
+	private static final String mainClass = "net.minecraft.client.main.Main";
 	
 	// TODO Obfuscation 1.7.2
-	private static final String classMappingRenderLightningBoltObf = "bny";
+	private static final String renderLightningBoltClassObf = "bny";
 	
 	private static boolean postInit = false;
 	
 	@Override
 	public byte[] transform(String name, String transformedName, byte[] basicClass)
 	{
-		if (classMappingMain.equals(name))
+		if (mainClass.equals(name))
 		{
 			return this.transformMain(basicClass);
 		}
 		
-		if ((classMappingRenderLightningBolt.equals(name) || classMappingRenderLightningBoltObf.equals(name)) && !LiteLoaderTransformer.postInit)
+		if ((renderLightningBoltClass.equals(name) || renderLightningBoltClassObf.equals(name)) && !LiteLoaderTransformer.postInit)
 		{
 			return this.transformRenderLightningBolt(basicClass);
 		}

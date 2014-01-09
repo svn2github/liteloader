@@ -49,12 +49,13 @@ import com.mumfrey.liteloader.util.PrivateFields;
  * lightweight mods
  * 
  * @author Adam Mummery-Smith
- * @version 1.7.2_01
+ * @version 1.7.2_02
  */
 public final class LiteLoader
 {
 	private static final String OPTION_MOD_INFO_SCREEN   = "modInfoScreen";
 	private static final String OPTION_SOUND_MANAGER_FIX = "soundManagerFix";
+	private static final String OPTION_GENERATE_MAPPINGS = "genMappings";
 
 	/**
 	 * LiteLoader is a singleton, this is the singleton instance
@@ -338,7 +339,7 @@ public final class LiteLoader
 		this.registerModResourcePack(new InternalResourcePack("LiteLoader", LiteLoader.class, "liteloader"));
 		
 		// Create the event broker
-		this.events = new Events(this, this.minecraft, this.pluginChannels);
+		this.events = new Events(this, this.minecraft, this.pluginChannels, this.bootstrap.getBooleanProperty(OPTION_GENERATE_MAPPINGS));
 		
 		// Spawn mod instances
 		this.loadMods();

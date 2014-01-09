@@ -21,6 +21,18 @@ import com.mumfrey.liteloader.core.PluginChannels;
  */
 public class ASMHookProxy
 {
+	/**
+	 * Initialisation done
+	 */
+	private static boolean initDone = false;
+	
+	/**
+	 * Tick clock, sent as a flag to the core onTick so that mods know it's a new tick
+	 */
+	private static boolean clock = false;
+	
+	private static Events events;
+	
 	public static void handleLoginSuccessPacket(INetHandler netHandler, S02PacketLoginSuccess packet)
 	{
 		((INetHandlerLoginClient)netHandler).func_147390_a(packet);
@@ -70,5 +82,85 @@ public class ASMHookProxy
 		
 		PluginChannels pluginChannels = LiteLoader.getPluginChannels();
 		pluginChannels.onPluginChannelMessage(packet);
+	}
+	
+	public static void onTimerUpdate(int ref)
+	{
+		if (!ASMHookProxy.initDone)
+		{
+			ASMHookProxy.initDone = true;
+			ASMHookProxy.events = LiteLoader.getEvents();
+			ASMHookProxy.events.preBeginGame();
+		}
+		
+		ASMHookProxy.events.onTimerUpdate();
+	}
+	
+	public static void onAnimateTick(int ref)
+	{
+		ASMHookProxy.clock = true;
+	}
+	
+	public static void onTick(int ref)
+	{
+		if (ref == 2)
+		{
+			ASMHookProxy.events.onTick(ASMHookProxy.clock);
+		}
+	}
+	
+	public static void onRender(int ref)
+	{
+		ASMHookProxy.events.onRender();
+	}
+	
+	public static void preRenderGUI(int ref)
+	{
+		if (ref == 1)
+		{
+			ASMHookProxy.events.preRenderGUI();
+		}
+	}
+	
+	public static void onSetupCameraTransform(int ref)
+	{
+		ASMHookProxy.events.onSetupCameraTransform();
+	}
+	
+	public static void postRenderEntities(int ref)
+	{
+		ASMHookProxy.events.postRenderEntities();
+	}
+	
+	public static void postRender(int ref)
+	{
+		ASMHookProxy.events.postRender();
+	}
+	
+	public static void onRenderHUD(int ref)
+	{
+		ASMHookProxy.events.onRenderHUD();
+	}
+	
+	public static void onRenderChat(int ref)
+	{
+		ASMHookProxy.events.onRenderChat();
+	}
+	
+	public static void postRenderChat(int ref)
+	{
+		if (ref == 10)
+		{
+			ASMHookProxy.events.postRenderChat();
+		}
+	}
+	
+	public static void postRenderHUDandGUI(int ref)
+	{
+		if (ref == 2)
+		{
+			ASMHookProxy.events.postRenderHUD();
+			ASMHookProxy.events.preRenderGUI();
+		}
 	}
 }

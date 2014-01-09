@@ -20,7 +20,7 @@ import net.minecraft.util.Timer;
 import org.lwjgl.input.Mouse;
 
 import com.mumfrey.liteloader.*;
-import com.mumfrey.liteloader.core.hooks.HookProfiler;
+import com.mumfrey.liteloader.core.gen.GenProfiler;
 import com.mumfrey.liteloader.util.PrivateFields;
 
 /**
@@ -52,12 +52,12 @@ public class Events implements IPlayerUsage
 	/**
 	 * Flags which keep track of whether hooks have been applied
 	 */
-	private boolean hookInitDone, lateInitDone, tickHooked;
+	private boolean hookInitDone, lateInitDone, profilerHooked;
 	
 	/**
 	 * Profiler hook objects
 	 */
-	private final HookProfiler profilerHook = new HookProfiler(this);
+	private Profiler genProfiler = null;
 	
 	/**
 	 * ScaledResolution used by the pre-chat and post-chat render callbacks
@@ -157,11 +157,22 @@ public class Events implements IPlayerUsage
 	 * @param minecraft
 	 * @param pluginChannels
 	 */
-	Events(LiteLoader loader, Minecraft minecraft, PluginChannels pluginChannels)
+	Events(LiteLoader loader, Minecraft minecraft, PluginChannels pluginChannels, boolean genMappings)
 	{
 		this.loader = loader;
 		this.minecraft = minecraft;
 		this.pluginChannels = pluginChannels;
+		try
+		{
+			if (genMappings)
+			{
+				this.genProfiler = GenProfiler.class.newInstance();
+			}
+		}
+		catch (Throwable th)
+		{
+			th.printStackTrace();
+		}
 	}
 
 	/**
@@ -237,7 +248,7 @@ public class Events implements IPlayerUsage
 	}
 	
 	/**
-	 * Initialise mod hooks
+	 * Initialise hooks
 	 */
 	public void initHooks()
 	{
@@ -246,10 +257,13 @@ public class Events implements IPlayerUsage
 			LiteLoader.getLogger().info("Event manager is registering hooks");
 			
 			// Tick hook
-			if (!this.tickHooked)
+			if (!this.profilerHooked)
 			{
-				this.tickHooked = true;
-				PrivateFields.minecraftProfiler.setFinal(this.minecraft, this.profilerHook);
+				this.profilerHooked = true;
+				if (this.genProfiler != null)
+				{
+					PrivateFields.minecraftProfiler.setFinal(this.minecraft, this.genProfiler);
+				}
 			}
 			
 			// Sanity hook
@@ -552,7 +566,7 @@ public class Events implements IPlayerUsage
 	 * 
 	 * @param clock True if this is a new tick (otherwise it's just a new frame)
 	 */
-	public void onTick(Profiler profiler, boolean clock)
+	public void onTick(boolean clock)
 	{
 		float partialTicks = 0.0F;
 		
@@ -585,9 +599,9 @@ public class Events implements IPlayerUsage
 		// Iterate tickable mods
 		for (Tickable tickable : this.tickListeners)
 		{
-			profiler.startSection(tickable.getClass().getSimpleName());
+			this.minecraft.mcProfiler.startSection(tickable.getClass().getSimpleName());
 			tickable.onTick(this.minecraft, partialTicks, inGame, clock);
-			profiler.endSection();
+			this.minecraft.mcProfiler.endSection();
 		}
 		
 		// Detected world change
@@ -721,9 +735,9 @@ public class Events implements IPlayerUsage
 	 */
 	private void sanityCheck()
 	{
-		if (this.tickHooked && this.minecraft.mcProfiler != this.profilerHook)
+		if (this.profilerHooked && this.genProfiler != null && this.minecraft.mcProfiler != this.genProfiler)
 		{
-			PrivateFields.minecraftProfiler.setFinal(this.minecraft, this.profilerHook);
+			PrivateFields.minecraftProfiler.setFinal(this.minecraft, this.genProfiler);
 		}
 	}
 }

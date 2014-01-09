@@ -162,7 +162,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 
 		this.enumerator = new LiteLoaderEnumerator(this, classLoader, loadTweaks, this.enabledModsList);
 		this.enumerator.discoverMods();
-
+		
 		LiteLoaderBootstrap.logInfo("LiteLoader PreInit completed");
 	}
 	
@@ -383,6 +383,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	 * @param defaultValue
 	 * @return
 	 */
+	@Override
 	public boolean getAndStoreBooleanProperty(String propertyName, boolean defaultValue)
 	{
 		boolean result = this.localProperties.getProperty(propertyName, String.valueOf(defaultValue)).equalsIgnoreCase("true");
@@ -391,11 +392,25 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	}
 	
 	/**
+	 * Get a boolean propery from the properties file and also write the new value back to the properties file
+	 * 
+	 * @param propertyName
+	 * @param defaultValue
+	 * @return
+	 */
+	@Override
+	public boolean getBooleanProperty(String propertyName)
+	{
+		return this.localProperties.getProperty(propertyName, "false").equalsIgnoreCase("true");
+	}
+	
+	/**
 	 * Set a boolean property
 	 * 
 	 * @param propertyName
 	 * @param value
 	 */
+	@Override
 	public void setBooleanProperty(String propertyName, boolean value)
 	{
 		this.localProperties.setProperty(propertyName, String.valueOf(value));

@@ -32,4 +32,10 @@ public interface ILoaderBootstrap
 	 * Post-init, initialise loaded mods
 	 */
 	public abstract void postInit();
+
+	public abstract void setBooleanProperty(String propertyName, boolean value);
+
+	public abstract boolean getBooleanProperty(String propertyName);
+
+	public abstract boolean getAndStoreBooleanProperty(String propertyName, boolean defaultValue);
 }

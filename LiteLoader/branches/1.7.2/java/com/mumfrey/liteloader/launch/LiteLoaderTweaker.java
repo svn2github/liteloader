@@ -47,6 +47,8 @@ public class LiteLoaderTweaker implements ITweaker
 	
 	private static Logger logger = Logger.getLogger("liteloader");
 	
+	private static final String OPTION_GENERATE_MAPPINGS = "genMappings";
+
 	private boolean preInit = true;
 	
 	private boolean init = true;
@@ -92,6 +94,10 @@ public class LiteLoaderTweaker implements ITweaker
 		"com.mumfrey.liteloader.core.hooks.asm.CrashReportTransformer"
 	};
 	
+	private static final String injectionTransformerClassName = "com.mumfrey.liteloader.core.hooks.asm.CallbackInjectionTransformer";
+	
+	private static final String genTransformerClassName = "com.mumfrey.liteloader.core.gen.GenProfilerTransformer";
+
 	private static final String[] defaultPacketTransformers = {
 		"com.mumfrey.liteloader.core.hooks.asm.LoginSuccessPacketTransformer",
 		"com.mumfrey.liteloader.core.hooks.asm.ChatPacketTransformer",
@@ -287,6 +293,15 @@ public class LiteLoaderTweaker implements ITweaker
 				classLoader.registerTransformer(transformerInfo.getValue());
 			}
 		}
+
+		if (LiteLoaderTweaker.instance.bootstrap.getBooleanProperty(OPTION_GENERATE_MAPPINGS))
+		{
+			LiteLoaderTweaker.logger.info(String.format("Injecting gen trasnformer '%s'", LiteLoaderTweaker.genTransformerClassName));
+			LiteLoaderTweaker.instance.injectTransformers.add(LiteLoaderTweaker.genTransformerClassName);
+		}
+		
+		LiteLoaderTweaker.logger.info(String.format("Injecting required class transformer '%s'", LiteLoaderTweaker.injectionTransformerClassName));
+		LiteLoaderTweaker.instance.injectTransformers.add(LiteLoaderTweaker.injectionTransformerClassName);
 	}
 
 	private void injectModTransformers()

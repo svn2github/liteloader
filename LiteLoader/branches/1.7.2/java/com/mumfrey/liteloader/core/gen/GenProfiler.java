@@ -1,26 +1,29 @@
-package com.mumfrey.liteloader.core.hooks;
+package com.mumfrey.liteloader.core.gen;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+//import java.lang.reflect.Field;
+//import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.settings.GameSettings;
+//import net.minecraft.client.settings.GameSettings;
 import net.minecraft.profiler.Profiler;
 
-import com.mumfrey.liteloader.core.Events;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.core.exceptions.ProfilerCrossThreadAccessException;
 import com.mumfrey.liteloader.core.exceptions.ProfilerStackCorruptionException;
 
 /**
- * Main LiteLoader tick hook 
+ * Profiler used for generating callback signatures for the callback injector
  *
  * @author Adam Mummery-Smith
  */
-public class HookProfiler extends Profiler
+public class GenProfiler extends Profiler
 {
 	/**
 	 * Cross-thread sanity check 
@@ -30,12 +33,7 @@ public class HookProfiler extends Profiler
 	/**
 	 * Logger instance
 	 */
-	private Logger logger;
-	
-	/**
-	 * Event manager instance which will receive callbacks
-	 */
-	private Events events;
+	private static Logger logger;
 	
 	/**
 	 * Section list, used as a kind of stack to determine where we are in the profiler stack
@@ -43,24 +41,22 @@ public class HookProfiler extends Profiler
 	private LinkedList<String> sectionStack = new LinkedList<String>();
 
 	/**
-	 * Initialisation done
-	 */
-	private boolean initDone = false;
-	
-	/**
-	 * Tick clock, sent as a flag to the core onTick so that mods know it's a new tick
-	 */
-	private boolean tick;
-	
-	/**
 	 * Optifine compatibility, pointer to the "Profiler" setting so we can enable it if it's disabled
 	 */
-	private Field ofProfiler;
+//	private Field ofProfiler;
 	
 	/**
 	 * Minecraft reference, only set if optifine compatibility is enabled 
 	 */
 	private Minecraft mc;
+	
+	private static Map<String, String> eventSignatures = new HashMap<String, String>();
+	
+	private static Set<String> conflictedEvents = new HashSet<String>();
+
+	private static String lastEvent = null;
+	
+	private static String lastPosition = null;
 	
 	/**
 	 * .ctor
@@ -68,15 +64,14 @@ public class HookProfiler extends Profiler
 	 * @param events LiteLoader object which will get callbacks
 	 * @param logger Logger instance
 	 */
-	public HookProfiler(Events events)
+	public GenProfiler()
 	{
 		this.mc = Minecraft.getMinecraft();
 
-		this.events = events;
-		this.logger = LiteLoader.getLogger();
+		GenProfiler.logger = LiteLoader.getLogger();
 		
 		// Detect optifine (duh!)
-		this.detectOptifine();
+//		this.detectOptifine();
 		
 		this.minecraftThread = Thread.currentThread();
 	}
@@ -86,51 +81,51 @@ public class HookProfiler extends Profiler
 	 * 
 	 * @param logger
 	 */
-	private void detectOptifine()
-	{
-		try
-		{
-			this.ofProfiler = GameSettings.class.getDeclaredField("ofProfiler");
-		}
-		catch (SecurityException ex) {}
-		catch (NoSuchFieldException ex)
-		{
-			this.logger.info("Optifine not detected, skipping compatibility check");
-		}
-		finally
-		{
-			if (this.ofProfiler != null)
-			{
-				this.logger.info(String.format("Optifine version %s detected, enabling compatibility check", this.getOptifineVersion()));
-			}
-		}
-	}
+//	private void detectOptifine()
+//	{
+//		try
+//		{
+//			this.ofProfiler = GameSettings.class.getDeclaredField("ofProfiler");
+//		}
+//		catch (SecurityException ex) {}
+//		catch (NoSuchFieldException ex)
+//		{
+//			this.logger.info("Optifine not detected, skipping compatibility check");
+//		}
+//		finally
+//		{
+//			if (this.ofProfiler != null)
+//			{
+//				this.logger.info(String.format("Optifine version %s detected, enabling compatibility check", this.getOptifineVersion()));
+//			}
+//		}
+//	}
 	
 	/**
 	 * Try to get the optifine version using reflection
 	 * 
 	 * @return
 	 */
-	private String getOptifineVersion()
-	{
-		try
-		{
-			Class<?> config = Class.forName("Config");
-			
-			if (config != null)
-			{
-				Method getVersion = config.getDeclaredMethod("getVersion");
-				
-				if (getVersion != null)
-				{
-					return (String)getVersion.invoke(null);
-				}
-			}
-		}
-		catch (Exception ex) {}
-		
-		return "Unknown";
-	}
+//	private String getOptifineVersion()
+//	{
+//		try
+//		{
+//			Class<?> config = Class.forName("Config");
+//			
+//			if (config != null)
+//			{
+//				Method getVersion = config.getDeclaredMethod("getVersion");
+//				
+//				if (getVersion != null)
+//				{
+//					return (String)getVersion.invoke(null);
+//				}
+//			}
+//		}
+//		catch (Exception ex) {}
+//		
+//		return "Unknown";
+//	}
 	
 	/* (non-Javadoc)
 	 * @see net.minecraft.profiler.Profiler#startSection(java.lang.String)
@@ -144,56 +139,54 @@ public class HookProfiler extends Profiler
 			throw new ProfilerCrossThreadAccessException(Thread.currentThread().getName());
 		}
 		
-		if (!this.initDone)
-		{
-			this.initDone = true;
-			this.events.preBeginGame();
-		}
-		
 		if ("gameRenderer".equals(sectionName) && "root".equals(this.sectionStack.getLast()))
 		{
-			this.events.onRender();
+			this.debugEvent("onRender", sectionName);
 		}
 		else if ("frustrum".equals(sectionName) && "level".equals(this.sectionStack.getLast()))
 		{
-			this.events.onSetupCameraTransform();
+			this.debugEvent("onSetupCameraTransform", sectionName);
 		}
 		else if ("litParticles".equals(sectionName))
 		{
-			this.events.postRenderEntities();
+			this.debugEvent("postRenderEntities", sectionName);
 		}
 		else if ("tick".equals(sectionName) && "root".equals(this.sectionStack.getLast()))
 		{
-			this.events.onTimerUpdate();
+			this.debugEvent("onTimerUpdate", sectionName);
 		}
 		else if ("chat".equals(sectionName))
 		{
-			this.events.onRenderChat();
+			this.debugEvent("onRenderChat", sectionName);
 		}
 		else if ("gui".equals(sectionName) && "gameRenderer".equals(this.sectionStack.getLast()))
 		{
-			this.events.onRenderHUD();
+			this.debugEvent("onRenderHUD", sectionName);
 		}
 		
-		if ("animateTick".equals(sectionName)) this.tick = true;
+		if ("animateTick".equals(sectionName))
+		{
+			this.debugEvent("onAnimateTick", sectionName);
+		}
+		
 		this.sectionStack.add(sectionName);
 		super.startSection(sectionName);
 
-		if (this.ofProfiler != null)
-		{
-			try
-			{
-				this.ofProfiler.set(this.mc.gameSettings, true);
-			}
-			catch (IllegalArgumentException ex)
-			{
-				this.ofProfiler = null;
-			}
-			catch (IllegalAccessException ex)
-			{
-				this.ofProfiler = null;
-			}
-		}
+//		if (this.ofProfiler != null)
+//		{
+//			try
+//			{
+//				this.ofProfiler.set(this.mc.gameSettings, true);
+//			}
+//			catch (IllegalArgumentException ex)
+//			{
+//				this.ofProfiler = null;
+//			}
+//			catch (IllegalAccessException ex)
+//			{
+//				this.ofProfiler = null;
+//			}
+//		}
 	}
 	
 	/* (non-Javadoc)
@@ -214,34 +207,33 @@ public class HookProfiler extends Profiler
 		{
 			String endingSection = this.sectionStack.size() > 0 ? this.sectionStack.removeLast() : null;
 			String nextSection = this.sectionStack.size() > 0 ? this.sectionStack.getLast() : null;
+			String sectionName = "end[" + endingSection + "] next[" + nextSection + "]";
 			
 			if ("gameRenderer".equals(endingSection) && "root".equals(nextSection))
 			{
-				super.startSection("litetick");
+//				super.startSection("litetick");
 				
-				this.events.onTick(this, this.tick);
-				this.tick = false;
+				this.debugEvent("onTick", sectionName);
 				
-				super.endSection();
+//				super.endSection();
 			}
 			else
 			{
 				if ("gui".equals(endingSection) && "gameRenderer".equals(nextSection) && this.mc.theWorld != null)
 				{
-					this.events.postRenderHUD();
-					this.events.preRenderGUI();
+					this.debugEvent("postRenderHUDandGUI", sectionName);
 				}
 				else if ("mouse".equals(endingSection) && "gameRenderer".equals(nextSection) && (this.mc.skipRenderWorld || this.mc.theWorld == null))
 				{
-					this.events.preRenderGUI();
+					this.debugEvent("preRenderGUI", sectionName);
 				}
 				else if ("hand".equals(endingSection) && "level".equals(nextSection))
 				{
-					this.events.postRender();
+					this.debugEvent("postRender", sectionName);
 				}
 				else if ("chat".equals(endingSection))
 				{
-					this.events.postRenderChat();
+					this.debugEvent("postRenderChat", sectionName);
 				}
 			}
 		}
@@ -249,6 +241,32 @@ public class HookProfiler extends Profiler
 		{
 			this.logger.severe("Corrupted Profiler stack detected, this indicates an error with one of your mods.");
 			throw new ProfilerStackCorruptionException("Corrupted Profiler stack detected");
+		}
+	}
+	
+	private void debugEvent(String lastEvent, String profilerPos)
+	{
+		GenProfiler.lastEvent = lastEvent;
+		GenProfiler.lastPosition = profilerPos;
+	}
+
+	public static void storeSignature(String signature)
+	{
+		if (GenProfiler.lastEvent == null) return;
+		if (signature.startsWith("// com")) return;
+		
+		if (!GenProfiler.eventSignatures.containsKey(GenProfiler.lastEvent))
+		{
+			GenProfiler.eventSignatures.put(GenProfiler.lastEvent, signature);
+			System.out.println("\n// " + GenProfiler.lastPosition + "\n" + signature.replace("<event>", GenProfiler.lastEvent));
+		}
+		else
+		{
+			if (!GenProfiler.eventSignatures.get(GenProfiler.lastEvent).equals(signature) && !GenProfiler.conflictedEvents.contains(GenProfiler.lastEvent))
+			{
+				GenProfiler.conflictedEvents.add(GenProfiler.lastEvent);
+				System.out.println("\n// CONFLICT\n// " + GenProfiler.lastPosition + "\n" + signature.replace("<event>", GenProfiler.lastEvent));
+			}
 		}
 	}
 }
