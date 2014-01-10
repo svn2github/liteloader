@@ -19,6 +19,10 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  */
 public interface LoadableMod<L> extends Loadable<L>, Injectable
 {
+	static final String METADATA_FILENAME = "litemod.json";
+	
+	static final String LEGACY_METADATA_FILENAME = "version.txt";
+
 	/**
 	 * Get the name of the mod
 	 */
@@ -141,6 +145,24 @@ public interface LoadableMod<L> extends Loadable<L>, Injectable
 		public boolean isEnabled(EnabledModsList enabledModsList, String profile)
 		{
 			return true;
+		}
+		
+		@Override
+		public boolean isFile()
+		{
+			return false;
+		}
+		
+		@Override
+		public boolean isDirectory()
+		{
+			return false;
+		}
+		
+		@Override
+		public File toFile()
+		{
+			return null;
 		}
 
 		@Override

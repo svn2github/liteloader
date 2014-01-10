@@ -163,6 +163,12 @@ public class LoadableFile extends File implements TweakContainer<File>
 	}
 	
 	@Override
+	public File toFile()
+	{
+		return this;
+	}
+	
+	@Override
 	public String getLocation()
 	{
 		return this.getAbsolutePath();

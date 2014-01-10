@@ -1,5 +1,7 @@
 package com.mumfrey.liteloader.core;
 
+import java.io.File;
+
 /**
  * Interface for things which are loadable, essentially mods and tweaks
  * 
@@ -62,4 +64,19 @@ public interface Loadable<L> extends Comparable<L>
 	 * @return
 	 */
 	public abstract boolean isEnabled(EnabledModsList enabledModsList, String profile);
+	
+	/**
+	 * Get whether this loadable is a file container
+	 */
+	public abstract boolean isFile();
+		
+	/**
+	 * Get whether this loadable is a directory container
+	 */
+	public abstract boolean isDirectory();
+	
+	/**
+	 * If isFile or isDirectory return true then this method returns the inner File instance, otherwise returns null
+	 */
+	public abstract File toFile();
 }

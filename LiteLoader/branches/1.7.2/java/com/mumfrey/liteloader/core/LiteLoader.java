@@ -859,7 +859,7 @@ public final class LiteLoader
 				else
 				{
 					LiteLoader.logInfo("Not loading mod %s, excluded by filter", identifier);
-					LoadableMod<File> modContainer = this.enumerator.getModContainer(mod);
+					LoadableMod<?> modContainer = this.enumerator.getModContainer(mod);
 					if (modContainer != LoadableMod.NONE) this.disabledMods.add(modContainer);
 				}
 			}
@@ -889,19 +889,19 @@ public final class LiteLoader
 		LiteLoader.logInfo("Successfully added mod %s version %s", modName, newMod.getVersion());
 		
 		// Get the mod file and register it as a resource pack if it exists
-		LoadableMod<File> modFile = this.enumerator.getModContainer(mod);
-		if (modFile != null)
+		LoadableMod<?> loadableMod = this.enumerator.getModContainer(mod);
+		if (loadableMod != null)
 		{
-			this.disabledMods.remove(modFile);
+			this.disabledMods.remove(loadableMod);
 			
-			LiteLoader.logInfo("Adding \"%s\" to active resource pack set", modFile.getLocation());
+			LiteLoader.logInfo("Adding \"%s\" to active resource pack set", loadableMod.getLocation());
 			if (modName != null)
 			{
-				modFile.initResourcePack(modName);
+				loadableMod.initResourcePack(modName);
 				
-				if (modFile.hasResourcePack() && this.registerModResourcePack((IResourcePack)modFile.getResourcePack()))
+				if (loadableMod.hasResourcePack() && this.registerModResourcePack((IResourcePack)loadableMod.getResourcePack()))
 				{
-					LiteLoader.logInfo("Successfully added \"%s\" to active resource pack set", modFile.getLocation());
+					LiteLoader.logInfo("Successfully added \"%s\" to active resource pack set", loadableMod.getLocation());
 				}
 			}
 		}

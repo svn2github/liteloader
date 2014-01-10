@@ -29,7 +29,7 @@ import com.mumfrey.liteloader.resources.ModResourcePack;
  *
  * @author Adam Mummery-Smith
  */
-public class ModFile extends LoadableFile implements LoadableMod<File>
+public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 {
 	private static final long serialVersionUID = -7952147161905688459L;
 
@@ -89,7 +89,7 @@ public class ModFile extends LoadableFile implements LoadableMod<File>
 	 * @param file
 	 * @param strVersion
 	 */
-	ModFile(File file, String strVersion)
+	LoadableModFile(File file, String strVersion)
 	{
 		super(file.getAbsolutePath());
 		
@@ -104,11 +104,11 @@ public class ModFile extends LoadableFile implements LoadableMod<File>
 		
 		try
 		{
-			this.metaData = ModFile.gson.fromJson(strVersionData, HashMap.class);
+			this.metaData = LoadableModFile.gson.fromJson(strVersionData, HashMap.class);
 		}
 		catch (JsonSyntaxException jsx)
 		{
-			ModFile.logger.warning("Error reading litemod.json in " + this.getAbsolutePath() + ", JSON syntax exception: " + jsx.getMessage());
+			LoadableModFile.logger.warning("Error reading " + LoadableMod.METADATA_FILENAME + " in " + this.getAbsolutePath() + ", JSON syntax exception: " + jsx.getMessage());
 			return;
 		}
 		
@@ -118,7 +118,7 @@ public class ModFile extends LoadableFile implements LoadableMod<File>
 		this.targetVersion = this.metaData.get("mcversion");
 		if (this.targetVersion == null)
 		{
-			ModFile.logger.warning("Mod in " + this.getAbsolutePath() + " has no loader version number reading litemod.json");
+			LoadableModFile.logger.warning("Mod in " + this.getAbsolutePath() + " has no loader version number reading " + LoadableMod.METADATA_FILENAME);
 			return;
 		}
 		
@@ -130,7 +130,7 @@ public class ModFile extends LoadableFile implements LoadableMod<File>
 		catch (NullPointerException ex) {}
 		catch (Exception ex)
 		{
-			ModFile.logger.warning("Mod in " + this.getAbsolutePath() + " has an invalid revision number reading litemod.json");
+			LoadableModFile.logger.warning("Mod in " + this.getAbsolutePath() + " has an invalid revision number reading " + LoadableMod.METADATA_FILENAME);
 		}
 
 		this.valid = true;
@@ -246,7 +246,7 @@ public class ModFile extends LoadableFile implements LoadableMod<File>
 	{
 		if (this.resourcePack == null)
 		{
-			ModFile.logger.info(String.format("Setting up \"%s\" as mod resource pack with identifier \"%s\"", this.getName(), name));
+			LoadableModFile.logger.info(String.format("Setting up \"%s\" as mod resource pack with identifier \"%s\"", this.getName(), name));
 			this.resourcePack = new ModResourcePack(name, this);
 		}
 	}
@@ -266,9 +266,9 @@ public class ModFile extends LoadableFile implements LoadableMod<File>
 	@Override
 	public int compareTo(File other)
 	{
-		if (other == null || !(other instanceof ModFile)) return -1;
+		if (other == null || !(other instanceof LoadableModFile)) return -1;
 		
-		ModFile otherMod = (ModFile)other;
+		LoadableModFile otherMod = (LoadableModFile)other;
 		
 		// If the other object has a revision, compare revisions
 		if (otherMod.hasRevision)

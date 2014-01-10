@@ -160,7 +160,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		this.enabledModsList = EnabledModsList.createFrom(this.enabledModsFile);
 		this.enabledModsList.processModsList(this.profile, modsToLoad);
 
-		this.enumerator = new LiteLoaderEnumerator(this, classLoader, loadTweaks, this.enabledModsList);
+		this.enumerator = new LiteLoaderEnumerator(this, classLoader, this.enabledModsList, loadTweaks);
 		this.enumerator.discoverMods();
 		
 		LiteLoaderBootstrap.logInfo("LiteLoader PreInit completed");

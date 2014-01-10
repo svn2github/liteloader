@@ -19,15 +19,15 @@ import com.mumfrey.liteloader.resources.ModResourcePackDir;
  *
  * @author Adam Mummery-Smith
  */
-public class ClassPathMod extends ModFile
+public class LoadableModClassPath extends LoadableModFile
 {
 	private static final long serialVersionUID = -4759310661966590773L;
 	
 	private static final Logger logger = Logger.getLogger("liteloader");
 
-	ClassPathMod(File file, String fallbackName)
+	LoadableModClassPath(File file, String fallbackName)
 	{
-		super(file, ClassPathMod.getVersionMetaDataString(file));
+		super(file, LoadableModClassPath.getVersionMetaDataString(file));
 
 		if (this.modName == null) this.modName = fallbackName;
 		if (this.targetVersion == null) this.targetVersion = LiteLoaderVersion.CURRENT.getMinecraftVersion();
@@ -52,12 +52,12 @@ public class ClassPathMod extends ModFile
 		{
 			if (this.isDirectory())
 			{
-				ClassPathMod.logger.info(String.format("Setting up \"%s/%s\" as mod resource pack with identifier \"%s\"", this.getParentFile().getName(), this.getName(), name));
+				LoadableModClassPath.logger.info(String.format("Setting up \"%s/%s\" as mod resource pack with identifier \"%s\"", this.getParentFile().getName(), this.getName(), name));
 				this.resourcePack = new ModResourcePackDir(name, this);
 			}
 			else
 			{
-				ClassPathMod.logger.info(String.format("Setting up \"%s\" as mod resource pack with identifier \"%s\"", this.getName(), name));
+				LoadableModClassPath.logger.info(String.format("Setting up \"%s\" as mod resource pack with identifier \"%s\"", this.getName(), name));
 				this.resourcePack = new ModResourcePack(name, this);
 			}
 		}
@@ -82,7 +82,7 @@ public class ClassPathMod extends ModFile
 		{
 			if (file.isDirectory())
 			{
-				File versionMetaFile = new File(file, "litemod.json");
+				File versionMetaFile = new File(file, LoadableMod.METADATA_FILENAME);
 				if (versionMetaFile.exists())
 				{
 					return Files.toString(versionMetaFile, Charsets.UTF_8);
@@ -92,12 +92,12 @@ public class ClassPathMod extends ModFile
 			{
 				String strVersion = null;
 				ZipFile modZip = new ZipFile(file);
-				ZipEntry versionEntry = modZip.getEntry("litemod.json");
+				ZipEntry versionEntry = modZip.getEntry(LoadableMod.METADATA_FILENAME);
 				if (versionEntry != null)
 				{
 					try
 					{
-						strVersion = ModFile.zipEntryToString(modZip, versionEntry);
+						strVersion = LoadableModFile.zipEntryToString(modZip, versionEntry);
 					}
 					catch (IOException ex) {}
 				}
