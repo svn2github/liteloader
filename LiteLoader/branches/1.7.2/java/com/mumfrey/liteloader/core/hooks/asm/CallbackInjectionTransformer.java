@@ -14,8 +14,6 @@ import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 
-import com.mumfrey.liteloader.core.hooks.asm.CallbackInjectionTransformer.Callback;
-
 import net.minecraft.launchwrapper.IClassTransformer;
 
 /**
@@ -68,19 +66,19 @@ public class CallbackInjectionTransformer implements IClassTransformer
 	
 	public CallbackInjectionTransformer()
 	{
-		this.addMappings(
-			"net.minecraft.client.Minecraft",
-			"net.minecraft.client.renderer.EntityRenderer",
-			"net.minecraft.client.gui.GuiIngame",
-			"runGameLoop",
-			"runTick",
-			"updateCameraAndRender",
-			"renderWorld",
-			"renderGameOverlay",
-			"startSection",
-			"endSection",
-			"endStartSection"
-		);
+		this.addMappings(                                   // @MCPONLY
+			"net.minecraft.client.Minecraft",               // @MCPONLY
+			"net.minecraft.client.renderer.EntityRenderer", // @MCPONLY
+			"net.minecraft.client.gui.GuiIngame",           // @MCPONLY
+			"runGameLoop",                                  // @MCPONLY
+			"runTick",                                      // @MCPONLY
+			"updateCameraAndRender",                        // @MCPONLY
+			"renderWorld",                                  // @MCPONLY
+			"renderGameOverlay",                            // @MCPONLY
+			"startSection",                                 // @MCPONLY
+			"endSection",                                   // @MCPONLY
+			"endStartSection"                               // @MCPONLY
+		);                                                  // @MCPONLY
 		
 		// TODO Obfuscation 1.7.2
 		this.addMappings(

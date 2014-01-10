@@ -58,11 +58,11 @@
 	    <property name="mc.src" location="${mcp.dir}/src/mcp" />
     </target>
 
-	<target name="build" description="Perform all tasks for a build" depends="init, recompile, reobfuscate, savemd5, stage, zip" >
+	<target name="build" description="Perform all tasks for a build" depends="init">
 	</target>
 
 	<target name="clean">
-        <echo level="info" message="Cleaning output directories" />
+		<echo level="info" message="Cleaning output directories" />
 		
 		<delete dir="${src}" />
 		<delete dir="${mcp.dir}/reobf" />
@@ -76,6 +76,11 @@
 				<exclude name="**/debug/*.java" />
 			</fileset>
 			<fileset dir="${eclipse}/${lib}/src" />
+			<filterchain>
+				<linecontains negate="true">
+					<contains value="@MCPONLY" />
+				</linecontains>
+			</filterchain>
 		</copy>
 	</target>
 
