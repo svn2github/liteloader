@@ -29,10 +29,8 @@ import com.mumfrey.liteloader.launch.LiteLoaderTweaker;
  *
  * @author Adam Mummery-Smith
  */
-class LiteLoaderEnumerator
+class LiteLoaderEnumerator implements PluggableEnumerator
 {
-	public static final String MOD_CLASS_PREFIX = "LiteMod";
-	
 	private static final String OPTION_SEARCH_MODS      = "search.mods";
 	private static final String OPTION_SEARCH_JAR       = "search.jar";
 	private static final String OPTION_SEARCH_CLASSPATH = "search.classpath";
@@ -114,21 +112,21 @@ class LiteLoaderEnumerator
 		
 		if (this.searchClassPath)
 		{
-			this.registerModule(new EnumeratorModuleClassPath(this, loadTweaks));
+			this.registerModule(new EnumeratorModuleClassPath(loadTweaks));
 		}
 		
 		if (this.searchProtectionDomain)
 		{
-			this.registerModule(new EnumeratorModuleProtectionDomain(this, loadTweaks));
+			this.registerModule(new EnumeratorModuleProtectionDomain(loadTweaks));
 		}
 		
 		if (this.searchModsFolder)
 		{
 			File modsFolder = this.bootstrap.getModsFolder();
-			this.registerModule(new EnumeratorModuleFolder(this, modsFolder, loadTweaks, false));
+			this.registerModule(new EnumeratorModuleFolder(modsFolder, loadTweaks, false));
 			
-			File versionedModsFolder = new File(modsFolder, LiteLoaderVersion.CURRENT.getMinecraftVersion());
-			this.registerModule(new EnumeratorModuleFolder(this, versionedModsFolder, loadTweaks, true));
+			File versionedModsFolder = this.bootstrap.getVersionedModsFolder();
+			this.registerModule(new EnumeratorModuleFolder(versionedModsFolder, loadTweaks, true));
 		}
 		
 		this.writeSettings();
@@ -163,15 +161,17 @@ class LiteLoaderEnumerator
 		this.bootstrap.setBooleanProperty(OPTION_SEARCH_CLASSPATH, this.searchClassPath);
 	}
 
-	/**
-	 * @param module
+	/* (non-Javadoc)
+	 * @see com.mumfrey.liteloader.core.PluggableEnumerator#registerModule(com.mumfrey.liteloader.core.EnumeratorModule)
 	 */
+	@Override
 	public void registerModule(EnumeratorModule<?> module)
 	{
 		if (module != null && !this.modules.contains(module))
 		{
 			LiteLoaderEnumerator.logInfo("Registering %s: %s", module.getClass().getSimpleName(), module);
 			this.modules.add(module);
+			module.init(this);
 		}
 	}
 	
@@ -180,7 +180,8 @@ class LiteLoaderEnumerator
 	 * @param defaultValue
 	 * @return
 	 */
-	boolean getAndStoreBooleanProperty(String propertyName, boolean defaultValue)
+	@Override
+	public boolean getAndStoreBooleanProperty(String propertyName, boolean defaultValue)
 	{
 		return this.bootstrap.getAndStoreBooleanProperty(propertyName, defaultValue);
 	}
@@ -189,7 +190,8 @@ class LiteLoaderEnumerator
 	 * @param propertyName
 	 * @param value
 	 */
-	void setBooleanProperty(String propertyName, boolean value)
+	@Override
+	public void setBooleanProperty(String propertyName, boolean value)
 	{
 		this.bootstrap.setBooleanProperty(propertyName, value);
 	}
@@ -268,7 +270,7 @@ class LiteLoaderEnumerator
 	{
 		for (EnumeratorModule<?> module : this.modules)
 		{
-			module.enumerate(this.enabledModsList, this.bootstrap.getProfile());
+			module.enumerate(this, this.enabledModsList, this.bootstrap.getProfile());
 		}
 	}
 	
@@ -281,12 +283,12 @@ class LiteLoaderEnumerator
 		{
 			for (EnumeratorModule<?> module : this.modules)
 			{
-				module.injectIntoClassLoader(this.classLoader);
+				module.injectIntoClassLoader(this, this.classLoader);
 			}
 
 			for (EnumeratorModule<?> module : this.modules)
 			{
-				module.registerMods(this.classLoader);
+				module.registerMods(this, this.classLoader);
 			}
 
 			LiteLoaderEnumerator.logInfo("Mod class discovery completed");
@@ -298,7 +300,11 @@ class LiteLoaderEnumerator
 		}
 	}
 
-	void addTweaksFrom(TweakContainer<File> container)
+	/* (non-Javadoc)
+	 * @see com.mumfrey.liteloader.core.PluggableEnumerator#addTweaksFrom(com.mumfrey.liteloader.core.TweakContainer)
+	 */
+	@Override
+	public void addTweaksFrom(TweakContainer<File> container)
 	{
 		if (!container.isEnabled(this.enabledModsList, this.bootstrap.getProfile()))
 		{
@@ -377,7 +383,11 @@ class LiteLoaderEnumerator
 		}
 	}
 
-	void registerLoadableMod(Class<? extends LiteMod> mod, LoadableMod<?> container)
+	/* (non-Javadoc)
+	 * @see com.mumfrey.liteloader.core.PluggableEnumerator#addMod(java.lang.Class, com.mumfrey.liteloader.core.LoadableMod)
+	 */
+	@Override
+	public void registerMod(Class<? extends LiteMod> mod, LoadableMod<?> container)
 	{
 		if (this.modsToLoad.containsKey(mod.getSimpleName()))
 		{

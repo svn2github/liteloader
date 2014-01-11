@@ -72,6 +72,11 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	private final File modsFolder;
 	
 	/**
+	 * "Mods" folder to use
+	 */
+	private final File versionedModsFolder;
+	
+	/**
 	 * Base "liteconfig" folder under which all other lite mod configs and liteloader configs are placed 
 	 */
 	private final File configBaseFolder;
@@ -124,17 +129,19 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	 */
 	public LiteLoaderBootstrap(File gameDirectory, File assetsDirectory, String profile)
 	{
-		this.gameDirectory    = gameDirectory;
-		this.assetsDirectory  = assetsDirectory;
-		this.profile          = profile;
+		this.gameDirectory       = gameDirectory;
+		this.assetsDirectory     = assetsDirectory;
+		this.profile             = profile;
 		
-		this.modsFolder       = new File(this.gameDirectory,    "mods");
-		this.configBaseFolder = new File(this.gameDirectory,    "liteconfig");
-		this.logFile          = new File(this.configBaseFolder, "liteloader.log");
-		this.propertiesFile   = new File(this.configBaseFolder, "liteloader.properties");
-		this.enabledModsFile  = new File(this.configBaseFolder, "liteloader.profiles.json");
+		this.modsFolder          = new File(this.gameDirectory,    "mods");
+		this.versionedModsFolder = new File(this.modsFolder,       LiteLoaderVersion.CURRENT.getMinecraftVersion());
+		this.configBaseFolder    = new File(this.gameDirectory,    "liteconfig");
+		this.logFile             = new File(this.configBaseFolder, "liteloader.log");
+		this.propertiesFile      = new File(this.configBaseFolder, "liteloader.properties");
+		this.enabledModsFile     = new File(this.configBaseFolder, "liteloader.profiles.json");
 
 		if (!this.modsFolder.exists()) this.modsFolder.mkdirs();
+		if (!this.versionedModsFolder.exists()) this.versionedModsFolder.mkdirs();
 		if (!this.configBaseFolder.exists()) this.configBaseFolder.mkdirs();
 	}
 	
@@ -368,6 +375,14 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		return this.modsFolder;
 	}
 
+	/**
+	 * Get the mods folder
+	 */
+	public File getVersionedModsFolder()
+	{
+		return this.versionedModsFolder;
+	}
+	
 	/**
 	 * Get the base "liteconfig" folder
 	 */

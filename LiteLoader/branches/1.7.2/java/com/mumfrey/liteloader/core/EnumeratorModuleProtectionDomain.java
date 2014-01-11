@@ -22,8 +22,6 @@ public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 	 */
 	private static Logger logger = Logger.getLogger("liteloader");
 
-	private final LiteLoaderEnumerator parent;
-
 	private File packagePath;
 
 	/**
@@ -32,10 +30,8 @@ public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 	 * @param searchClassPath
 	 * @param loadTweaks
 	 */
-	public EnumeratorModuleProtectionDomain(LiteLoaderEnumerator parent, boolean loadTweaks)
+	public EnumeratorModuleProtectionDomain(boolean loadTweaks)
 	{
-		this.parent = parent;
-
 		this.initPackagePath();
 	}
 	
@@ -78,19 +74,24 @@ public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 			EnumeratorModuleProtectionDomain.logWarning("Error determining local protection domain: %s", th.getMessage());
 		}
 	}
-
+	
 	@Override
-	public void writeSettings()
+	public void init(PluggableEnumerator enumerator)
 	{
 	}
 
 	@Override
-	public void enumerate(EnabledModsList enabledModsList, String profile)
+	public void writeSettings(PluggableEnumerator enumerator)
+	{
+	}
+
+	@Override
+	public void enumerate(PluggableEnumerator enumerator, EnabledModsList enabledModsList, String profile)
 	{
 	}
 	
 	@Override
-	public void injectIntoClassLoader(LaunchClassLoader classLoader)
+	public void injectIntoClassLoader(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 	}
 
@@ -99,7 +100,7 @@ public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 	 */
 	@SuppressWarnings("unchecked")
 	@Override
-	public void registerMods(LaunchClassLoader classLoader)
+	public void registerMods(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 		EnumeratorModuleProtectionDomain.logInfo("Searching protection domain code source...");
 
@@ -107,11 +108,11 @@ public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 		{
 			if (this.packagePath != null)
 			{
-				LinkedList<Class<?>> modClasses = LiteLoaderEnumerator.getSubclassesFor(this.packagePath, classLoader, LiteMod.class, LiteLoaderEnumerator.MOD_CLASS_PREFIX);
+				LinkedList<Class<?>> modClasses = LiteLoaderEnumerator.getSubclassesFor(this.packagePath, classLoader, LiteMod.class, PluggableEnumerator.MOD_CLASS_PREFIX);
 				
 				for (Class<?> mod : modClasses)
 				{
-					this.parent.registerLoadableMod((Class<? extends LiteMod>)mod, null);
+					enumerator.registerMod((Class<? extends LiteMod>)mod, null);
 				}
 				
 				if (modClasses.size() > 0)

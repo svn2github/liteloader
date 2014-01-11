@@ -44,35 +44,36 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	 */
 	private final List<LoadableMod<File>> loadableMods = new ArrayList<LoadableMod<File>>();
 
-	private final LiteLoaderEnumerator parent;
-	
 	private File directory;
 
-	private final boolean readZipFiles;
-	private final boolean readJarFiles;
-	private final boolean loadTweaks;
+	private boolean readZipFiles;
+	private boolean readJarFiles;
+	private boolean loadTweaks;
 
 	private final boolean isVersioned;
 
-	public EnumeratorModuleFolder(LiteLoaderEnumerator parent, File directory, boolean loadTweaks, boolean isVersioned)
+	public EnumeratorModuleFolder(File directory, boolean loadTweaks, boolean isVersioned)
 	{
-		this.parent       = parent;
 		this.directory    = directory;
 		this.loadTweaks   = loadTweaks;
 		this.isVersioned  = isVersioned;
-
-		this.readZipFiles = this.parent.getAndStoreBooleanProperty(OPTION_SEARCH_ZIPFILES,  false);
-		this.readJarFiles = this.parent.getAndStoreBooleanProperty(OPTION_SEARCH_JARFILES,  true);
+	}
+	
+	@Override
+	public void init(PluggableEnumerator enumerator)
+	{
+		this.readZipFiles = enumerator.getAndStoreBooleanProperty(OPTION_SEARCH_ZIPFILES,  false);
+		this.readJarFiles = enumerator.getAndStoreBooleanProperty(OPTION_SEARCH_JARFILES,  true);
 	}
 	
 	/**
 	 * Write settings
 	 */
 	@Override
-	public void writeSettings()
+	public void writeSettings(PluggableEnumerator enumerator)
 	{
-		this.parent.setBooleanProperty(OPTION_SEARCH_ZIPFILES, this.readZipFiles);
-		this.parent.setBooleanProperty(OPTION_SEARCH_JARFILES, this.readJarFiles);
+		enumerator.setBooleanProperty(OPTION_SEARCH_ZIPFILES, this.readZipFiles);
+		enumerator.setBooleanProperty(OPTION_SEARCH_JARFILES, this.readJarFiles);
 	}
 	
 	@Override
@@ -115,14 +116,14 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	 * @see com.mumfrey.liteloader.core.Enumerator#enumerate(com.mumfrey.liteloader.core.EnabledModsList, java.lang.String)
 	 */
 	@Override
-	public void enumerate(EnabledModsList enabledModsList, String profile)
+	public void enumerate(PluggableEnumerator enumerator, EnabledModsList enabledModsList, String profile)
 	{
 		if (this.directory.exists() && this.directory.isDirectory())
 		{
 			EnumeratorModuleFolder.logInfo("Mods folder found, searching %s", this.directory.getPath());
 
-			this.findValidFiles(enabledModsList, profile);
-			this.sortAndAllocateFiles();
+			this.findValidFiles(enumerator, enabledModsList, profile);
+			this.sortAndAllocateFiles(enumerator);
 			this.versionOrderingSets.clear();
 		}
 	}
@@ -131,7 +132,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	 * @param enabledModsList
 	 * @param profile
 	 */
-	private void findValidFiles(EnabledModsList enabledModsList, String profile)
+	private void findValidFiles(PluggableEnumerator enumerator, EnabledModsList enabledModsList, String profile)
 	{
 		for (File candidateFile : this.directory.listFiles(this))
 		{
@@ -168,7 +169,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 				else if (this.isVersioned && this.loadTweaks && this.readJarFiles && candidateFile.getName().toLowerCase().endsWith(".jar"))
 				{
 					LoadableFile container = new LoadableFile(candidateFile);
-					this.parent.addTweaksFrom(container);
+					enumerator.addTweaksFrom(container);
 				}
 			}
 			catch (Exception ex)
@@ -219,11 +220,12 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	}
 
 	/**
+	 * @param enumerator 
 	 * @param enabledModsList
 	 * @param profile
 	 */
 	@SuppressWarnings("unchecked")
-	private void sortAndAllocateFiles()
+	private void sortAndAllocateFiles(PluggableEnumerator enumerator)
 	{
 		// Copy the first entry in every version set into the modfiles list
 		for (Entry<String, TreeSet<LoadableMod<File>>> modFileEntry : this.versionOrderingSets.entrySet())
@@ -239,7 +241,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 				{
 					if (newestVersion instanceof TweakContainer)
 					{
-						this.parent.addTweaksFrom((TweakContainer<File>)newestVersion);
+						enumerator.addTweaksFrom((TweakContainer<File>)newestVersion);
 					}
 				}
 				catch (Throwable th)
@@ -251,7 +253,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	}
 	
 	@Override
-	public void injectIntoClassLoader(LaunchClassLoader classLoader)
+	public void injectIntoClassLoader(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 		EnumeratorModuleFolder.logInfo("Injecting external mods into class path...");
 		
@@ -273,17 +275,17 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	
 	@Override
 	@SuppressWarnings("unchecked")
-	public void registerMods(LaunchClassLoader classLoader)
+	public void registerMods(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 		for (LoadableMod<?> modFile : this.loadableMods)
 		{
 			EnumeratorModuleFolder.logInfo("Searching %s...", modFile.getLocation());
 			
-			LinkedList<Class<?>> modClasses = LiteLoaderEnumerator.getSubclassesFor(modFile.toFile(), classLoader, LiteMod.class, LiteLoaderEnumerator.MOD_CLASS_PREFIX);
+			LinkedList<Class<?>> modClasses = LiteLoaderEnumerator.getSubclassesFor(modFile.toFile(), classLoader, LiteMod.class, PluggableEnumerator.MOD_CLASS_PREFIX);
 			
 			for (Class<?> mod : modClasses)
 			{
-				this.parent.registerLoadableMod((Class<? extends LiteMod>)mod, modFile);
+				enumerator.registerMod((Class<? extends LiteMod>)mod, modFile);
 			}
 			
 			if (modClasses.size() > 0)

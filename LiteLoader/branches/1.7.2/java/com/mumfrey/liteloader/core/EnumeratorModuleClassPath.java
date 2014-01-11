@@ -25,8 +25,6 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	 */
 	private final String[] classPathEntries;
 	
-	private final LiteLoaderEnumerator parent;
-
 	private boolean loadTweaks;
 
 	/**
@@ -35,10 +33,8 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	 * @param searchClassPath
 	 * @param loadTweaks
 	 */
-	public EnumeratorModuleClassPath(LiteLoaderEnumerator parent, boolean loadTweaks)
+	public EnumeratorModuleClassPath(boolean loadTweaks)
 	{
-		this.parent = parent;
-		
 		// Read the JVM class path into the local array
 		this.classPathEntries = this.readClassPath();
 		
@@ -50,9 +46,14 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	{
 		return "<Java Class Path>";
 	}
+	
+	@Override
+	public void init(PluggableEnumerator enumerator)
+	{
+	}
 
 	@Override
-	public void writeSettings()
+	public void writeSettings(PluggableEnumerator enumerator)
 	{
 	}
 
@@ -73,7 +74,7 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	}
 
 	@Override
-	public void enumerate(EnabledModsList enabledModsList, String profile)
+	public void enumerate(PluggableEnumerator enumerator, EnabledModsList enabledModsList, String profile)
 	{
 		if (this.loadTweaks)
 		{
@@ -88,7 +89,7 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 					
 					if (classPathMod.hasTweakClass() || classPathMod.hasClassTransformers())
 					{
-						this.parent.addTweaksFrom(classPathMod);
+						enumerator.addTweaksFrom(classPathMod);
 					}
 				}
 			}
@@ -96,7 +97,7 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	}
 	
 	@Override
-	public void injectIntoClassLoader(LaunchClassLoader classLoader)
+	public void injectIntoClassLoader(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 	}
 
@@ -105,7 +106,7 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	 */
 	@SuppressWarnings("unchecked")
 	@Override
-	public void registerMods(LaunchClassLoader classLoader)
+	public void registerMods(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 		EnumeratorModuleClassPath.logInfo("Discovering mods on class path...");
 		
@@ -114,12 +115,12 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 			EnumeratorModuleClassPath.logInfo("Searching %s...", classPathPart);
 			
 			File packagePath = new File(classPathPart);
-			LinkedList<Class<?>> modClasses = LiteLoaderEnumerator.getSubclassesFor(packagePath, classLoader, LiteMod.class, LiteLoaderEnumerator.MOD_CLASS_PREFIX);
+			LinkedList<Class<?>> modClasses = LiteLoaderEnumerator.getSubclassesFor(packagePath, classLoader, LiteMod.class, PluggableEnumerator.MOD_CLASS_PREFIX);
 			
 			for (Class<?> mod : modClasses)
 			{
 				LoadableModClassPath container = new LoadableModClassPath(packagePath, mod.getSimpleName().substring(7).toLowerCase());
-				this.parent.registerLoadableMod((Class<? extends LiteMod>)mod, container);
+				enumerator.registerMod((Class<? extends LiteMod>)mod, container);
 			}
 			
 			if (modClasses.size() > 0)

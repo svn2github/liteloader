@@ -12,25 +12,33 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
 public interface EnumeratorModule<T>
 {
 	/**
+	 * @param enumerator
+	 */
+	public abstract void init(PluggableEnumerator enumerator);
+
+	/**
+	 * @param enumerator
+	 */
+	public abstract void writeSettings(PluggableEnumerator enumerator);
+	
+	/**
 	 * Find loadable mods in this enumerator's domain
 	 * 
+	 * @param enumerator
 	 * @param enabledModsList
 	 * @param profile
 	 */
-	public abstract void enumerate(EnabledModsList enabledModsList, String profile);
+	public abstract void enumerate(PluggableEnumerator enumerator, EnabledModsList enabledModsList, String profile);
 	
 	/**
+	 * @param enumerator
 	 * @param classLoader
 	 */
-	public abstract void injectIntoClassLoader(LaunchClassLoader classLoader);
+	public abstract void injectIntoClassLoader(PluggableEnumerator enumerator, LaunchClassLoader classLoader);
 
 	/**
+	 * @param enumerator
 	 * @param classLoader
 	 */
-	public abstract void registerMods(LaunchClassLoader classLoader);
-
-	/**
-	 * 
-	 */
-	public abstract void writeSettings();
+	public abstract void registerMods(PluggableEnumerator enumerator, LaunchClassLoader classLoader);
 }
