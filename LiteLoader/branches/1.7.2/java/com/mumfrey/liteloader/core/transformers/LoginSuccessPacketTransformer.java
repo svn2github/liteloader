@@ -1,4 +1,6 @@
-package com.mumfrey.liteloader.core.hooks.asm;
+package com.mumfrey.liteloader.core.transformers;
+
+import com.mumfrey.liteloader.core.runtime.Obf;
 
 /**
  * Transformer for S02PacketLoginSuccess
@@ -11,8 +13,7 @@ public class LoginSuccessPacketTransformer extends PacketTransformer
 	
 	public LoginSuccessPacketTransformer()
 	{
-		// TODO Obfuscation 1.7.2
-		super("net.minecraft.network.login.server.S02PacketLoginSuccess", "jg", "com.mumfrey.liteloader.core.hooks.asm.ASMHookProxy", "handleLoginSuccessPacket", 1000);
+		super(Obf.S02PacketLoginSuccess, Obf.InjectedCallbackProxy.name, "handleLoginSuccessPacket", 1000);
 	}
 	
 	@Override

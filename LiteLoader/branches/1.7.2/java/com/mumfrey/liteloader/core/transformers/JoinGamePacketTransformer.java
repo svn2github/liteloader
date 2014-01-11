@@ -1,4 +1,6 @@
-package com.mumfrey.liteloader.core.hooks.asm;
+package com.mumfrey.liteloader.core.transformers;
+
+import com.mumfrey.liteloader.core.runtime.Obf;
 
 /**
  * Transformer for S01PacketJoinGame
@@ -11,8 +13,7 @@ public class JoinGamePacketTransformer extends PacketTransformer
 	
 	public JoinGamePacketTransformer()
 	{
-		// TODO Obfuscation 1.7.2
-		super("net.minecraft.network.play.server.S01PacketJoinGame", "gu", "com.mumfrey.liteloader.core.hooks.asm.ASMHookProxy", "handleJoinGamePacket", 1000);
+		super(Obf.S01PacketJoinGame, Obf.InjectedCallbackProxy.name, "handleJoinGamePacket", 1000);
 	}
 	
 	@Override

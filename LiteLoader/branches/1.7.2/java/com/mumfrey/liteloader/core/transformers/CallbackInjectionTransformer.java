@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core.hooks.asm;
+package com.mumfrey.liteloader.core.transformers;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -13,6 +13,8 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+
+import com.mumfrey.liteloader.core.runtime.Obf;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 
@@ -36,7 +38,7 @@ public class CallbackInjectionTransformer implements IClassTransformer
 		
 		public Callback(String callbackMethod)
 		{
-			this(callbackMethod, "com/mumfrey/liteloader/core/hooks/asm/ASMHookProxy");
+			this(callbackMethod, Obf.InjectedCallbackProxy.ref);
 		}
 		
 		public Callback(String callbackMethod, String callbackClass)
@@ -57,87 +59,29 @@ public class CallbackInjectionTransformer implements IClassTransformer
 		}
 	}
 	
-	private static final String profilerClass = "net/minecraft/profiler/Profiler";
-
-	// TODO Obfuscation 1.7.2
-	private static final String profilerClassObf = "ov";
-	
 	private Map<String, Map<String, Callback>> mappings = new HashMap<String, Map<String, Callback>>();
 	
 	public CallbackInjectionTransformer()
 	{
-		this.addMappings(                                   // @MCPONLY
-			"net.minecraft.client.Minecraft",               // @MCPONLY
-			"net.minecraft.client.renderer.EntityRenderer", // @MCPONLY
-			"net.minecraft.client.gui.GuiIngame",           // @MCPONLY
-			"runGameLoop",                                  // @MCPONLY
-			"runTick",                                      // @MCPONLY
-			"updateCameraAndRender",                        // @MCPONLY
-			"renderWorld",                                  // @MCPONLY
-			"renderGameOverlay",                            // @MCPONLY
-			"startSection",                                 // @MCPONLY
-			"endSection",                                   // @MCPONLY
-			"endStartSection"                               // @MCPONLY
-		);                                                  // @MCPONLY
-		
-		// TODO Obfuscation 1.7.2
-		this.addMappings(
-			"net.minecraft.client.Minecraft",
-			"net.minecraft.client.renderer.EntityRenderer",
-			"net.minecraft.client.gui.GuiIngame",
-			"func_71411_J", // runGameLoop
-			"func_71407_l", // runTick,
-			"func_78480_b", // updateCameraAndRender
-			"func_78471_a", // renderWorld
-			"func_73830_a", // renderGameOverlay
-			"func_76320_a", // startSection
-			"func_76319_b", // endSection
-			"func_76318_c"  // endStartSection
-		);
-		
-		// TODO Obfuscation 1.7.2
-		this.addMappings(
-			"azd", // Minecraft
-			"bll", // EntityRenderer
-			"bah", // GuiIngame
-			"ad",  // runGameLoop
-			"o",   // runTick
-			"b",   // updateCameraAndRender
-			"a",   // renderWorld
-			"a",   // renderGameOverlay
-			"a",   // startSection
-			"b",   // endSection
-			"c"    // endStartSection
-		);
+		this.addMappings(Obf.MCP); // @MCPONLY
+		this.addMappings(Obf.SRG);
+		this.addMappings(Obf.OBF);
 	}
 
-	/**
-	 * @param clsMinecraft
-	 * @param clsEntityRenderer
-	 * @param clsGuiIngame
-	 * @param runGameLoop
-	 * @param runTick
-	 * @param updateCameraAndRender
-	 * @param renderWorld
-	 * @param renderGameOverlay
-	 * @param startSection
-	 * @param endSection
-	 * @param endStartSection
-	 */
-	private void addMappings(String clsMinecraft, String clsEntityRenderer, String clsGuiIngame, String runGameLoop, String runTick, String updateCameraAndRender, String renderWorld, String renderGameOverlay, String startSection, String endSection, String endStartSection)
+	protected void addMappings(int type)
 	{
-		this.addMapping(clsMinecraft,      runGameLoop,           "()V",     startSection,    "tick",         new Callback("onTimerUpdate"));
-		this.addMapping(clsMinecraft,      runGameLoop,           "()V",     endStartSection, "gameRenderer", new Callback("onRender"));
-		this.addMapping(clsMinecraft,      runTick,               "()V",     endStartSection, "animateTick",  new Callback("onAnimateTick"));
-		this.addMapping(clsMinecraft,      runGameLoop,           "()V",     endSection,      "",             new Callback("onTick")); // ref 2
-		this.addMapping(clsEntityRenderer, updateCameraAndRender, "(F)V",    endSection,      "",             new Callback("preRenderGUI")); // ref 1
-		this.addMapping(clsEntityRenderer, renderWorld,           "(FJ)V",   endStartSection, "frustrum",     new Callback("onSetupCameraTransform"));
-		this.addMapping(clsEntityRenderer, renderWorld,           "(FJ)V",   endStartSection, "litParticles", new Callback("postRenderEntities"));
-		this.addMapping(clsEntityRenderer, renderWorld,           "(FJ)V",   endSection,      "",             new Callback("postRender"));
-		this.addMapping(clsEntityRenderer, updateCameraAndRender, "(F)V",    endStartSection, "gui",          new Callback("onRenderHUD"));
-		this.addMapping(clsGuiIngame,      renderGameOverlay,     "(FZII)V", startSection,    "chat",         new Callback("onRenderChat"));
-		this.addMapping(clsGuiIngame,      renderGameOverlay,     "(FZII)V", endSection,      "",             new Callback("postRenderChat")); // ref 10
-		this.addMapping(clsEntityRenderer, updateCameraAndRender, "(F)V",    endSection,      "",             new Callback("postRenderHUDandGUI")); // ref 2
+		this.addMapping(Obf.Minecraft.names[type],      Obf.runGameLoop.names[type],           "()V",     Obf.startSection.names[type],    "tick",         new Callback("onTimerUpdate"));
+		this.addMapping(Obf.Minecraft.names[type],      Obf.runGameLoop.names[type],           "()V",     Obf.endStartSection.names[type], "gameRenderer", new Callback("onRender"));
+		this.addMapping(Obf.Minecraft.names[type],      Obf.runTick.names[type],               "()V",     Obf.endStartSection.names[type], "animateTick",  new Callback("onAnimateTick"));
+		this.addMapping(Obf.Minecraft.names[type],      Obf.runGameLoop.names[type],           "()V",     Obf.endSection.names[type],      "",             new Callback("onTick")); // ref 2
+		this.addMapping(Obf.EntityRenderer.names[type], Obf.updateCameraAndRender.names[type], "(F)V",    Obf.endSection.names[type],      "",             new Callback("preRenderGUI")); // ref 1
+		this.addMapping(Obf.EntityRenderer.names[type], Obf.updateCameraAndRender.names[type], "(F)V",    Obf.endSection.names[type],      "",             new Callback("postRenderHUDandGUI")); // ref 2
+		this.addMapping(Obf.EntityRenderer.names[type], Obf.updateCameraAndRender.names[type], "(F)V",    Obf.endStartSection.names[type], "gui",          new Callback("onRenderHUD"));
+		this.addMapping(Obf.EntityRenderer.names[type], Obf.renderWorld.names[type],           "(FJ)V",   Obf.endStartSection.names[type], "frustrum",     new Callback("onSetupCameraTransform"));
+		this.addMapping(Obf.EntityRenderer.names[type], Obf.renderWorld.names[type],           "(FJ)V",   Obf.endStartSection.names[type], "litParticles", new Callback("postRenderEntities"));
+		this.addMapping(Obf.EntityRenderer.names[type], Obf.renderWorld.names[type],           "(FJ)V",   Obf.endSection.names[type],      "",             new Callback("postRender"));
+		this.addMapping(Obf.GuiIngame.names[type],      Obf.renderGameOverlay.names[type],     "(FZII)V", Obf.startSection.names[type],    "chat",         new Callback("onRenderChat"));
+		this.addMapping(Obf.GuiIngame.names[type],      Obf.renderGameOverlay.names[type],     "(FZII)V", Obf.endSection.names[type],      "",             new Callback("postRenderChat")); // ref 10
 	}
 	
 	/**
@@ -148,7 +92,7 @@ public class CallbackInjectionTransformer implements IClassTransformer
 	 * @param section
 	 * @param callback
 	 */
-	private void addMapping(String className, String methodName, String methodSignature, String invokeName, String section, Callback callback)
+	protected void addMapping(String className, String methodName, String methodSignature, String invokeName, String section, Callback callback)
 	{
 		if (!this.mappings.containsKey(className))
 		{
@@ -196,7 +140,7 @@ public class CallbackInjectionTransformer implements IClassTransformer
 				if (insn.getOpcode() == Opcodes.INVOKEVIRTUAL)
 				{
 					MethodInsnNode invokeNode = (MethodInsnNode)insn;
-					if (profilerClass.equals(invokeNode.owner) || profilerClassObf.equals(invokeNode.owner))
+					if (Obf.Profiler.ref.equals(invokeNode.owner) || Obf.Profiler.obf.equals(invokeNode.owner))
 					{
 						section = "";
 						if (lastInsn instanceof LdcInsnNode)
@@ -246,7 +190,7 @@ public class CallbackInjectionTransformer implements IClassTransformer
 	 * @param basicClass
 	 * @return
 	 */
-	private ClassNode readClass(byte[] basicClass)
+	protected ClassNode readClass(byte[] basicClass)
 	{
 		ClassReader classReader = new ClassReader(basicClass);
 		ClassNode classNode = new ClassNode();
@@ -258,7 +202,7 @@ public class CallbackInjectionTransformer implements IClassTransformer
 	 * @param classNode
 	 * @return
 	 */
-	private byte[] writeClass(ClassNode classNode)
+	protected byte[] writeClass(ClassNode classNode)
 	{
 		ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
 		classNode.accept(writer);

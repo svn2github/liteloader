@@ -15,6 +15,7 @@ import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.Launch;
 
 import com.mumfrey.liteloader.core.LiteLoader;
+import com.mumfrey.liteloader.core.runtime.Obf;
 
 /**
  * A small collection of useful functions for mods
@@ -85,6 +86,18 @@ public abstract class ModUtilities
 	{
 		boolean deobfuscated = Tessellator.class.getSimpleName().equals("Tessellator");
 		return deobfuscated ? (ModUtilities.seargeNames ? seargeFieldName : fieldName) : (ModUtilities.fmlDetected ? seargeFieldName : obfuscatedFieldName);
+	}
+	
+	/**
+	 * Abstraction helper function
+	 * 
+	 * @param fieldName Name of field to get, returned unmodified if in debug mode
+	 * @return Obfuscated field name if present
+	 */
+	public static String getObfuscatedFieldName(Obf obf)
+	{
+		boolean deobfuscated = Tessellator.class.getSimpleName().equals("Tessellator");
+		return deobfuscated ? (ModUtilities.seargeNames ? obf.srg : obf.name) : (ModUtilities.fmlDetected ? obf.srg : obf.obf);
 	}
 
 	/**

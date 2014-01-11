@@ -23,7 +23,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.gson.Gson;
-import com.mumfrey.liteloader.core.hooks.asm.PacketTransformer;
+import com.mumfrey.liteloader.core.transformers.PacketTransformer;
 import com.mumfrey.liteloader.util.SortableValue;
 
 import joptsimple.ArgumentAcceptingOptionSpec;
@@ -91,18 +91,18 @@ public class LiteLoaderTweaker implements ITweaker
 	
 	private static final String[] requiredTransformers = {
 		"com.mumfrey.liteloader.launch.LiteLoaderTransformer",
-		"com.mumfrey.liteloader.core.hooks.asm.CrashReportTransformer"
+		"com.mumfrey.liteloader.core.transformers.CrashReportTransformer"
 	};
 	
-	private static final String injectionTransformerClassName = "com.mumfrey.liteloader.core.hooks.asm.CallbackInjectionTransformer";
+	private static final String injectionTransformerClassName = "com.mumfrey.liteloader.core.transformers.CallbackInjectionTransformer";
 	
 	private static final String genTransformerClassName = "com.mumfrey.liteloader.core.gen.GenProfilerTransformer";
 
 	private static final String[] defaultPacketTransformers = {
-		"com.mumfrey.liteloader.core.hooks.asm.LoginSuccessPacketTransformer",
-		"com.mumfrey.liteloader.core.hooks.asm.ChatPacketTransformer",
-		"com.mumfrey.liteloader.core.hooks.asm.JoinGamePacketTransformer",
-		"com.mumfrey.liteloader.core.hooks.asm.CustomPayloadPacketTransformer"
+		"com.mumfrey.liteloader.core.transformers.LoginSuccessPacketTransformer",
+		"com.mumfrey.liteloader.core.transformers.ChatPacketTransformer",
+		"com.mumfrey.liteloader.core.transformers.JoinGamePacketTransformer",
+		"com.mumfrey.liteloader.core.transformers.CustomPayloadPacketTransformer"
 	};
 	
 	@SuppressWarnings("unchecked")
@@ -275,6 +275,8 @@ public class LiteLoaderTweaker implements ITweaker
 	@Override
 	public void injectIntoClassLoader(LaunchClassLoader classLoader)
 	{
+		classLoader.addClassLoaderExclusion("com.mumfrey.liteloader.core.runtime.");
+
 		this.sieveAndSortPacketTransformers(classLoader, this.injectTransformers);
 		
 		for (String requiredTransformerClassName : LiteLoaderTweaker.requiredTransformers)
@@ -325,7 +327,8 @@ public class LiteLoaderTweaker implements ITweaker
 		int registeredTransformers = 0;
 		
 		NonDelegatingClassLoader tempLoader = new NonDelegatingClassLoader(classLoader.getURLs(), this.getClass().getClassLoader());
-		tempLoader.addDelegatedClassName("com.mumfrey.liteloader.core.hooks.asm.PacketTransformer");
+		tempLoader.addDelegatedClassName("com.mumfrey.liteloader.core.transformers.PacketTransformer");
+		tempLoader.addDelegatedClassName("com.mumfrey.liteloader.core.runtime.Obf");
 		tempLoader.addDelegatedClassName("net.minecraft.launchwrapper.IClassTransformer");
 		tempLoader.addDelegatedPackage("org.objectweb.asm.");
 
@@ -353,8 +356,8 @@ public class LiteLoaderTweaker implements ITweaker
 				if (err.getCause() instanceof InvalidTransformerException)
 				{
 					InvalidTransformerException ex = (InvalidTransformerException)err.getCause();
-					ex.printStackTrace();
 					LiteLoaderTweaker.logger.warning(String.format("Packet transformer class '%s' references class '%s' which is not allowed. Packet transformers must not contain references to other classes", transformerClassName, ex.getAccessedClass())); 
+					ex.printStackTrace();
 					iter.remove();
 				}
 				else

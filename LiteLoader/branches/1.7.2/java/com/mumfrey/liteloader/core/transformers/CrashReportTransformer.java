@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core.hooks.asm;
+package com.mumfrey.liteloader.core.transformers;
 
 import java.util.ListIterator;
 
@@ -14,17 +14,14 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
+import com.mumfrey.liteloader.core.runtime.Obf;
+
 public class CrashReportTransformer implements IClassTransformer
 {
-	private static final String classMappingCallableJVMFlags = "net.minecraft.crash.CrashReport$6";
-	
-	// TODO Obfuscation 1.7.2
-	private static final String classMappingCallableJVMFlagsObf = "i";
-	
 	@Override
 	public byte[] transform(String name, String transformedName, byte[] basicClass)
 	{
-		if (classMappingCallableJVMFlags.equals(name) || classMappingCallableJVMFlagsObf.equals(name))
+		if (Obf.CrashReport$6.name.equals(name) || Obf.CrashReport$6.obf.equals(name))
 		{
 			try
 			{

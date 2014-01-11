@@ -171,7 +171,7 @@ public class Events implements IPlayerUsage
 		}
 		catch (Throwable th)
 		{
-			th.printStackTrace();
+//			th.printStackTrace();
 		}
 	}
 

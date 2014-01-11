@@ -14,21 +14,18 @@ import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 
+import com.mumfrey.liteloader.core.runtime.Obf;
+
 import net.minecraft.launchwrapper.IClassTransformer;
 
 public class GenProfilerTransformer implements IClassTransformer
 {
-	private static final String profilerClass = "net.minecraft.profiler.Profiler";
-	
-	// TODO Obfuscation 1.7.2
-	private static final String profilerClassObf = "ov";
-	
 	private Map<String, Integer> references = new HashMap<String, Integer>();
 	
 	@Override
 	public byte[] transform(String name, String transformedName, byte[] basicClass)
 	{
-		if (basicClass != null && !profilerClass.equals(name) && !profilerClassObf.equals(name))
+		if (basicClass != null && !Obf.Profiler.name.equals(name) && !Obf.Profiler.obf.equals(name))
 		{
 			return this.transformProfilerCalls(basicClass);
 		}
@@ -53,7 +50,7 @@ public class GenProfilerTransformer implements IClassTransformer
 				if (insn.getOpcode() == Opcodes.INVOKEVIRTUAL)
 				{
 					MethodInsnNode invokeNode = (MethodInsnNode)insn;
-					if (profilerClass.replace('.', '/').equals(invokeNode.owner) || profilerClassObf.replace('.', '/').equals(invokeNode.owner))
+					if (Obf.Profiler.ref.equals(invokeNode.owner) || Obf.Profiler.obf.equals(invokeNode.owner))
 					{
 						if (lastInsn instanceof LdcInsnNode)
 							section = ((LdcInsnNode)lastInsn).cst.toString();

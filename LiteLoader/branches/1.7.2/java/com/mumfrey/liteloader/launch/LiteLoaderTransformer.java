@@ -7,6 +7,8 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 
+import com.mumfrey.liteloader.core.runtime.Obf;
+
 import net.minecraft.launchwrapper.IClassTransformer;
 
 public class LiteLoaderTransformer implements IClassTransformer
@@ -19,12 +21,7 @@ public class LiteLoaderTransformer implements IClassTransformer
 	
 	private static final String METHOD_POSTINIT = "postInit";
 
-	private static final String renderLightningBoltClass = "net.minecraft.client.renderer.entity.RenderLightningBolt";
-	
 	private static final String mainClass = "net.minecraft.client.main.Main";
-	
-	// TODO Obfuscation 1.7.2
-	private static final String renderLightningBoltClassObf = "bny";
 	
 	private static boolean postInit = false;
 	
@@ -36,7 +33,7 @@ public class LiteLoaderTransformer implements IClassTransformer
 			return this.transformMain(basicClass);
 		}
 		
-		if ((renderLightningBoltClass.equals(name) || renderLightningBoltClassObf.equals(name)) && !LiteLoaderTransformer.postInit)
+		if ((Obf.RenderLightningBolt.name.equals(name) || Obf.RenderLightningBolt.obf.equals(name)) && !LiteLoaderTransformer.postInit)
 		{
 			return this.transformRenderLightningBolt(basicClass);
 		}

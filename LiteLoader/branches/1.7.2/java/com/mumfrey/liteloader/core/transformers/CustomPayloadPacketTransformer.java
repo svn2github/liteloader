@@ -1,4 +1,6 @@
-package com.mumfrey.liteloader.core.hooks.asm;
+package com.mumfrey.liteloader.core.transformers;
+
+import com.mumfrey.liteloader.core.runtime.Obf;
 
 /**
  * Transformer for S3FPacketCustomPayload
@@ -11,8 +13,7 @@ public class CustomPayloadPacketTransformer extends PacketTransformer
 	
 	public CustomPayloadPacketTransformer()
 	{
-		// TODO Obfuscation 1.7.2
-		super("net.minecraft.network.play.server.S3FPacketCustomPayload", "gi", "com.mumfrey.liteloader.core.hooks.asm.ASMHookProxy", "handleCustomPayloadPacket", 1000);
+		super(Obf.S3FPacketCustomPayload, Obf.InjectedCallbackProxy.name, "handleCustomPayloadPacket", 1000);
 	}
 
 	@Override

@@ -1,4 +1,6 @@
-package com.mumfrey.liteloader.core.hooks.asm;
+package com.mumfrey.liteloader.core.transformers;
+
+import com.mumfrey.liteloader.core.runtime.Obf;
 
 /**
  * Transformer for S02PacketChat
@@ -11,8 +13,7 @@ public class ChatPacketTransformer extends PacketTransformer
 	
 	public ChatPacketTransformer()
 	{
-		// TODO Obfuscation 1.7.2
-		super("net.minecraft.network.play.server.S02PacketChat", "ga", "com.mumfrey.liteloader.core.hooks.asm.ASMHookProxy", "handleChatPacket", 1000);
+		super(Obf.S02PacketChat, Obf.InjectedCallbackProxy.name, "handleChatPacket", 1000);
 	}
 
 	@Override

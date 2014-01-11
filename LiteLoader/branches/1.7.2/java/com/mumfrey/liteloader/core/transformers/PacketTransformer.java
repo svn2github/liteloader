@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core.hooks.asm;
+package com.mumfrey.liteloader.core.transformers;
 
 import java.util.HashSet;
 import java.util.List;
@@ -19,6 +19,7 @@ import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TryCatchBlockNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
+import com.mumfrey.liteloader.core.runtime.Obf;
 import com.mumfrey.liteloader.util.SortableValue;
 
 /**
@@ -35,13 +36,6 @@ public abstract class PacketTransformer implements IClassTransformer
 	private static final Set<String> transformedPackets = new HashSet<String>();
 	private static int transformerOrder = 0;
 	
-	private static final String netHandlerClass = "net/minecraft/network/INetHandler";
-	private static final String processPacketMethod = "processPacket";
-	
-	// TODO Obfuscation 1.7.2
-	private static final String netHandlerClassObf = "es";
-	private static final String processPacketMethodObf = "a";
-	
 	private final String packetClass;
 	private final String packetClassObf;
 
@@ -56,6 +50,18 @@ public abstract class PacketTransformer implements IClassTransformer
 	 * Create a PacketTransformer with default priority
 	 * 
 	 * @param packetClass Packet class name we want to override (FQ)
+	 * @param handlerClassName Name of the class which will handle the callback
+	 * @param handlerMethodName Method name to map to in handlerClass (must have signature (INetHandler, PacketClass)Void) 
+	 */
+	protected PacketTransformer(Obf packetClass, String handlerClassName, String handlerMethodName)
+	{
+		this(packetClass.name, packetClass.obf, handlerClassName, handlerMethodName, 0);
+	}
+	
+	/**
+	 * Create a PacketTransformer with default priority
+	 * 
+	 * @param packetClass Packet class name we want to override (FQ)
 	 * @param packetClassObf Obfuscated packet class name
 	 * @param handlerClassName Name of the class which will handle the callback
 	 * @param handlerMethodName Method name to map to in handlerClass (must have signature (INetHandler, PacketClass)Void) 
@@ -63,6 +69,19 @@ public abstract class PacketTransformer implements IClassTransformer
 	protected PacketTransformer(String packetClass, String packetClassObf, String handlerClassName, String handlerMethodName)
 	{
 		this(packetClass, packetClassObf, handlerClassName, handlerMethodName, 0);
+	}
+	
+	/**
+	 * Create a PacketTransformer with default priority
+	 * 
+	 * @param packetClass Packet class name we want to override (FQ)
+	 * @param handlerClassName Name of the class which will handle the callback
+	 * @param handlerMethodName Method name to map to in handlerClass (must have signature (INetHandler, PacketClass)Void)
+	 * @param priority transformer priority, if there are multiple transformers registered for this packet then higher priority handlers are called before lower priority ones, default priority is 0 
+	 */
+	protected PacketTransformer(Obf packetClass, String handlerClassName, String handlerMethodName, int priority)
+	{
+		this(packetClass.name, packetClass.obf, handlerClassName, handlerMethodName, priority);
 	}
 	
 	/**
@@ -124,10 +143,10 @@ public abstract class PacketTransformer implements IClassTransformer
 		classReader.accept(classNode, ClassReader.EXPAND_FRAMES);
 		
 		// Try and transform obfuscated first
-		if (!this.tryTransformMethod(className, classNode, PacketTransformer.processPacketMethodObf, PacketTransformer.netHandlerClassObf))
+		if (!this.tryTransformMethod(className, classNode, Obf.processPacket.obf, Obf.INetHandler.obf))
 		{
 			// Try to transform non-obf for use in dev env
-			if (!this.tryTransformMethod(className, classNode, PacketTransformer.processPacketMethod, PacketTransformer.netHandlerClass))
+			if (!this.tryTransformMethod(className, classNode, Obf.processPacket.name, Obf.INetHandler.ref))
 			{
 				PacketTransformer.logger.warning(String.format("PacketTransformer: failed transforming class '%s' (%s)", this.packetClass, this.packetClassObf));
 			}

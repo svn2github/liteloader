@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core.hooks.asm;
+package com.mumfrey.liteloader.core.transformers;
 
 import net.minecraft.network.INetHandler;
 import net.minecraft.network.login.INetHandlerLoginClient;
@@ -19,7 +19,7 @@ import com.mumfrey.liteloader.core.PluginChannels;
  * 
  * @author Adam Mummery-Smith
  */
-public class ASMHookProxy
+public class InjectedCallbackProxy
 {
 	/**
 	 * Initialisation done
@@ -86,72 +86,72 @@ public class ASMHookProxy
 	
 	public static void onTimerUpdate(int ref)
 	{
-		if (!ASMHookProxy.initDone)
+		if (!InjectedCallbackProxy.initDone)
 		{
-			ASMHookProxy.initDone = true;
-			ASMHookProxy.events = LiteLoader.getEvents();
-			ASMHookProxy.events.preBeginGame();
+			InjectedCallbackProxy.initDone = true;
+			InjectedCallbackProxy.events = LiteLoader.getEvents();
+			InjectedCallbackProxy.events.preBeginGame();
 		}
 		
-		ASMHookProxy.events.onTimerUpdate();
+		InjectedCallbackProxy.events.onTimerUpdate();
 	}
 	
 	public static void onAnimateTick(int ref)
 	{
-		ASMHookProxy.clock = true;
+		InjectedCallbackProxy.clock = true;
 	}
 	
 	public static void onTick(int ref)
 	{
 		if (ref == 2)
 		{
-			ASMHookProxy.events.onTick(ASMHookProxy.clock);
+			InjectedCallbackProxy.events.onTick(InjectedCallbackProxy.clock);
 		}
 	}
 	
 	public static void onRender(int ref)
 	{
-		ASMHookProxy.events.onRender();
+		InjectedCallbackProxy.events.onRender();
 	}
 	
 	public static void preRenderGUI(int ref)
 	{
 		if (ref == 1)
 		{
-			ASMHookProxy.events.preRenderGUI();
+			InjectedCallbackProxy.events.preRenderGUI();
 		}
 	}
 	
 	public static void onSetupCameraTransform(int ref)
 	{
-		ASMHookProxy.events.onSetupCameraTransform();
+		InjectedCallbackProxy.events.onSetupCameraTransform();
 	}
 	
 	public static void postRenderEntities(int ref)
 	{
-		ASMHookProxy.events.postRenderEntities();
+		InjectedCallbackProxy.events.postRenderEntities();
 	}
 	
 	public static void postRender(int ref)
 	{
-		ASMHookProxy.events.postRender();
+		InjectedCallbackProxy.events.postRender();
 	}
 	
 	public static void onRenderHUD(int ref)
 	{
-		ASMHookProxy.events.onRenderHUD();
+		InjectedCallbackProxy.events.onRenderHUD();
 	}
 	
 	public static void onRenderChat(int ref)
 	{
-		ASMHookProxy.events.onRenderChat();
+		InjectedCallbackProxy.events.onRenderChat();
 	}
 	
 	public static void postRenderChat(int ref)
 	{
 		if (ref == 10)
 		{
-			ASMHookProxy.events.postRenderChat();
+			InjectedCallbackProxy.events.postRenderChat();
 		}
 	}
 	
@@ -159,8 +159,8 @@ public class ASMHookProxy
 	{
 		if (ref == 2)
 		{
-			ASMHookProxy.events.postRenderHUD();
-			ASMHookProxy.events.preRenderGUI();
+			InjectedCallbackProxy.events.postRenderHUD();
+			InjectedCallbackProxy.events.preRenderGUI();
 		}
 	}
 }
