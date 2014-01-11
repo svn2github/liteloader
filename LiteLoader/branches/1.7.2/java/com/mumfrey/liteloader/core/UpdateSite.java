@@ -3,11 +3,11 @@ package com.mumfrey.liteloader.core;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.logging.Logger;
 
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 import com.mumfrey.liteloader.util.net.HttpStringRetriever;
 
 /**
@@ -23,11 +23,6 @@ public class UpdateSite implements Comparator<Long>
 	 */
 	private static Gson gson = new Gson();
 
-	/**
-	 * Local logger reference
-	 */
-	private static final Logger logger = Logger.getLogger("liteloader");
-	
 	/**
 	 * Base URL of the remote update site
 	 */
@@ -254,12 +249,12 @@ public class UpdateSite implements Comparator<Long>
 			}
 			else
 			{
-				UpdateSite.logger.warning("No key 'versions' in update site JSON");
+				LiteLoaderLogger.warning("No key 'versions' in update site JSON");
 			}
 		}
 		catch (JsonSyntaxException ex)
 		{
-			UpdateSite.logger.warning(String.format("Error parsing update site JSON: %s: %s", ex.getClass().getSimpleName(), ex.getMessage()));
+			LiteLoaderLogger.warning(String.format("Error parsing update site JSON: %s: %s", ex.getClass().getSimpleName(), ex.getMessage()));
 		}
 	}
 
@@ -277,7 +272,7 @@ public class UpdateSite implements Comparator<Long>
 		}
 		else
 		{
-			UpdateSite.logger.warning(String.format("No version entry for current version '%s' in update site JSON", this.targetVersion));
+			LiteLoaderLogger.warning(String.format("No version entry for current version '%s' in update site JSON", this.targetVersion));
 		}
 	}
 
@@ -295,7 +290,7 @@ public class UpdateSite implements Comparator<Long>
 			}
 			else
 			{
-				UpdateSite.logger.warning(String.format("No artefacts entry for specified artefact '%s' in update site JSON", this.artefact));
+				LiteLoaderLogger.warning(String.format("No artefacts entry for specified artefact '%s' in update site JSON", this.artefact));
 			}
 		}
 	}
@@ -312,7 +307,7 @@ public class UpdateSite implements Comparator<Long>
 		}
 		else
 		{
-			UpdateSite.logger.warning("No key 'latest' in update site JSON");
+			LiteLoaderLogger.warning("No key 'latest' in update site JSON");
 			
 			long bestTimeStamp = this.currentTimeStamp;
 			Map<String, String> bestRemoteArtefact = null; 

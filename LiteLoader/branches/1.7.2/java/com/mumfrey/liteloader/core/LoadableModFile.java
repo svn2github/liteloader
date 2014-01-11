@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -21,6 +20,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.mumfrey.liteloader.launch.InjectionStrategy;
 import com.mumfrey.liteloader.resources.ModResourcePack;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * Wrapper for file which represents a mod file to load with associated version information and
@@ -32,8 +32,6 @@ import com.mumfrey.liteloader.resources.ModResourcePack;
 public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 {
 	private static final long serialVersionUID = -7952147161905688459L;
-
-	private static final Logger logger = Logger.getLogger("liteloader");
 
 	/**
 	 * Gson parser for JSON
@@ -108,7 +106,7 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 		}
 		catch (JsonSyntaxException jsx)
 		{
-			LoadableModFile.logger.warning("Error reading " + LoadableMod.METADATA_FILENAME + " in " + this.getAbsolutePath() + ", JSON syntax exception: " + jsx.getMessage());
+			LiteLoaderLogger.warning("Error reading %s in %s, JSON syntax exception: %s", LoadableMod.METADATA_FILENAME, this.getAbsolutePath(), jsx.getMessage());
 			return;
 		}
 		
@@ -118,7 +116,7 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 		this.targetVersion = this.metaData.get("mcversion");
 		if (this.targetVersion == null)
 		{
-			LoadableModFile.logger.warning("Mod in " + this.getAbsolutePath() + " has no loader version number reading " + LoadableMod.METADATA_FILENAME);
+			LiteLoaderLogger.warning("Mod in %s has no loader version number reading %s" + this.getAbsolutePath(), LoadableMod.METADATA_FILENAME);
 			return;
 		}
 		
@@ -130,7 +128,7 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 		catch (NullPointerException ex) {}
 		catch (Exception ex)
 		{
-			LoadableModFile.logger.warning("Mod in " + this.getAbsolutePath() + " has an invalid revision number reading " + LoadableMod.METADATA_FILENAME);
+			LiteLoaderLogger.warning("Mod in %s has an invalid revision number reading %s", this.getAbsolutePath(), LoadableMod.METADATA_FILENAME);
 		}
 
 		this.valid = true;
@@ -246,7 +244,7 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 	{
 		if (this.resourcePack == null)
 		{
-			LoadableModFile.logger.info(String.format("Setting up \"%s\" as mod resource pack with identifier \"%s\"", this.getName(), name));
+			LiteLoaderLogger.info(String.format("Setting up \"%s\" as mod resource pack with identifier \"%s\"", this.getName(), name));
 			this.resourcePack = new ModResourcePack(name, this);
 		}
 	}

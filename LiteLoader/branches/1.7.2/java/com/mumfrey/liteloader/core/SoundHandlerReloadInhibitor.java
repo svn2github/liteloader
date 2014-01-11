@@ -7,6 +7,7 @@ import net.minecraft.client.resources.IResourceManagerReloadListener;
 import net.minecraft.client.resources.SimpleReloadableResourceManager;
 
 import com.mumfrey.liteloader.util.PrivateFields;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * Manager object which handles inhibiting the sound handler's reload notification at startup
@@ -68,7 +69,7 @@ public class SoundHandlerReloadInhibitor
 		}
 		catch (Exception ex)
 		{
-			LiteLoader.getLogger().warning("Error inhibiting sound handler reload");
+			LiteLoaderLogger.warning("Error inhibiting sound handler reload");
 		}
 		
 		return false;
@@ -113,7 +114,7 @@ public class SoundHandlerReloadInhibitor
 		}
 		catch (Exception ex)
 		{
-			LiteLoader.getLogger().warning("Error removing sound handler reload inhibit");
+			LiteLoaderLogger.warning("Error removing sound handler reload inhibit");
 		}
 		
 		return false;

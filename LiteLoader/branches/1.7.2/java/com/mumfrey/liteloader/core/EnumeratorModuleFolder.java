@@ -11,13 +11,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 import java.util.Map.Entry;
-import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import com.mumfrey.liteloader.LiteMod;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * Enumerator module which searches for mods and tweaks in a folder
@@ -29,11 +29,6 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	private static final String OPTION_SEARCH_ZIPFILES  = "search.zipfiles";
 	private static final String OPTION_SEARCH_JARFILES  = "search.jarfiles";
 
-	/**
-	 * Local logger reference
-	 */
-	private static Logger logger = Logger.getLogger("liteloader");
-	
 	/**
 	 * Ordered sets used to sort mods by version/revision  
 	 */
@@ -120,7 +115,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	{
 		if (this.directory.exists() && this.directory.isDirectory())
 		{
-			EnumeratorModuleFolder.logInfo("Mods folder found, searching %s", this.directory.getPath());
+			LiteLoaderLogger.info("Mods folder found, searching %s", this.directory.getPath());
 
 			this.findValidFiles(enumerator, enabledModsList, profile);
 			this.sortAndAllocateFiles(enumerator);
@@ -154,7 +149,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 					}
 					catch (IOException ex)
 					{
-						EnumeratorModuleFolder.logWarning("Error reading version data from %s", candidateZip.getName());
+						LiteLoaderLogger.warning("Error reading version data from %s", candidateZip.getName());
 					}
 					
 					if (strVersion != null)
@@ -164,7 +159,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 				}
 				else if (legacyVersionEntry != null)
 				{
-					EnumeratorModuleFolder.logWarning("%s is no longer supported, ignoring outdated mod file: %s", LoadableMod.LEGACY_METADATA_FILENAME, candidateFile.getAbsolutePath());
+					LiteLoaderLogger.warning("%s is no longer supported, ignoring outdated mod file: %s", LoadableMod.LEGACY_METADATA_FILENAME, candidateFile.getAbsolutePath());
 				}
 				else if (this.isVersioned && this.loadTweaks && this.readJarFiles && candidateFile.getName().toLowerCase().endsWith(".jar"))
 				{
@@ -174,7 +169,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 			}
 			catch (Exception ex)
 			{
-				EnumeratorModuleFolder.logInfo("Error enumerating '%s': Invalid zip file or error reading file", candidateFile.getAbsolutePath());
+				LiteLoaderLogger.info("Error enumerating '%s': Invalid zip file or error reading file", candidateFile.getAbsolutePath());
 			}
 			finally
 			{
@@ -209,12 +204,12 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 					this.versionOrderingSets.put(modFile.getModName(), new TreeSet<LoadableMod<File>>());
 				}
 				
-				EnumeratorModuleFolder.logInfo("Considering valid mod file: %s", modFile.getAbsolutePath());
+				LiteLoaderLogger.info("Considering valid mod file: %s", modFile.getAbsolutePath());
 				this.versionOrderingSets.get(modFile.getModName()).add(modFile);
 			}
 			else
 			{
-				EnumeratorModuleFolder.logInfo("Not adding invalid or outdated mod file: %s", candidateFile.getAbsolutePath());
+				LiteLoaderLogger.info("Not adding invalid or outdated mod file: %s", candidateFile.getAbsolutePath());
 			}
 		}
 	}
@@ -232,7 +227,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 		{
 			LoadableMod<File> newestVersion = modFileEntry.getValue().iterator().next();
 
-			EnumeratorModuleFolder.logInfo("Adding newest valid mod file '%s' at revision %.4f: ", newestVersion.getLocation(), newestVersion.getRevision());
+			LiteLoaderLogger.info("Adding newest valid mod file '%s' at revision %.4f: ", newestVersion.getLocation(), newestVersion.getRevision());
 			this.loadableMods.add(newestVersion);
 			
 			if (this.loadTweaks)
@@ -246,7 +241,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 				}
 				catch (Throwable th)
 				{
-					EnumeratorModuleFolder.logWarning("Error adding tweaks from '%s'", newestVersion.getLocation());
+					LiteLoaderLogger.warning("Error adding tweaks from '%s'", newestVersion.getLocation());
 				}
 			}
 		}
@@ -255,7 +250,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	@Override
 	public void injectIntoClassLoader(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
 	{
-		EnumeratorModuleFolder.logInfo("Injecting external mods into class path...");
+		LiteLoaderLogger.info("Injecting external mods into class path...");
 		
 		for (LoadableMod<?> loadableMod : this.loadableMods)
 		{
@@ -263,12 +258,12 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 			{
 				if (loadableMod.injectIntoClassPath(classLoader, false))
 				{
-					EnumeratorModuleFolder.logInfo("Successfully injected mod file '%s' into classpath", loadableMod.getLocation());
+					LiteLoaderLogger.info("Successfully injected mod file '%s' into classpath", loadableMod.getLocation());
 				}
 			}
 			catch (MalformedURLException ex)
 			{
-				EnumeratorModuleFolder.logWarning("Error injecting '%s' into classPath. The mod will not be loaded", loadableMod.getLocation());
+				LiteLoaderLogger.warning("Error injecting '%s' into classPath. The mod will not be loaded", loadableMod.getLocation());
 			}
 		}
 	}
@@ -279,7 +274,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	{
 		for (LoadableMod<?> modFile : this.loadableMods)
 		{
-			EnumeratorModuleFolder.logInfo("Searching %s...", modFile.getLocation());
+			LiteLoaderLogger.info("Searching %s...", modFile.getLocation());
 			
 			LinkedList<Class<?>> modClasses = LiteLoaderEnumerator.getSubclassesFor(modFile.toFile(), classLoader, LiteMod.class, PluggableEnumerator.MOD_CLASS_PREFIX);
 			
@@ -290,18 +285,8 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 			
 			if (modClasses.size() > 0)
 			{
-				EnumeratorModuleFolder.logInfo("Found %s potential matches", modClasses.size());
+				LiteLoaderLogger.info("Found %s potential matches", modClasses.size());
 			}
 		}
-	}
-
-	private static void logInfo(String string, Object... args)
-	{
-		EnumeratorModuleFolder.logger.info(String.format(string, args));
-	}
-
-	private static void logWarning(String string, Object... args)
-	{
-		EnumeratorModuleFolder.logger.warning(String.format(string, args));
 	}
 }

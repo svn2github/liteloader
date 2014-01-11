@@ -11,7 +11,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.network.NetHandlerLoginClient;
@@ -29,6 +28,7 @@ import com.mumfrey.liteloader.PluginChannelListener;
 import com.mumfrey.liteloader.core.exceptions.UnregisteredChannelException;
 import com.mumfrey.liteloader.permissions.PermissionsManagerClient;
 import com.mumfrey.liteloader.util.PrivateFields;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * Manages plugin channel connections and subscriptions for LiteLoader
@@ -191,7 +191,7 @@ public class PluginChannels
 		}
 		catch (UnsupportedEncodingException ex)
 		{
-			LiteLoader.getLogger().log(Level.WARNING, "Error decoding REGISTER packet from server " + ex.getClass().getSimpleName(), ex);
+			LiteLoaderLogger.warning(ex, "Error decoding REGISTER packet from server %s", ex.getClass().getSimpleName());
 		}
 	}
 
@@ -219,7 +219,7 @@ public class PluginChannels
 				
 				if (failCount >= PluginChannels.WARN_FAULT_THRESHOLD)
 				{
-					LiteLoader.getLogger().warning(String.format("Plugin channel listener %s exceeded fault threshold on channel %s with %s", pluginChannelListener.getName(), channel, ex.getClass().getSimpleName()));
+					LiteLoaderLogger.warning(String.format("Plugin channel listener %s exceeded fault threshold on channel %s with %s", pluginChannelListener.getName(), channel, ex.getClass().getSimpleName()));
 					this.faultingPluginChannelListeners.remove(pluginChannelListener);
 				}
 				else
@@ -286,7 +286,7 @@ public class PluginChannels
 		}
 		catch (Exception ex)
 		{
-			LiteLoader.getLogger().log(Level.WARNING, "Error dispatching REGISTER packet to server " + ex.getClass().getSimpleName(), ex);
+			LiteLoaderLogger.warning(ex, "Error dispatching REGISTER packet to server %s", ex.getClass().getSimpleName());
 		}
 	}
 	

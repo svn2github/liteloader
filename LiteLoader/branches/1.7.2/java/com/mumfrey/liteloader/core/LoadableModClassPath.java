@@ -3,7 +3,6 @@ package com.mumfrey.liteloader.core;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -13,6 +12,7 @@ import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 import com.mumfrey.liteloader.resources.ModResourcePack;
 import com.mumfrey.liteloader.resources.ModResourcePackDir;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * Mod file reference for a file loaded from class path
@@ -23,8 +23,6 @@ public class LoadableModClassPath extends LoadableModFile
 {
 	private static final long serialVersionUID = -4759310661966590773L;
 	
-	private static final Logger logger = Logger.getLogger("liteloader");
-
 	LoadableModClassPath(File file, String fallbackName)
 	{
 		super(file, LoadableModClassPath.getVersionMetaDataString(file));
@@ -52,12 +50,12 @@ public class LoadableModClassPath extends LoadableModFile
 		{
 			if (this.isDirectory())
 			{
-				LoadableModClassPath.logger.info(String.format("Setting up \"%s/%s\" as mod resource pack with identifier \"%s\"", this.getParentFile().getName(), this.getName(), name));
+				LiteLoaderLogger.info(String.format("Setting up \"%s/%s\" as mod resource pack with identifier \"%s\"", this.getParentFile().getName(), this.getName(), name));
 				this.resourcePack = new ModResourcePackDir(name, this);
 			}
 			else
 			{
-				LoadableModClassPath.logger.info(String.format("Setting up \"%s\" as mod resource pack with identifier \"%s\"", this.getName(), name));
+				LiteLoaderLogger.info(String.format("Setting up \"%s\" as mod resource pack with identifier \"%s\"", this.getName(), name));
 				this.resourcePack = new ModResourcePack(name, this);
 			}
 		}

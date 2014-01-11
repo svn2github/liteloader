@@ -1,22 +1,18 @@
 package com.mumfrey.liteloader.core.gen;
 
-//import java.lang.reflect.Field;
-//import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.logging.Logger;
 
 import net.minecraft.client.Minecraft;
-//import net.minecraft.client.settings.GameSettings;
 import net.minecraft.profiler.Profiler;
 
-import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.core.exceptions.ProfilerCrossThreadAccessException;
 import com.mumfrey.liteloader.core.exceptions.ProfilerStackCorruptionException;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * Profiler used for generating callback signatures for the callback injector
@@ -31,20 +27,10 @@ public class GenProfiler extends Profiler
 	private final Thread minecraftThread;
 	
 	/**
-	 * Logger instance
-	 */
-	private static Logger logger;
-	
-	/**
 	 * Section list, used as a kind of stack to determine where we are in the profiler stack
 	 */
 	private LinkedList<String> sectionStack = new LinkedList<String>();
 
-	/**
-	 * Optifine compatibility, pointer to the "Profiler" setting so we can enable it if it's disabled
-	 */
-//	private Field ofProfiler;
-	
 	/**
 	 * Minecraft reference, only set if optifine compatibility is enabled 
 	 */
@@ -68,65 +54,9 @@ public class GenProfiler extends Profiler
 	{
 		this.mc = Minecraft.getMinecraft();
 
-		GenProfiler.logger = LiteLoader.getLogger();
-		
-		// Detect optifine (duh!)
-//		this.detectOptifine();
-		
 		this.minecraftThread = Thread.currentThread();
 	}
 
-	/**
-	 * Try to detect optifine using reflection
-	 * 
-	 * @param logger
-	 */
-//	private void detectOptifine()
-//	{
-//		try
-//		{
-//			this.ofProfiler = GameSettings.class.getDeclaredField("ofProfiler");
-//		}
-//		catch (SecurityException ex) {}
-//		catch (NoSuchFieldException ex)
-//		{
-//			this.logger.info("Optifine not detected, skipping compatibility check");
-//		}
-//		finally
-//		{
-//			if (this.ofProfiler != null)
-//			{
-//				this.logger.info(String.format("Optifine version %s detected, enabling compatibility check", this.getOptifineVersion()));
-//			}
-//		}
-//	}
-	
-	/**
-	 * Try to get the optifine version using reflection
-	 * 
-	 * @return
-	 */
-//	private String getOptifineVersion()
-//	{
-//		try
-//		{
-//			Class<?> config = Class.forName("Config");
-//			
-//			if (config != null)
-//			{
-//				Method getVersion = config.getDeclaredMethod("getVersion");
-//				
-//				if (getVersion != null)
-//				{
-//					return (String)getVersion.invoke(null);
-//				}
-//			}
-//		}
-//		catch (Exception ex) {}
-//		
-//		return "Unknown";
-//	}
-	
 	/* (non-Javadoc)
 	 * @see net.minecraft.profiler.Profiler#startSection(java.lang.String)
 	 */
@@ -135,7 +65,7 @@ public class GenProfiler extends Profiler
 	{
 		if (Thread.currentThread() != this.minecraftThread)
 		{
-			this.logger.severe("Profiler cross thread access detected, this indicates an error with one of your mods.");
+			LiteLoaderLogger.severe("Profiler cross thread access detected, this indicates an error with one of your mods.");
 			throw new ProfilerCrossThreadAccessException(Thread.currentThread().getName());
 		}
 		
@@ -171,22 +101,6 @@ public class GenProfiler extends Profiler
 		
 		this.sectionStack.add(sectionName);
 		super.startSection(sectionName);
-
-//		if (this.ofProfiler != null)
-//		{
-//			try
-//			{
-//				this.ofProfiler.set(this.mc.gameSettings, true);
-//			}
-//			catch (IllegalArgumentException ex)
-//			{
-//				this.ofProfiler = null;
-//			}
-//			catch (IllegalAccessException ex)
-//			{
-//				this.ofProfiler = null;
-//			}
-//		}
 	}
 	
 	/* (non-Javadoc)
@@ -197,7 +111,7 @@ public class GenProfiler extends Profiler
 	{
 		if (Thread.currentThread() != this.minecraftThread)
 		{
-			this.logger.severe("Profiler cross thread access detected, this indicates an error with one of your mods.");
+			LiteLoaderLogger.severe("Profiler cross thread access detected, this indicates an error with one of your mods.");
 			throw new ProfilerCrossThreadAccessException(Thread.currentThread().getName());
 		}
 		
@@ -211,11 +125,7 @@ public class GenProfiler extends Profiler
 			
 			if ("gameRenderer".equals(endingSection) && "root".equals(nextSection))
 			{
-//				super.startSection("litetick");
-				
 				this.debugEvent("onTick", sectionName);
-				
-//				super.endSection();
 			}
 			else
 			{
@@ -239,7 +149,7 @@ public class GenProfiler extends Profiler
 		}
 		catch (NoSuchElementException ex)
 		{
-			this.logger.severe("Corrupted Profiler stack detected, this indicates an error with one of your mods.");
+			LiteLoaderLogger.severe("Corrupted Profiler stack detected, this indicates an error with one of your mods.");
 			throw new ProfilerStackCorruptionException("Corrupted Profiler stack detected");
 		}
 	}

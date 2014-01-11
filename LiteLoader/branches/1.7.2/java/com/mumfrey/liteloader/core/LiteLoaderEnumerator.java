@@ -12,8 +12,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -22,6 +20,7 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.core.exceptions.OutdatedLoaderException;
 import com.mumfrey.liteloader.launch.LiteLoaderTweaker;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * The enumerator performs all mod discovery functions for LiteLoader, this includes locating mod files to load
@@ -40,11 +39,6 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 	 */
 	private static final int MAX_DISCOVERY_DEPTH = 16;
 
-	/**
-	 * Local logger reference
-	 */
-	private static Logger logger = Logger.getLogger("liteloader");
-	
 	/**
 	 * Reference to the bootstrap agent 
 	 */
@@ -143,7 +137,7 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 		
 		if (!this.searchModsFolder && !this.searchProtectionDomain && !this.searchClassPath)
 		{
-			LiteLoaderEnumerator.logWarning("Invalid configuration, no search locations defined. Enabling all search locations.");
+			LiteLoaderLogger.warning("Invalid configuration, no search locations defined. Enabling all search locations.");
 			
 			this.searchModsFolder       = true;
 			this.searchProtectionDomain = true;
@@ -169,7 +163,7 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 	{
 		if (module != null && !this.modules.contains(module))
 		{
-			LiteLoaderEnumerator.logInfo("Registering %s: %s", module.getClass().getSimpleName(), module);
+			LiteLoaderLogger.info("Registering %s: %s", module.getClass().getSimpleName(), module);
 			this.modules.add(module);
 			module.init(this);
 		}
@@ -291,11 +285,11 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 				module.registerMods(this, this.classLoader);
 			}
 
-			LiteLoaderEnumerator.logInfo("Mod class discovery completed");
+			LiteLoaderLogger.info("Mod class discovery completed");
 		}
 		catch (Throwable th)
 		{
-			LiteLoaderEnumerator.logger.log(Level.WARNING, "Mod class discovery failed", th);
+			LiteLoaderLogger.warning(th, "Mod class discovery failed");
 			return;
 		}
 	}
@@ -308,7 +302,7 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 	{
 		if (!container.isEnabled(this.enabledModsList, this.bootstrap.getProfile()))
 		{
-			LiteLoaderEnumerator.logInfo("Mod %s is disabled for profile %s, not injecting tranformers", container.getIdentifier(), this.bootstrap.getProfile());
+			LiteLoaderLogger.info("Mod %s is disabled for profile %s, not injecting tranformers", container.getIdentifier(), this.bootstrap.getProfile());
 			return;
 		}
 		
@@ -329,10 +323,10 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 		{
 			String tweakClass = container.getTweakClassName();
 			int tweakPriority = container.getTweakPriority();
-			LiteLoaderEnumerator.logInfo("Mod file '%s' provides tweakClass '%s', adding to Launch queue with priority %d", container.getName(), tweakClass, tweakPriority);
+			LiteLoaderLogger.info("Mod file '%s' provides tweakClass '%s', adding to Launch queue with priority %d", container.getName(), tweakClass, tweakPriority);
 			if (LiteLoaderTweaker.addTweaker(tweakClass, tweakPriority))
 			{
-				LiteLoaderEnumerator.logInfo("tweakClass '%s' was successfully added", tweakClass);
+				LiteLoaderLogger.info("tweakClass '%s' was successfully added", tweakClass);
 				container.injectIntoClassPath(this.classLoader, true);
 				
 				if (container.isExternalJar())
@@ -350,7 +344,7 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 							File classPathJar = new File(this.bootstrap.getGameDirectory(), classPathEntry);
 							URL classPathJarUrl = classPathJar.toURI().toURL();
 							
-							LiteLoaderEnumerator.logInfo("Adding Class-Path entry: %s", classPathEntry); 
+							LiteLoaderLogger.info("Adding Class-Path entry: %s", classPathEntry); 
 							LiteLoaderTweaker.addURLToParentClassLoader(classPathJarUrl);
 							this.classLoader.addURL(classPathJarUrl);
 						}
@@ -370,10 +364,10 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 		{
 			for (String classTransformerClass : classTransformerClasses)
 			{
-				LiteLoaderEnumerator.logInfo("Mod file '%s' provides classTransformer '%s', adding to class loader", container.getName(), classTransformerClass);
+				LiteLoaderLogger.info("Mod file '%s' provides classTransformer '%s', adding to class loader", container.getName(), classTransformerClass);
 				if (LiteLoaderTweaker.addClassTransformer(classTransformerClass))
 				{
-					LiteLoaderEnumerator.logInfo("classTransformer '%s' was successfully added", classTransformerClass);
+					LiteLoaderLogger.info("classTransformer '%s' was successfully added", classTransformerClass);
 					container.injectIntoClassPath(classLoader, true);
 				}
 			}
@@ -391,7 +385,7 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 	{
 		if (this.modsToLoad.containsKey(mod.getSimpleName()))
 		{
-			LiteLoaderEnumerator.logWarning("Mod name collision for mod with class '%s', maybe you have more than one copy?", mod.getSimpleName());
+			LiteLoaderLogger.warning("Mod name collision for mod with class '%s', maybe you have more than one copy?", mod.getSimpleName());
 		}
 		
 		this.modsToLoad.put(mod.getSimpleName(), mod);
@@ -425,11 +419,11 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 			catch (OutdatedLoaderException ex)
 			{
 				classes.clear();
-				LiteLoaderEnumerator.logWarning("Error searching in '%s', missing API component '%s', your loader is probably out of date", packagePath, ex.getMessage());
+				LiteLoaderLogger.info("Error searching in '%s', missing API component '%s', your loader is probably out of date", packagePath, ex.getMessage());
 			}
 			catch (Throwable th)
 			{
-				LiteLoaderEnumerator.logger.log(Level.WARNING, "Enumeration error", th);
+				LiteLoaderLogger.warning(th, "Enumeration error");
 			}
 		}
 		
@@ -558,17 +552,7 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 				}
 			}
 			
-			LiteLoaderEnumerator.logger.log(Level.WARNING, "checkAndAddClass error", th);
+			LiteLoaderLogger.warning(th, "checkAndAddClass error");
 		}
-	}
-
-	private static void logInfo(String string, Object... args)
-	{
-		LiteLoaderEnumerator.logger.info(String.format(string, args));
-	}
-
-	private static void logWarning(String string, Object... args)
-	{
-		LiteLoaderEnumerator.logger.warning(String.format(string, args));
 	}
 }

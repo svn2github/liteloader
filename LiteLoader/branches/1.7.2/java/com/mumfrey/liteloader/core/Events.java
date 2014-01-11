@@ -1,7 +1,6 @@
 package com.mumfrey.liteloader.core;
 
 import java.util.LinkedList;
-import java.util.logging.Level;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiNewChat;
@@ -22,6 +21,7 @@ import org.lwjgl.input.Mouse;
 import com.mumfrey.liteloader.*;
 import com.mumfrey.liteloader.core.gen.GenProfiler;
 import com.mumfrey.liteloader.util.PrivateFields;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  *
@@ -216,7 +216,7 @@ public class Events implements IPlayerUsage
 		{
 			if (listener instanceof ChatFilter)
 			{
-				LiteLoader.getLogger().warning(String.format("Interface error initialising mod '%1s'. A mod implementing ChatFilter and ChatListener is not supported! Remove one of these interfaces", listener.getName()));
+				LiteLoaderLogger.warning("Interface error initialising mod '%1s'. A mod implementing ChatFilter and ChatListener is not supported! Remove one of these interfaces", listener.getName());
 			}
 			else
 			{
@@ -271,7 +271,7 @@ public class Events implements IPlayerUsage
 			}
 			catch (Exception ex)
 			{
-				LiteLoader.getLogger().log(Level.WARNING, "Error creating hook", ex);
+				LiteLoaderLogger.warning(ex, "Error creating hook");
 				ex.printStackTrace();
 			}
 		}	
@@ -445,7 +445,7 @@ public class Events implements IPlayerUsage
 				}
 				catch (Throwable th)
 				{
-					LiteLoader.getLogger().log(Level.WARNING, "Error initialising mod " + initMod.getName(), th);
+					LiteLoaderLogger.warning(th, "Error initialising mod %s", initMod.getName());
 				}
 			}
 		}

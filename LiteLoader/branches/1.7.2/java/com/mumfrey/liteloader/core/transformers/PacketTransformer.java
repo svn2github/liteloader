@@ -3,7 +3,6 @@ package com.mumfrey.liteloader.core.transformers;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Logger;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 
@@ -21,6 +20,7 @@ import org.objectweb.asm.tree.VarInsnNode;
 
 import com.mumfrey.liteloader.core.runtime.Obf;
 import com.mumfrey.liteloader.util.SortableValue;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * Class transformer which transforms a Packet class and alters the "processPacket" function to call the specified
@@ -31,8 +31,6 @@ import com.mumfrey.liteloader.util.SortableValue;
  */
 public abstract class PacketTransformer implements IClassTransformer
 {
-	private static Logger logger = Logger.getLogger("liteloader");
-	
 	private static final Set<String> transformedPackets = new HashSet<String>();
 	private static int transformerOrder = 0;
 	
@@ -115,7 +113,7 @@ public abstract class PacketTransformer implements IClassTransformer
 	{
 		if (this.packetClass.equals(name) || this.packetClassObf.equals(name))
 		{
-			PacketTransformer.logger.info(String.format("PacketTransformer: Running transformer %s for %s", this.getClass().getName(), name));
+			LiteLoaderLogger.info(String.format("PacketTransformer: Running transformer %s for %s", this.getClass().getName(), name));
 			
 			try
 			{
@@ -148,7 +146,7 @@ public abstract class PacketTransformer implements IClassTransformer
 			// Try to transform non-obf for use in dev env
 			if (!this.tryTransformMethod(className, classNode, Obf.processPacket.name, Obf.INetHandler.ref))
 			{
-				PacketTransformer.logger.warning(String.format("PacketTransformer: failed transforming class '%s' (%s)", this.packetClass, this.packetClassObf));
+				LiteLoaderLogger.warning(String.format("PacketTransformer: failed transforming class '%s' (%s)", this.packetClass, this.packetClassObf));
 			}
 		}
 		

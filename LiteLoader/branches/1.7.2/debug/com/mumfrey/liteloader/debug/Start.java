@@ -2,14 +2,11 @@ package com.mumfrey.liteloader.debug;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.Handler;
-import java.util.logging.Logger;
 
 import net.minecraft.launchwrapper.Launch;
 
 import com.mumfrey.liteloader.launch.LiteLoaderTweaker;
-import com.mumfrey.liteloader.util.log.LiteLoaderLogFormatter;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * Wrapper class for LaunchWrapper Main class, which logs into minecraft.net first so that online shizzle can be tested
@@ -20,7 +17,6 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogFormatter;
 public abstract class Start
 {
 	private static final String FML_TWEAKER_NAME = "cpw.mods.fml.common.launcher.FMLTweaker";
-	private static Logger logger = Logger.getLogger("liteloader");
 	
 	/**
 	 * Entry point.
@@ -44,8 +40,6 @@ public abstract class Start
 			argsList.add("--tweakClass");argsList.add(FML_TWEAKER_NAME);
 		}
 
-		Start.prepareLogger(fmlDetected);
-		
 		String usernameFromCmdLine = (args.length > 0) ? args[0] : null;
 		String passwordFromCmdLine = (args.length > 1) ? args[1] : null;
 		
@@ -53,7 +47,7 @@ public abstract class Start
 		LoginManager loginManager = new LoginManager(loginJson);
 		loginManager.login(usernameFromCmdLine, passwordFromCmdLine, 5);
 
-		Start.logger.info(String.format("Launching game as %s", loginManager.getProfileName()));
+		LiteLoaderLogger.info(String.format("Launching game as %s", loginManager.getProfileName()));
 		
 		File gameDir = new File(System.getProperty("user.dir"));
 		File assetsDir = new File(gameDir, "assets/virtual/legacy");
@@ -67,16 +61,5 @@ public abstract class Start
 		argsList.add("--assetsDir");   argsList.add(assetsDir.getAbsolutePath());
 		
 		Launch.main(argsList.toArray(args));
-	}
-	
-	private static void prepareLogger(boolean fmlDetected)
-	{
-		if (!fmlDetected) System.setProperty("liteloaderFormatLog", "true");
-		
-		for (Handler handler : Start.logger.getParent().getHandlers())
-		{
-			if (handler instanceof ConsoleHandler)
-				handler.setFormatter(new LiteLoaderLogFormatter(false));
-		}
 	}
 }

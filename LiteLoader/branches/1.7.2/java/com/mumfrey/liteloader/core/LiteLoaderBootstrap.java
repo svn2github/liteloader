@@ -7,19 +7,21 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Properties;
-import java.util.logging.FileHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.StreamHandler;
+
+import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.core.appender.FileAppender;
+import org.apache.logging.log4j.core.layout.PatternLayout;
 
 import net.minecraft.client.ClientBrandRetriever;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import com.mumfrey.liteloader.launch.ILoaderBootstrap;
-import com.mumfrey.liteloader.util.log.LiteLoaderLogFormatter;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * LiteLoaderBootstrap is a proxy class which handles the early part of the LiteLoader startup process which
@@ -40,11 +42,6 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	 * Liteloader version
 	 */
 	public static final LiteLoaderVersion VERSION = LiteLoaderVersion.CURRENT;
-
-	/**
-	 * Local logger reference
-	 */
-	private static final Logger logger = Logger.getLogger("liteloader");
 
 	/**
 	 * True to use stdout instead of stderr
@@ -154,15 +151,15 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		// Set up the bootstrap
 		if (!this.prepare()) return;
 		
-		LiteLoaderBootstrap.logInfo("LiteLoader %s starting up...", LiteLoaderVersion.CURRENT.getLoaderVersion());
+		LiteLoaderLogger.info("LiteLoader %s starting up...", LiteLoaderVersion.CURRENT.getLoaderVersion());
 		
 		// Print the branding version if any was provided
 		if (this.branding != null)
 		{
-			LiteLoaderBootstrap.logInfo("Active Pack: %s", this.branding);
+			LiteLoaderLogger.info("Active Pack: %s", this.branding);
 		}
 		
-		LiteLoaderBootstrap.logInfo("Java reports OS=\"%s\"", System.getProperty("os.name").toLowerCase());
+		LiteLoaderLogger.info("Java reports OS=\"%s\"", System.getProperty("os.name").toLowerCase());
 		
 		this.enabledModsList = EnabledModsList.createFrom(this.enabledModsFile);
 		this.enabledModsList.processModsList(this.profile, modsToLoad);
@@ -170,7 +167,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		this.enumerator = new LiteLoaderEnumerator(this, classLoader, this.enabledModsList, loadTweaks);
 		this.enumerator.discoverMods();
 		
-		LiteLoaderBootstrap.logInfo("LiteLoader PreInit completed");
+		LiteLoaderLogger.info("LiteLoader PreInit completed");
 	}
 	
 	/* (non-Javadoc)
@@ -182,14 +179,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		// PreInit failed
 		if (this.enumerator == null) return;
 		
-		try
-		{
-			if (LiteLoaderBootstrap.logger.getHandlers().length < 1)
-				this.prepareLogger();
-		}
-		catch (Exception ex) {}
-
-		LiteLoaderBootstrap.logger.info("Beginning LiteLoader Init...");
+		LiteLoaderLogger.info("Beginning LiteLoader Init...");
 		LiteLoader.init(this, this.enumerator, this.enabledModsList, classLoader);
 	}
 
@@ -202,14 +192,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		// PreInit failed
 		if (this.enumerator == null) return;
 		
-		try
-		{
-			if (LiteLoaderBootstrap.logger.getHandlers().length < 1)
-				this.prepareLogger();
-		}
-		catch (Exception ex) {}
-		
-		LiteLoaderBootstrap.logger.info("Beginning LiteLoader PostInit...");
+		LiteLoaderLogger.info("Beginning LiteLoader PostInit...");
 		LiteLoader.postInit();
 	}
 
@@ -238,7 +221,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		}
 		catch (Throwable th)
 		{
-			LiteLoaderBootstrap.logger.log(Level.SEVERE, "Error initialising LiteLoader Bootstrap", th);
+			LiteLoaderLogger.severe(th, "Error initialising LiteLoader Bootstrap");
 			return false;
 		}
 		
@@ -251,16 +234,10 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	 */
 	private void prepareLogger() throws SecurityException, IOException
 	{
-		LiteLoaderBootstrap.logger.setUseParentHandlers(false);
-		LiteLoaderBootstrap.useStdOut = System.getProperty("liteloader.log", "stderr").equalsIgnoreCase("stdout") || this.localProperties.getProperty("log", "stderr").equalsIgnoreCase("stdout");
-		
-		StreamHandler consoleHandler = useStdOut ? new com.mumfrey.liteloader.util.log.ConsoleHandler() : new java.util.logging.ConsoleHandler();
-		consoleHandler.setFormatter(new LiteLoaderLogFormatter(false));
-		LiteLoaderBootstrap.logger.addHandler(consoleHandler);
-		
-		FileHandler logFileHandler = new FileHandler(this.logFile.getAbsolutePath());
-		logFileHandler.setFormatter(new LiteLoaderLogFormatter(true));
-		LiteLoaderBootstrap.logger.addHandler(logFileHandler);
+		Logger logger = LiteLoaderLogger.getLogger();
+		Layout<? extends Serializable> layout = PatternLayout.createLayout("[%d{HH:mm:ss}] [%t/%level]: %msg%n", logger.getContext().getConfiguration(), null, "UTF-8", "True");
+		FileAppender fileAppender = FileAppender.createAppender(this.logFile.getAbsolutePath(), "False", "False", "LiteLoader", "True", "True", "True", layout, null, "False", "", logger.getContext().getConfiguration());
+		logger.addAppender(fileAppender);
 	}
 	
 	/**
@@ -339,7 +316,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		}
 		catch (Throwable th)
 		{
-			LiteLoaderBootstrap.logger.log(Level.WARNING, "Error writing liteloader properties", th);
+			LiteLoaderLogger.warning(th, "Error writing liteloader properties");
 		}
 	}
 
@@ -502,16 +479,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		}
 		catch (Throwable th)
 		{
-			LiteLoaderBootstrap.logger.log(Level.WARNING, "Setting branding failed", th);
+			LiteLoaderLogger.warning(th, "Setting branding failed");
 		}
-	}
-	
-	/**
-	 * @param string
-	 * @param args
-	 */
-	private static void logInfo(String string, Object... args)
-	{
-		LiteLoaderBootstrap.logger.info(String.format(string, args));
 	}
 }

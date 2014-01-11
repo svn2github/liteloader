@@ -2,11 +2,11 @@ package com.mumfrey.liteloader.core;
 
 import java.io.File;
 import java.util.LinkedList;
-import java.util.logging.Logger;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import com.mumfrey.liteloader.LiteMod;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * Enumerator module which searches for mods on the classpath
@@ -15,11 +15,6 @@ import com.mumfrey.liteloader.LiteMod;
  */
 public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 {
-	/**
-	 * Local logger reference
-	 */
-	private static Logger logger = Logger.getLogger("liteloader");
-
 	/**
 	 * Array of class path entries specified to the JVM instance 
 	 */
@@ -62,14 +57,14 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	 */
 	private String[] readClassPath()
 	{
-		EnumeratorModuleClassPath.logInfo("Enumerating class path...");
+		LiteLoaderLogger.info("Enumerating class path...");
 		
 		String classPath = System.getProperty("java.class.path");
 		String classPathSeparator = System.getProperty("path.separator");
 		String[] classPathEntries = classPath.split(classPathSeparator);
 		
-		EnumeratorModuleClassPath.logInfo("Class path separator=\"%s\"", classPathSeparator);
-		EnumeratorModuleClassPath.logInfo("Class path entries=(\n   classpathEntry=%s\n)", classPath.replace(classPathSeparator, "\n   classpathEntry="));
+		LiteLoaderLogger.info("Class path separator=\"%s\"", classPathSeparator);
+		LiteLoaderLogger.info("Class path entries=(\n   classpathEntry=%s\n)", classPath.replace(classPathSeparator, "\n   classpathEntry="));
 		return classPathEntries;
 	}
 
@@ -78,7 +73,7 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	{
 		if (this.loadTweaks)
 		{
-			EnumeratorModuleClassPath.logInfo("Discovering tweaks on class path...");
+			LiteLoaderLogger.info("Discovering tweaks on class path...");
 			
 			for (String classPathPart : this.classPathEntries)
 			{
@@ -108,11 +103,11 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	@Override
 	public void registerMods(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
 	{
-		EnumeratorModuleClassPath.logInfo("Discovering mods on class path...");
+		LiteLoaderLogger.info("Discovering mods on class path...");
 		
 		for (String classPathPart : this.classPathEntries)
 		{
-			EnumeratorModuleClassPath.logInfo("Searching %s...", classPathPart);
+			LiteLoaderLogger.info("Searching %s...", classPathPart);
 			
 			File packagePath = new File(classPathPart);
 			LinkedList<Class<?>> modClasses = LiteLoaderEnumerator.getSubclassesFor(packagePath, classLoader, LiteMod.class, PluggableEnumerator.MOD_CLASS_PREFIX);
@@ -124,12 +119,7 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 			}
 			
 			if (modClasses.size() > 0)
-				EnumeratorModuleClassPath.logInfo("Found %s potential matches", modClasses.size());
+				LiteLoaderLogger.info("Found %s potential matches", modClasses.size());
 		}
-	}
-
-	private static void logInfo(String string, Object... args)
-	{
-		EnumeratorModuleClassPath.logger.info(String.format(string, args));
 	}
 }

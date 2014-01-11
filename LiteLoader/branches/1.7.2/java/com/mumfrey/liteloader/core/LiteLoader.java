@@ -15,8 +15,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.activity.InvalidActivityException;
 
@@ -31,6 +29,7 @@ import net.minecraft.network.INetHandler;
 import net.minecraft.network.play.server.S01PacketJoinGame;
 import net.minecraft.world.World;
 
+import org.apache.logging.log4j.Logger;
 import org.lwjgl.input.Keyboard;
 
 import com.mumfrey.liteloader.LiteMod;
@@ -43,6 +42,7 @@ import com.mumfrey.liteloader.modconfig.Exposable;
 import com.mumfrey.liteloader.permissions.PermissionsManagerClient;
 import com.mumfrey.liteloader.resources.InternalResourcePack;
 import com.mumfrey.liteloader.util.PrivateFields;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * LiteLoader is a simple loader which loads and provides useful callbacks to
@@ -65,7 +65,7 @@ public final class LiteLoader
 	/**
 	 * Logger for LiteLoader events
 	 */
-	private static final Logger logger = Logger.getLogger("liteloader");
+	private static final Logger logger = LiteLoaderLogger.getLogger();
 	
 	/**
 	 * Tweak system class loader 
@@ -176,7 +176,7 @@ public final class LiteLoader
 	/**
 	 * If inhibit is enabled, this object is used to reflectively inhibit the sound manager's reload process during startup by removing it from the reloadables list
 	 */
-	private SoundHandlerReloadInhibitor soundManagerReloadInhibitor;
+	private SoundHandlerReloadInhibitor soundHandlerReloadInhibitor;
 
 	/**
 	 * File in which we will store mod key mappings
@@ -320,7 +320,7 @@ public final class LiteLoader
 		}
 		catch (Throwable th)
 		{
-			LiteLoader.getLogger().log(Level.SEVERE, "Error initialising LiteLoader", th);
+			LiteLoaderLogger.severe("Error initialising LiteLoader", th);
 			return false;
 		}
 		
@@ -837,15 +837,15 @@ public final class LiteLoader
 	{
 		if (!this.enumerator.hasModsToLoad())
 		{
-			LiteLoader.logInfo("Mod class discovery failed or no mod classes were found. Not loading any mods.");
+			LiteLoaderLogger.info("Mod class discovery failed or no mod classes were found. Not loading any mods.");
 			return;
 		}
 		
-		LiteLoader.logInfo("Discovered %d total mod(s)", this.enumerator.modsToLoadCount());
+		LiteLoaderLogger.info("Discovered %d total mod(s)", this.enumerator.modsToLoadCount());
 		
 		this.pendingResourceReload = false;
-		this.soundManagerReloadInhibitor = new SoundHandlerReloadInhibitor((SimpleReloadableResourceManager)this.minecraft.getResourceManager(), this.minecraft.getSoundHandler());
-		if (this.inhibitSoundManagerReload) this.soundManagerReloadInhibitor.inhibit();
+		this.soundHandlerReloadInhibitor = new SoundHandlerReloadInhibitor((SimpleReloadableResourceManager)this.minecraft.getResourceManager(), this.minecraft.getSoundHandler());
+		if (this.inhibitSoundManagerReload) this.soundHandlerReloadInhibitor.inhibit();
 		
 		for (Class<? extends LiteMod> mod : this.enumerator.getModsToLoad())
 		{
@@ -858,7 +858,7 @@ public final class LiteLoader
 				}
 				else
 				{
-					LiteLoader.logInfo("Not loading mod %s, excluded by filter", identifier);
+					LiteLoaderLogger.info("Not loading mod %s, excluded by filter", identifier);
 					LoadableMod<?> modContainer = this.enumerator.getModContainer(mod);
 					if (modContainer != LoadableMod.NONE) this.disabledMods.add(modContainer);
 				}
@@ -866,7 +866,7 @@ public final class LiteLoader
 			catch (Throwable th)
 			{
 				th.printStackTrace();
-				LiteLoader.getLogger().log(Level.WARNING, String.format("Error loading mod from %s", mod.getName()), th);
+				LiteLoaderLogger.warning(th, "Error loading mod from %s", mod.getName());
 			}
 		}
 	}
@@ -879,14 +879,14 @@ public final class LiteLoader
 	 */
 	protected void loadMod(String identifier, Class<? extends LiteMod> mod) throws InstantiationException, IllegalAccessException
 	{
-		LiteLoader.logInfo("Loading mod from %s", mod.getName());
+		LiteLoaderLogger.info("Loading mod from %s", mod.getName());
 		
 		LiteMod newMod = mod.newInstance();
 		
 		this.mods.add(newMod);
 		String modName = newMod.getName();
 		if (modName == null && identifier != null) modName = identifier;
-		LiteLoader.logInfo("Successfully added mod %s version %s", modName, newMod.getVersion());
+		LiteLoaderLogger.info("Successfully added mod %s version %s", modName, newMod.getVersion());
 		
 		// Get the mod file and register it as a resource pack if it exists
 		LoadableMod<?> loadableMod = this.enumerator.getModContainer(mod);
@@ -894,14 +894,14 @@ public final class LiteLoader
 		{
 			this.disabledMods.remove(loadableMod);
 			
-			LiteLoader.logInfo("Adding \"%s\" to active resource pack set", loadableMod.getLocation());
+			LiteLoaderLogger.info("Adding \"%s\" to active resource pack set", loadableMod.getLocation());
 			if (modName != null)
 			{
 				loadableMod.initResourcePack(modName);
 				
 				if (loadableMod.hasResourcePack() && this.registerModResourcePack((IResourcePack)loadableMod.getResourcePack()))
 				{
-					LiteLoader.logInfo("Successfully added \"%s\" to active resource pack set", loadableMod.getLocation());
+					LiteLoaderLogger.info("Successfully added \"%s\" to active resource pack set", loadableMod.getLocation());
 				}
 			}
 		}
@@ -926,7 +926,7 @@ public final class LiteLoader
 			}
 			catch (Throwable th)
 			{
-				LiteLoader.getLogger().log(Level.WARNING, "Error initialising mod '" + mod.getName() + "'", th);
+				LiteLoaderLogger.warning(th, "Error initialising mod '%s'", mod.getName());
 				iter.remove();
 			}
 		}
@@ -939,7 +939,7 @@ public final class LiteLoader
 	 */
 	protected void initMod(LiteMod mod)
 	{
-		LiteLoader.logInfo("Initialising mod %s version %s", mod.getName(), mod.getVersion());
+		LiteLoaderLogger.info("Initialising mod %s version %s", mod.getName(), mod.getVersion());
 		
 		// register mod config panel if configurable
 		this.configManager.registerMod(mod);
@@ -950,7 +950,7 @@ public final class LiteLoader
 		}
 		catch (Throwable th)
 		{
-			LiteLoader.logWarning("Error performing settings upgrade for %s. Settings may not be properly migrated", mod.getName());
+			LiteLoaderLogger.warning("Error performing settings upgrade for %s. Settings may not be properly migrated", mod.getName());
 		}
 		
 		// Init mod config if there is any
@@ -979,7 +979,7 @@ public final class LiteLoader
 		
 		if (LiteLoaderVersion.CURRENT.getLoaderRevision() > lastModVersion.getLoaderRevision())
 		{
-			LiteLoader.logInfo("Performing config upgrade for mod %s. Upgrading %s to %s...", mod.getName(), lastModVersion, LiteLoaderVersion.CURRENT);
+			LiteLoaderLogger.info("Performing config upgrade for mod %s. Upgrading %s to %s...", mod.getName(), lastModVersion, LiteLoaderVersion.CURRENT);
 			
 			// Migrate versioned config if any is present
 			this.configManager.migrateModConfig(mod, this.versionConfigFolder, this.inflectVersionedConfigPath(lastModVersion));
@@ -988,7 +988,7 @@ public final class LiteLoader
 			mod.upgradeSettings(LiteLoaderVersion.CURRENT.getMinecraftVersion(), this.versionConfigFolder, this.inflectVersionedConfigPath(lastModVersion));
 			
 			this.bootstrap.storeLastKnownModRevision(modKey);
-			LiteLoader.logInfo("Config upgrade succeeded for mod %s", mod.getName());
+			LiteLoaderLogger.info("Config upgrade succeeded for mod %s", mod.getName());
 		}
 	}
 	
@@ -1029,9 +1029,9 @@ public final class LiteLoader
 		// Set the loader branding in ClientBrandRetriever using reflection
 		LiteLoaderBootstrap.setBranding("LiteLoader");
 		
-		if (this.soundManagerReloadInhibitor != null && this.soundManagerReloadInhibitor.isInhibited())
+		if (this.soundHandlerReloadInhibitor != null && this.soundHandlerReloadInhibitor.isInhibited())
 		{
-			this.soundManagerReloadInhibitor.unInhibit(true);
+			this.soundHandlerReloadInhibitor.unInhibit(true);
 		}
 	}
 
@@ -1118,7 +1118,7 @@ public final class LiteLoader
 
 	private void onShutDown()
 	{
-		LiteLoader.logInfo("LiteLoader is shutting down, syncing configuration");
+		LiteLoaderLogger.info("LiteLoader is shutting down, syncing configuration");
 		
 		this.storeBindings();
 		this.configManager.syncConfig();
@@ -1235,16 +1235,6 @@ public final class LiteLoader
 			this.modInfoScreen = new GuiScreenModInfo(this.minecraft, parentScreen, this, this.enabledModsList, this.configManager, this.hideModInfoScreenTab);
 			this.minecraft.displayGuiScreen(this.modInfoScreen);
 		}
-	}
-
-	private static void logInfo(String string, Object... args)
-	{
-		LiteLoader.logger.info(String.format(string, args));
-	}
-
-	private static void logWarning(String string, Object... args)
-	{
-		LiteLoader.logger.warning(String.format(string, args));
 	}
 
 	/**

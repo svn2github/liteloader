@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,6 +15,7 @@ import com.google.common.primitives.Ints;
 import com.mumfrey.liteloader.launch.ClassPathUtilities;
 import com.mumfrey.liteloader.launch.InjectionStrategy;
 import com.mumfrey.liteloader.launch.LiteLoaderTweaker;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
@@ -24,11 +24,6 @@ public class LoadableFile extends File implements TweakContainer<File>
 	private static final Pattern versionPattern = Pattern.compile("([0-9]+\\.)+[0-9]+([_A-Z0-9]+)?");
 
 	private static final long serialVersionUID = 1L;
-
-	/**
-	 * Local logger reference
-	 */
-	private static Logger logger = Logger.getLogger("liteloader");
 
 	/**
 	 * True once this file has been injected into the class path 
@@ -102,7 +97,7 @@ public class LoadableFile extends File implements TweakContainer<File>
 			jar = new JarFile(this);
 			if (jar.getManifest() != null)
 			{
-				LoadableFile.logInfo("Searching for tweaks in '%s'", this.getName());
+				LiteLoaderLogger.info("Searching for tweaks in '%s'", this.getName());
 				Attributes manifestAttributes = jar.getManifest().getMainAttributes();
 				
 				this.tweakClassName = manifestAttributes.getValue("TweakClass");
@@ -144,7 +139,7 @@ public class LoadableFile extends File implements TweakContainer<File>
 		}
 		catch (Exception ex)
 		{
-			LoadableFile.logWarning("Error parsing manifest entries in '%s'", this.getAbsolutePath());
+			LiteLoaderLogger.warning("Error parsing manifest entries in '%s'", this.getAbsolutePath());
 		}
 		finally
 		{
@@ -306,15 +301,5 @@ public class LoadableFile extends File implements TweakContainer<File>
 	public boolean isEnabled(EnabledModsList enabledModsList, String profile)
 	{
 		return enabledModsList.isEnabled(profile, this.getIdentifier());
-	}
-
-	private static void logInfo(String string, Object... args)
-	{
-		LoadableFile.logger.info(String.format(string, args));
-	}
-
-	private static void logWarning(String string, Object... args)
-	{
-		LoadableFile.logger.warning(String.format(string, args));
 	}
 }

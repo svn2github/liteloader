@@ -16,10 +16,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Stack;
 import java.util.jar.JarFile;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import com.mumfrey.liteloader.launch.InjectionStrategy.InjectionPosition;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
@@ -32,8 +31,6 @@ import sun.misc.URLClassPath;
  */
 public abstract class ClassPathUtilities
 {
-	private static Logger logger = Logger.getLogger("liteloader");
-	
 	/**
 	 * URLClassLoader::ucp -> instance of URLClassPath
 	 */
@@ -80,7 +77,7 @@ public abstract class ClassPathUtilities
 		}
 		catch (Throwable th)
 		{
-			ClassPathUtilities.logger.log(Level.SEVERE, "ClassPathUtilities: Error initialising ClassPathUtilities, special class path injection disabled", th);
+			LiteLoaderLogger.severe(th, "ClassPathUtilities: Error initialising ClassPathUtilities, special class path injection disabled");
 			th.printStackTrace();
 		}
 	}
@@ -144,7 +141,7 @@ public abstract class ClassPathUtilities
 	{
 		if (ClassPathUtilities.canInject)
 		{
-			ClassPathUtilities.logger.info(String.format("ClassPathUtilities: attempting to inject %s into %s", url, classLoader.getClass().getSimpleName()));
+			LiteLoaderLogger.info("ClassPathUtilities: attempting to inject %s into %s", url, classLoader.getClass().getSimpleName());
 			
 			try
 			{
@@ -176,7 +173,7 @@ public abstract class ClassPathUtilities
 			}
 			catch (Exception ex)
 			{
-				ClassPathUtilities.logger.warning(String.format("ClassPathUtilities: failed to inject %s", url));
+				LiteLoaderLogger.warning("ClassPathUtilities: failed to inject %s", url);
 			}
 		}
 		

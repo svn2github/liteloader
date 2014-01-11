@@ -19,12 +19,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import com.google.gson.Gson;
 import com.mumfrey.liteloader.core.transformers.PacketTransformer;
 import com.mumfrey.liteloader.util.SortableValue;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.NonOptionArgumentSpec;
@@ -44,8 +43,6 @@ public class LiteLoaderTweaker implements ITweaker
 	public static final String VERSION = "1.7.2";
 	
 	private static LiteLoaderTweaker instance;
-	
-	private static Logger logger = Logger.getLogger("liteloader");
 	
 	private static final String OPTION_GENERATE_MAPPINGS = "genMappings";
 
@@ -149,7 +146,7 @@ public class LiteLoaderTweaker implements ITweaker
 		
 		if (this.jarFile != null)
 		{
-			LiteLoaderTweaker.logger.info(String.format("Injecting version jar '%s'", this.jarFile.getAbsolutePath()));
+			LiteLoaderLogger.info(String.format("Injecting version jar '%s'", this.jarFile.getAbsolutePath()));
 			Launch.classLoader.addURL(this.jarUrl);
 			LiteLoaderTweaker.addURLToParentClassLoader(this.jarUrl);
 		}
@@ -168,7 +165,7 @@ public class LiteLoaderTweaker implements ITweaker
 			{
 				String jarPath = this.jarOption.value(this.parsedOptions);
 				if (jarPath.matches("^[0-9\\.]+$")) jarPath = String.format("versions/%1$s/%1$s.jar", jarPath);
-				LiteLoaderTweaker.logger.info(String.format("Version jar '%s' was specified on the command line", jarPath));
+				LiteLoaderLogger.info(String.format("Version jar '%s' was specified on the command line", jarPath));
 				this.jarFile = new File(jarPath);
 				this.jarUrl = this.jarFile.toURI().toURL();
 			}
@@ -193,7 +190,7 @@ public class LiteLoaderTweaker implements ITweaker
 					if (refMap.containsKey("jarfile"))
 					{
 						String jarPath = refMap.get("jarfile");
-						LiteLoaderTweaker.logger.info(String.format("Version jar '%s' specified via jarfile.ref", jarPath));
+						LiteLoaderLogger.info(String.format("Version jar '%s' specified via jarfile.ref", jarPath));
 						this.jarFile = new File(refContainer.getParentFile(), jarPath);
 						this.jarUrl = this.jarFile.toURI().toURL();
 						return;
@@ -281,7 +278,7 @@ public class LiteLoaderTweaker implements ITweaker
 		
 		for (String requiredTransformerClassName : LiteLoaderTweaker.requiredTransformers)
 		{
-			LiteLoaderTweaker.logger.info(String.format("Injecting required class transformer '%s'", requiredTransformerClassName));
+			LiteLoaderLogger.info(String.format("Injecting required class transformer '%s'", requiredTransformerClassName));
 			classLoader.registerTransformer(requiredTransformerClassName);
 		}
 		
@@ -291,29 +288,29 @@ public class LiteLoaderTweaker implements ITweaker
 			{
 				String packetClass = packetClassTransformers.getKey();
 				if (packetClass.lastIndexOf('.') != -1) packetClass = packetClass.substring(packetClass.lastIndexOf('.') + 1);
-				LiteLoaderTweaker.logger.info(String.format("Injecting packet class transformer '%s' for packet class '%s' with priority %d", transformerInfo.getValue(), packetClass, transformerInfo.getPriority()));
+				LiteLoaderLogger.info(String.format("Injecting packet class transformer '%s' for packet class '%s' with priority %d", transformerInfo.getValue(), packetClass, transformerInfo.getPriority()));
 				classLoader.registerTransformer(transformerInfo.getValue());
 			}
 		}
 
 		if (LiteLoaderTweaker.instance.bootstrap.getBooleanProperty(OPTION_GENERATE_MAPPINGS))
 		{
-			LiteLoaderTweaker.logger.info(String.format("Injecting gen trasnformer '%s'", LiteLoaderTweaker.genTransformerClassName));
+			LiteLoaderLogger.info(String.format("Injecting gen trasnformer '%s'", LiteLoaderTweaker.genTransformerClassName));
 			LiteLoaderTweaker.instance.injectTransformers.add(LiteLoaderTweaker.genTransformerClassName);
 		}
 		
-		LiteLoaderTweaker.logger.info(String.format("Injecting required class transformer '%s'", LiteLoaderTweaker.injectionTransformerClassName));
+		LiteLoaderLogger.info(String.format("Injecting required class transformer '%s'", LiteLoaderTweaker.injectionTransformerClassName));
 		LiteLoaderTweaker.instance.injectTransformers.add(LiteLoaderTweaker.injectionTransformerClassName);
 	}
 
 	private void injectModTransformers()
 	{
 		if (LiteLoaderTweaker.instance.injectTransformers.size() > 0)
-			LiteLoaderTweaker.logger.info("Injecting downstream transformers");
+			LiteLoaderLogger.info("Injecting downstream transformers");
 
 		for (String transformerClassName : LiteLoaderTweaker.instance.injectTransformers)
 		{
-			LiteLoaderTweaker.logger.info(String.format("Injecting additional class transformer class '%s'", transformerClassName));
+			LiteLoaderLogger.info(String.format("Injecting additional class transformer class '%s'", transformerClassName));
 			Launch.classLoader.registerTransformer(transformerClassName);
 		}
 		
@@ -323,7 +320,7 @@ public class LiteLoaderTweaker implements ITweaker
 	@SuppressWarnings("unchecked")
 	private void sieveAndSortPacketTransformers(LaunchClassLoader classLoader, Set<String> transformers)
 	{
-		LiteLoaderTweaker.logger.info("Sorting registered packet transformers by priority");
+		LiteLoaderLogger.info("Sorting registered packet transformers by priority");
 		int registeredTransformers = 0;
 		
 		NonDelegatingClassLoader tempLoader = new NonDelegatingClassLoader(classLoader.getURLs(), this.getClass().getClassLoader());
@@ -356,7 +353,7 @@ public class LiteLoaderTweaker implements ITweaker
 				if (err.getCause() instanceof InvalidTransformerException)
 				{
 					InvalidTransformerException ex = (InvalidTransformerException)err.getCause();
-					LiteLoaderTweaker.logger.warning(String.format("Packet transformer class '%s' references class '%s' which is not allowed. Packet transformers must not contain references to other classes", transformerClassName, ex.getAccessedClass())); 
+					LiteLoaderLogger.warning(String.format("Packet transformer class '%s' references class '%s' which is not allowed. Packet transformers must not contain references to other classes", transformerClassName, ex.getAccessedClass())); 
 					ex.printStackTrace();
 					iter.remove();
 				}
@@ -371,7 +368,7 @@ public class LiteLoaderTweaker implements ITweaker
 			}
 		}
 		
-		LiteLoaderTweaker.logger.info(String.format("Added %d packet transformer classes to the transformer list", registeredTransformers));
+		LiteLoaderLogger.info(String.format("Added %d packet transformer classes to the transformer list", registeredTransformers));
 	}
 
 	@Override
@@ -425,13 +422,13 @@ public class LiteLoaderTweaker implements ITweaker
 	{
 		if (!LiteLoaderTweaker.instance.preInit)
 		{
-			LiteLoaderTweaker.logger.warning("Failed to inject cascaded tweak classes because preInit is already complete");
+			LiteLoaderLogger.warning("Failed to inject cascaded tweak classes because preInit is already complete");
 			return;
 		}
 		
 		if (this.sortedTweaks.size() > 0)
 		{
-			LiteLoaderTweaker.logger.info("Injecting cascaded tweakers...");
+			LiteLoaderLogger.info("Injecting cascaded tweakers...");
 
 			List<String> tweakClasses = (List<String>)Launch.blackboard.get("TweakClasses");
 			List<ITweaker> tweakers = (List<ITweaker>)Launch.blackboard.get("Tweaks");
@@ -440,7 +437,7 @@ public class LiteLoaderTweaker implements ITweaker
 				for (SortableValue<String> tweak : this.sortedTweaks)
 				{
 					String tweakClass = tweak.getValue();
-					LiteLoaderTweaker.logger.info(String.format("Injecting tweak class %s with priority %d", tweakClass, tweak.getPriority()));
+					LiteLoaderLogger.info(String.format("Injecting tweak class %s with priority %d", tweakClass, tweak.getPriority()));
 					this.injectTweakClass(tweakClass, tweakClasses, tweakers);
 				}
 			}
@@ -473,7 +470,7 @@ public class LiteLoaderTweaker implements ITweaker
 	{
 		if (!LiteLoaderTweaker.instance.preInit)
 		{
-			LiteLoaderTweaker.logger.warning(String.format("Failed to add transformer class %s because preInit is already complete", transfomerClass));
+			LiteLoaderLogger.warning(String.format("Failed to add transformer class %s because preInit is already complete", transfomerClass));
 			return false;
 		}
 
@@ -499,7 +496,7 @@ public class LiteLoaderTweaker implements ITweaker
 			}
 			catch (Exception ex)
 			{
-				LiteLoaderTweaker.logger.log(Level.WARNING, String.format("addURLToParentClassLoader failed: %s", ex.getMessage()), ex);
+				LiteLoaderLogger.warning(ex, "addURLToParentClassLoader failed: %s", ex.getMessage());
 			}
 		}
 			
@@ -523,9 +520,9 @@ public class LiteLoaderTweaker implements ITweaker
 	{
 		try
 		{
-			LiteLoaderTweaker.logger.info("Bootstrapping LiteLoader " + LiteLoaderTweaker.VERSION);
+			LiteLoaderLogger.info("Bootstrapping LiteLoader " + LiteLoaderTweaker.VERSION);
 			LiteLoaderTweaker.spawnBootstrap();
-			LiteLoaderTweaker.logger.info("Beginning LiteLoader PreInit...");
+			LiteLoaderLogger.info("Beginning LiteLoader PreInit...");
 			this.bootstrap.preInit(Launch.classLoader, true, this.modsToLoad);
 			
 			this.injectDiscoveredTweakClasses();
@@ -534,7 +531,7 @@ public class LiteLoaderTweaker implements ITweaker
 		}
 		catch (Throwable th)
 		{
-			LiteLoaderTweaker.logger.log(Level.SEVERE, String.format("Error during LiteLoader PreInit: %s", th.getMessage()), th);
+			LiteLoaderLogger.severe(th, "Error during LiteLoader PreInit: %s", th.getMessage());
 		}
 	}
 	
@@ -558,7 +555,7 @@ public class LiteLoaderTweaker implements ITweaker
 		}
 		catch (Throwable th)
 		{
-			LiteLoaderTweaker.logger.log(Level.SEVERE, String.format("Error during LiteLoader Init: %s", th.getMessage()), th);
+			LiteLoaderLogger.severe("Error during LiteLoader Init: %s", th.getMessage());
 		}
 	}
 	
@@ -575,7 +572,7 @@ public class LiteLoaderTweaker implements ITweaker
 		}
 		catch (Throwable th)
 		{
-			LiteLoaderTweaker.logger.log(Level.SEVERE, String.format("Error during LiteLoader PostInit: %s", th.getMessage()), th);
+			LiteLoaderLogger.severe("Error during LiteLoader PostInit: %s", th.getMessage());
 		}
 	}
 	

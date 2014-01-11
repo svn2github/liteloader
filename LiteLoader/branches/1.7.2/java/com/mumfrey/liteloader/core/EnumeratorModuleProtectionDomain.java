@@ -4,11 +4,11 @@ import java.io.File;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.LinkedList;
-import java.util.logging.Logger;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import com.mumfrey.liteloader.LiteMod;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * Enumerator module which searches for mods on the classpath
@@ -17,11 +17,6 @@ import com.mumfrey.liteloader.LiteMod;
  */
 public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 {
-	/**
-	 * Local logger reference
-	 */
-	private static Logger logger = Logger.getLogger("liteloader");
-
 	private File packagePath;
 
 	/**
@@ -71,7 +66,7 @@ public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 		}
 		catch (Throwable th)
 		{
-			EnumeratorModuleProtectionDomain.logWarning("Error determining local protection domain: %s", th.getMessage());
+			LiteLoaderLogger.warning("Error determining local protection domain: %s", th.getMessage());
 		}
 	}
 	
@@ -102,7 +97,7 @@ public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 	@Override
 	public void registerMods(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
 	{
-		EnumeratorModuleProtectionDomain.logInfo("Searching protection domain code source...");
+		LiteLoaderLogger.info("Searching protection domain code source...");
 
 		try
 		{
@@ -116,22 +111,12 @@ public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 				}
 				
 				if (modClasses.size() > 0)
-					EnumeratorModuleProtectionDomain.logInfo("Found %s potential matches", modClasses.size());
+					LiteLoaderLogger.info("Found %s potential matches", modClasses.size());
 			}
 		}
 		catch (Throwable th)
 		{
-			EnumeratorModuleProtectionDomain.logWarning("Error loading from local class path: %s", th.getMessage());
+			LiteLoaderLogger.warning("Error loading from local class path: %s", th.getMessage());
 		}
-	}
-
-	private static void logInfo(String string, Object... args)
-	{
-		EnumeratorModuleProtectionDomain.logger.info(String.format(string, args));
-	}
-
-	private static void logWarning(String string, Object... args)
-	{
-		EnumeratorModuleProtectionDomain.logger.warning(String.format(string, args));
 	}
 }
