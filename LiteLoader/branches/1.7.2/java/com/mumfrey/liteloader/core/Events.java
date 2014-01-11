@@ -252,29 +252,29 @@ public class Events implements IPlayerUsage
 	 */
 	public void initHooks()
 	{
-		try
+		if (this.genProfiler != null)
 		{
-			LiteLoader.getLogger().info("Event manager is registering hooks");
-			
-			// Tick hook
-			if (!this.profilerHooked)
+			try
 			{
-				this.profilerHooked = true;
-				if (this.genProfiler != null)
+				LiteLoader.getLogger().info("Event manager is registering the mapping generator hook");
+				
+				// Tick hook
+				if (!this.profilerHooked)
 				{
+					this.profilerHooked = true;
 					PrivateFields.minecraftProfiler.setFinal(this.minecraft, this.genProfiler);
 				}
+				
+				// Sanity hook
+				PlayerUsageSnooper snooper = this.minecraft.getPlayerUsageSnooper();
+				PrivateFields.playerStatsCollector.setFinal(snooper, this);
 			}
-			
-			// Sanity hook
-			PlayerUsageSnooper snooper = this.minecraft.getPlayerUsageSnooper();
-			PrivateFields.playerStatsCollector.setFinal(snooper, this);
-		}
-		catch (Exception ex)
-		{
-			LiteLoader.getLogger().log(Level.WARNING, "Error creating hooks", ex);
-			ex.printStackTrace();
-		}
+			catch (Exception ex)
+			{
+				LiteLoader.getLogger().log(Level.WARNING, "Error creating hook", ex);
+				ex.printStackTrace();
+			}
+		}	
 		
 		this.hookInitDone = true;
 	}
@@ -568,6 +568,7 @@ public class Events implements IPlayerUsage
 	 */
 	public void onTick(boolean clock)
 	{
+		this.minecraft.mcProfiler.startSection("litemods");
 		float partialTicks = 0.0F;
 		
 		// Try to get the minecraft timer object and determine the value of the
@@ -587,6 +588,7 @@ public class Events implements IPlayerUsage
 		// Flag indicates whether we are in game at the moment
 		boolean inGame = this.minecraft.renderViewEntity != null && this.minecraft.renderViewEntity.worldObj != null;
 		
+		this.minecraft.mcProfiler.startSection("loader");
 		if (clock)
 		{
 			this.loader.onTick(partialTicks, inGame);
@@ -594,12 +596,14 @@ public class Events implements IPlayerUsage
 
 		int mouseX = Mouse.getX() * this.screenWidth / this.minecraft.displayWidth;
 		int mouseY = this.screenHeight - Mouse.getY() * this.screenHeight / this.minecraft.displayHeight - 1;
+		this.minecraft.mcProfiler.endStartSection("postrender");
 		this.loader.postRender(mouseX, mouseY, partialTicks);
+		this.minecraft.mcProfiler.endSection();
 		
 		// Iterate tickable mods
 		for (Tickable tickable : this.tickListeners)
 		{
-			this.minecraft.mcProfiler.startSection(tickable.getClass().getSimpleName());
+			this.minecraft.mcProfiler.startSection(tickable.getClass().getSimpleName().toLowerCase());
 			tickable.onTick(this.minecraft, partialTicks, inGame, clock);
 			this.minecraft.mcProfiler.endSection();
 		}
@@ -618,6 +622,8 @@ public class Events implements IPlayerUsage
 			this.worldHashCode = 0;
 			this.loader.onWorldChanged(null);
 		}
+
+		this.minecraft.mcProfiler.endSection();
 	}
 	
 	/**

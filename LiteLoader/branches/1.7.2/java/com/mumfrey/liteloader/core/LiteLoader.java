@@ -1094,13 +1094,17 @@ public final class LiteLoader
 	void onTick(float partialTicks, boolean inGame)
 	{
 		// Tick the permissions manager
+		this.minecraft.mcProfiler.startSection("permissionsmanager");
 		this.permissionsManager.onTick(this.minecraft, partialTicks, inGame);
 		
 		// Tick the config manager
+		this.minecraft.mcProfiler.endStartSection("configmanager");
 		this.configManager.onTick();
 		
+		this.minecraft.mcProfiler.endStartSection("keybindings");
 		this.checkAndStoreKeyBindings();
-		
+		this.minecraft.mcProfiler.endSection();
+
 		if (this.modInfoScreen != null && this.minecraft.currentScreen != this.modInfoScreen)
 		{
 			this.modInfoScreen.updateScreen();
