@@ -59,7 +59,7 @@ public class SoundHandlerReloadInhibitor
 					this.storedIndex = reloadListeners.indexOf(this.soundHandler);
 					if (this.storedIndex > -1)
 					{
-						LiteLoader.getLogger().info("Inhibiting sound handler reload");
+						LiteLoaderLogger.info("Inhibiting sound handler reload");
 						reloadListeners.remove(this.soundHandler);
 						this.inhibited = true;
 						return true;
@@ -99,11 +99,11 @@ public class SoundHandlerReloadInhibitor
 						reloadListeners.add(this.soundHandler);
 					}
 
-					LiteLoader.getLogger().info("Sound handler reload inhibit removed");
+					LiteLoaderLogger.info("Sound handler reload inhibit removed");
 					
 					if (reload)
 					{
-						LiteLoader.getLogger().info("Reloading sound handler");
+						LiteLoaderLogger.info("Reloading sound handler");
 						this.soundHandler.onResourceManagerReload(this.resourceManager);
 					}
 

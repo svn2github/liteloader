@@ -6,7 +6,6 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintStream;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.List;
@@ -43,11 +42,6 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	 */
 	public static final LiteLoaderVersion VERSION = LiteLoaderVersion.CURRENT;
 
-	/**
-	 * True to use stdout instead of stderr
-	 */
-	private static boolean useStdOut;
-	
 	/**
 	 * Base game directory, passed in from the tweaker
 	 */
@@ -238,16 +232,6 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		Layout<? extends Serializable> layout = PatternLayout.createLayout("[%d{HH:mm:ss}] [%t/%level]: %msg%n", logger.getContext().getConfiguration(), null, "UTF-8", "True");
 		FileAppender fileAppender = FileAppender.createAppender(this.logFile.getAbsolutePath(), "False", "False", "LiteLoader", "True", "True", "True", layout, null, "False", "", logger.getContext().getConfiguration());
 		logger.addAppender(fileAppender);
-	}
-	
-	/**
-	 * Get the output stream which we are using for console output
-	 * 
-	 * @return
-	 */
-	public static final PrintStream getConsoleStream()
-	{
-		return LiteLoaderBootstrap.useStdOut ? System.out : System.err;
 	}
 
 	/**

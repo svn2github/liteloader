@@ -411,7 +411,9 @@ public final class LiteLoader
 	 * Get the LiteLoader logger object
 	 * 
 	 * @return
+	 * @deprecated use LiteLoaderLogger instead
 	 */
+	@Deprecated
 	public static final Logger getLogger()
 	{
 		return LiteLoader.logger;
@@ -430,11 +432,13 @@ public final class LiteLoader
 	/**
 	 * Get the output stream which we are using for console output
 	 * 
-	 * @return
+	 * @return System.err
+	 * @deprecated use log4j instead
 	 */
+	@Deprecated
 	public static final PrintStream getConsoleStream()
 	{
-		return LiteLoaderBootstrap.getConsoleStream();
+		return System.err;
 	}
 	
 	/**

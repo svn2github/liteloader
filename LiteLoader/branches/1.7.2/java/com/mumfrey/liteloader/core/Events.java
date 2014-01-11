@@ -256,7 +256,7 @@ public class Events implements IPlayerUsage
 		{
 			try
 			{
-				LiteLoader.getLogger().info("Event manager is registering the mapping generator hook");
+				LiteLoaderLogger.info("Event manager is registering the mapping generator hook");
 				
 				// Tick hook
 				if (!this.profilerHooked)
@@ -440,7 +440,7 @@ public class Events implements IPlayerUsage
 			{
 				try
 				{
-					LiteLoader.getLogger().info("Calling late init for mod " + initMod.getName());
+					LiteLoaderLogger.info("Calling late init for mod " + initMod.getName());
 					initMod.onInitCompleted(this.minecraft, this.loader);
 				}
 				catch (Throwable th)
