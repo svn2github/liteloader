@@ -1,6 +1,8 @@
-package com.mumfrey.liteloader.core;
+package com.mumfrey.liteloader.update;
 
+import java.text.SimpleDateFormat;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -84,6 +86,11 @@ public class UpdateSite implements Comparator<Long>
 	private String availableVersion = null;
 	
 	/**
+	 * The version which is available
+	 */
+	private String availableVersionDate = null;
+	
+	/**
 	 * The URL to the available artefact
 	 */
 	private String availableVersionURL = null;
@@ -144,6 +151,7 @@ public class UpdateSite implements Comparator<Long>
 	 */
 	public boolean isCheckInProgress()
 	{
+		this.update();
 		boolean checkInProgress = false;
 		
 		synchronized (this.lock)
@@ -188,6 +196,15 @@ public class UpdateSite implements Comparator<Long>
 	{
 		this.update();
 		return this.availableVersion;
+	}
+	
+	/**
+	 * Gets the latest version available at the remote site
+	 */
+	public String getAvailableVersionDate()
+	{
+		this.update();
+		return this.availableVersionDate;
 	}
 	
 	/**
@@ -348,6 +365,7 @@ public class UpdateSite implements Comparator<Long>
 			}
 			
 			this.availableVersion = artefact.get("version");
+			this.availableVersionDate = SimpleDateFormat.getDateTimeInstance().format(new Date(remoteTimeStamp * 1000L));
 			this.availableVersionURL = this.createArtefactURL(artefact.get("file"));
 			this.updateAvailable = this.compareTimeStamps(bestTimeStamp, remoteTimeStamp);
 			

@@ -25,6 +25,7 @@ import org.lwjgl.input.Mouse;
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.core.EnabledModsList;
 import com.mumfrey.liteloader.core.LiteLoader;
+import com.mumfrey.liteloader.core.LiteLoaderVersion;
 import com.mumfrey.liteloader.core.Loadable;
 import com.mumfrey.liteloader.modconfig.ConfigManager;
 import com.mumfrey.liteloader.modconfig.ConfigPanel;
@@ -109,7 +110,11 @@ public class GuiScreenModInfo extends GuiScreen
 	/**
 	 * Text to display under the header
 	 */
-	private String activeModText;
+	private String activeModText, versionText, checkUpdatesText;
+	
+	private int versionTextWidth, checkUpdatesTextWidth;
+	
+	private boolean mouseOverUpdateText;
 	
 	/**
 	 * Height of all the items in the list
@@ -141,7 +146,7 @@ public class GuiScreenModInfo extends GuiScreen
 	/**
 	 * Configuration panel
 	 */
-	private GuiConfigPanelContainer configPanel;
+	private ModInfoScreenPanel currentPanel;
 	
 	/**
 	 * @param minecraft
@@ -157,8 +162,12 @@ public class GuiScreenModInfo extends GuiScreen
 		this.configManager = configManager;
 		this.hideTab = hideTab;
 		
-		aboutTextureResource = new ResourceLocation("liteloader", "textures/gui/about.png");
+		this.versionText = I18n.getStringParams("gui.about.versiontext", LiteLoader.getVersion());
+		this.checkUpdatesText = I18n.getStringParams("gui.about.checkupdates");
 		
+		this.versionTextWidth = this.fontRenderer.getStringWidth(this.versionText);
+		this.checkUpdatesTextWidth = this.fontRenderer.getStringWidth(this.checkUpdatesText);
+
 		this.populateModList(loader, enabledModsList);
 	}
 	
@@ -235,9 +244,9 @@ public class GuiScreenModInfo extends GuiScreen
 	@Override
 	public void initGui()
 	{
-		if (this.configPanel != null)
+		if (this.currentPanel != null)
 		{
-			this.configPanel.setSize(this.width - LEFT_EDGE, this.height);
+			this.currentPanel.setSize(this.width - LEFT_EDGE, this.height);
 		}
 		
 		int rightPanelLeftEdge = LEFT_EDGE + MARGIN + 4 + (this.width - LEFT_EDGE - MARGIN - MARGIN - 4) / 2;
@@ -282,9 +291,9 @@ public class GuiScreenModInfo extends GuiScreen
 	@Override
 	public void updateScreen()
 	{
-		if (this.configPanel != null)
+		if (this.currentPanel != null)
 		{
-			this.configPanel.onTick();
+			this.currentPanel.onTick();
 		}
 		
 		this.tickNumber++;
@@ -377,13 +386,15 @@ public class GuiScreenModInfo extends GuiScreen
 			drawRect(LEFT_EDGE, 0, LEFT_EDGE + 1, this.height, 0xFFFFFFFF);
 			this.mc.getTextureManager().bindTexture(aboutTextureResource);
 		}
+
+		this.mouseOverUpdateText = false;
 		
 		// Only draw the panel contents if we are actually open
 		if (this.isTweeningOrOpen())
 		{
-			if (this.configPanel != null)
+			if (this.currentPanel != null)
 			{
-				this.drawConfigPanel(mouseX, mouseY, partialTicks);
+				this.drawCurrentPanel(mouseX, mouseY, partialTicks);
 			}
 			else
 			{
@@ -393,9 +404,9 @@ public class GuiScreenModInfo extends GuiScreen
 				super.drawScreen(mouseX, mouseY, partialTicks);
 			}
 		}
-		else if (this.configPanel != null)
+		else if (this.currentPanel != null)
 		{
-			this.closeConfigPanel();
+			this.closeCurrentPanel();
 		}
 		
 		glPopMatrix();
@@ -406,18 +417,18 @@ public class GuiScreenModInfo extends GuiScreen
 	 * @param mouseY
 	 * @param partialTicks
 	 */
-	public void drawConfigPanel(int mouseX, int mouseY, float partialTicks)
+	public void drawCurrentPanel(int mouseX, int mouseY, float partialTicks)
 	{
-		if (this.configPanel.isCloseRequested())
+		if (this.currentPanel.isCloseRequested())
 		{
-			this.closeConfigPanel();
+			this.closeCurrentPanel();
 			return;
 		}
 		
 		glPushMatrix();
 		glTranslatef(LEFT_EDGE, 0, 0);
 		
-		this.configPanel.draw(mouseX - LEFT_EDGE, mouseY, partialTicks);
+		this.currentPanel.draw(mouseX - LEFT_EDGE, mouseY, partialTicks);
 		
 		glPopMatrix();
 	}
@@ -429,12 +440,16 @@ public class GuiScreenModInfo extends GuiScreen
 	 */
 	public void drawInfoPanel(int mouseX, int mouseY, float partialTicks)
 	{
+		int updateTextPos = LEFT_EDGE + MARGIN + 38 + this.versionTextWidth + 6;
+		this.mouseOverUpdateText = mouseX > updateTextPos && mouseX < updateTextPos + this.checkUpdatesTextWidth && mouseY > 50 && mouseY < 60;
+		
 		// Draw the header pieces
 		glDrawTexturedRect(LEFT_EDGE + MARGIN, 12, 128, 40, 0, 0, 256, 80, 1.0F); // liteloader logo
 		glDrawTexturedRect(this.width - 32 - MARGIN, 12, 32, 45, 0, 80, 64, 170, 1.0F); // chicken
 		
 		// Draw header text
-		this.fontRenderer.drawString(I18n.getStringParams("gui.about.versiontext", LiteLoader.getVersion()), LEFT_EDGE + MARGIN + 38, 50, 0xFFFFFFFF);
+		this.fontRenderer.drawString(this.versionText, LEFT_EDGE + MARGIN + 38, 50, 0xFFFFFFFF);
+		this.fontRenderer.drawString(this.checkUpdatesText, updateTextPos, 50, this.mouseOverUpdateText ? 0xFFFFFFAA : 0xFF4785D1);
 		this.fontRenderer.drawString(this.activeModText, LEFT_EDGE + MARGIN + 38, 60, 0xFFAAAAAA);
 		
 		// Draw top and bottom horizontal rules
@@ -574,9 +589,9 @@ public class GuiScreenModInfo extends GuiScreen
 	@Override
 	protected void keyTyped(char keyChar, int keyCode)
 	{
-		if (this.configPanel != null)
+		if (this.currentPanel != null)
 		{
-			this.configPanel.keyPressed(keyChar, keyCode);
+			this.currentPanel.keyPressed(keyChar, keyCode);
 			return;
 		}
 		
@@ -637,9 +652,9 @@ public class GuiScreenModInfo extends GuiScreen
 	@Override
 	protected void mouseClicked(int mouseX, int mouseY, int button)
 	{
-		if (this.configPanel != null)
+		if (this.currentPanel != null)
 		{
-			this.configPanel.mousePressed(mouseX - LEFT_EDGE, mouseY, button);
+			this.currentPanel.mousePressed(mouseX - LEFT_EDGE, mouseY, button);
 			return;
 		}
 		
@@ -648,6 +663,11 @@ public class GuiScreenModInfo extends GuiScreen
 			if (this.scrollBar.wasMouseOver())
 			{
 				this.scrollBar.setDragging(true);
+			}
+			
+			if (this.mouseOverUpdateText)
+			{
+				this.setCurrentPanel(new GuiCheckUpdatePanel(this.mc, LiteLoaderVersion.getUpdateSite(), "LiteLoader"));
 			}
 			
 			if (mouseY > PANEL_TOP && mouseY < this.height - PANEL_BOTTOM)
@@ -681,12 +701,12 @@ public class GuiScreenModInfo extends GuiScreen
 	@Override
 	protected void mouseMovedOrUp(int mouseX, int mouseY, int button)
 	{
-		if (this.configPanel != null)
+		if (this.currentPanel != null)
 		{
 			if (button == -1)
-				this.configPanel.mouseMoved(mouseX - LEFT_EDGE, mouseY);
+				this.currentPanel.mouseMoved(mouseX - LEFT_EDGE, mouseY);
 			else
-				this.configPanel.mouseReleased(mouseX - LEFT_EDGE, mouseY, button);
+				this.currentPanel.mouseReleased(mouseX - LEFT_EDGE, mouseY, button);
 			
 			return;
 		}
@@ -708,8 +728,8 @@ public class GuiScreenModInfo extends GuiScreen
 		int mouseWheelDelta = Mouse.getEventDWheel();
 		if (mouseWheelDelta != 0)
 		{
-			if (this.configPanel != null)
-				this.configPanel.mouseWheelScrolled(mouseWheelDelta);
+			if (this.currentPanel != null)
+				this.currentPanel.mouseWheelScrolled(mouseWheelDelta);
 			else
 				this.scrollBar.offsetValue(-mouseWheelDelta / 8);
 		}
@@ -777,27 +797,32 @@ public class GuiScreenModInfo extends GuiScreen
 			ConfigPanel panel = this.configManager.getPanel(this.selectedMod.getModClass());
 			if (panel != null)
 			{
-				if (this.configPanel != null)
-				{
-					this.configPanel.onHidden();
-				}
-				
-				this.configPanel = new GuiConfigPanelContainer(panel, this.selectedMod.getModInstance());
-				this.configPanel.setSize(this.width - LEFT_EDGE, this.height);
-				this.configPanel.onShown();
+				this.setCurrentPanel(new GuiConfigPanelContainer(this.mc, panel, this.selectedMod.getModInstance()));
 			}
 		}
+	}
+
+	/**
+	 * @param newPanel
+	 */
+	private void setCurrentPanel(ModInfoScreenPanel newPanel)
+	{
+		this.closeCurrentPanel();
+		
+		this.currentPanel = newPanel;
+		this.currentPanel.setSize(this.width - LEFT_EDGE, this.height);
+		this.currentPanel.onShown();
 	}
 
 	/* (non-Javadoc)
 	 * @see com.mumfrey.liteloader.modconfig.ConfigPanelHost#close()
 	 */
-	private void closeConfigPanel()
+	private void closeCurrentPanel()
 	{
-		if (this.configPanel != null)
+		if (this.currentPanel != null)
 		{
-			this.configPanel.onHidden();
-			this.configPanel = null;
+			this.currentPanel.onHidden();
+			this.currentPanel = null;
 		}
 	}
 	

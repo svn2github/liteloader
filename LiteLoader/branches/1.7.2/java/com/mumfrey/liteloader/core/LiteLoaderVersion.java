@@ -3,6 +3,8 @@ package com.mumfrey.liteloader.core;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.mumfrey.liteloader.update.UpdateSite;
+
 /**
  * LiteLoader version table
  *

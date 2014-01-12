@@ -5,6 +5,8 @@ key.categories.litemods=§eMod Keys
 gui.about.modsloaded=%d mod(s) loaded
 gui.about.versiontext=Version %s
 
+gui.about.checkupdates=§nCheck for updates
+
 gui.about.showtabmessage=Show "about LiteLoader" tab
 gui.about.keystrokehint= §e(use §9CTRL§e+§9SHIFT§e+§9TAB§e)
 
@@ -27,3 +29,19 @@ gui.mod.providestransformer=Provides Transformer
 
 gui.settings.title=%s Settings
 gui.saveandclose=Save & Close
+
+gui.updates.title=Check for updates for %s
+gui.updates.status.idle=§7No update check in progress
+gui.updates.status.checking=Contacting update site... %s
+gui.updates.status.success=§asuccess!
+gui.updates.status.failed=§cfailed!
+
+gui.updates.available.title=§nAvailable Update Info
+gui.updates.available.nonewversion=§7No newer version available
+gui.updates.available.newversion=§aNew version available
+gui.updates.available.version=Version: §a%s
+gui.updates.available.date=Release date: §a%s
+
+gui.checknow=Check now
+gui.installupdate=Install now
+gui.downloadupdate=Download now
