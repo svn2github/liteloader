@@ -9,7 +9,7 @@ import com.mumfrey.liteloader.LiteMod;
  *
  * @author Adam Mummery-Smith
  */
-interface PluggableEnumerator
+public interface PluggableEnumerator
 {
 	public static final String MOD_CLASS_PREFIX = "LiteMod";
 	

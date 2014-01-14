@@ -99,7 +99,9 @@ public class LiteLoaderTweaker implements ITweaker
 		"com.mumfrey.liteloader.core.transformers.LoginSuccessPacketTransformer",
 		"com.mumfrey.liteloader.core.transformers.ChatPacketTransformer",
 		"com.mumfrey.liteloader.core.transformers.JoinGamePacketTransformer",
-		"com.mumfrey.liteloader.core.transformers.CustomPayloadPacketTransformer"
+		"com.mumfrey.liteloader.core.transformers.CustomPayloadPacketTransformer",
+		"com.mumfrey.liteloader.core.transformers.ServerChatPacketTransformer",
+		"com.mumfrey.liteloader.core.transformers.ServerCustomPayloadPacketTransformer"
 	};
 	
 	@SuppressWarnings("unchecked")

@@ -17,7 +17,7 @@ import net.minecraft.network.play.server.S01PacketJoinGame;
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.Permissible;
 import com.mumfrey.liteloader.PluginChannelListener;
-import com.mumfrey.liteloader.core.PluginChannels;
+import com.mumfrey.liteloader.core.ClientPluginChannels;
 import com.mumfrey.liteloader.core.PluginChannels.ChannelPolicy;
 
 /**
@@ -243,7 +243,7 @@ public class PermissionsManagerClient implements PermissionsManager, PluginChann
 				if (!query.modName.equals("all") || query.permissions.size() > 0)
 				{
 					byte[] data = query.getBytes();
-					PluginChannels.sendMessage(ReplicatedPermissionsContainer.CHANNEL, data, ChannelPolicy.DISPATCH_ALWAYS);
+					ClientPluginChannels.sendMessage(ReplicatedPermissionsContainer.CHANNEL, data, ChannelPolicy.DISPATCH_ALWAYS);
 				}
 			}
 		}

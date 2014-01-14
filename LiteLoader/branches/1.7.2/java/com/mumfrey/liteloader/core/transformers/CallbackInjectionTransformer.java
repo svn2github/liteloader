@@ -8,13 +8,20 @@ import java.util.Map.Entry;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.IntInsnNode;
 import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.VarInsnNode;
 
 import com.mumfrey.liteloader.core.runtime.Obf;
+import com.mumfrey.liteloader.core.transformers.Callback.CallBackType;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 
@@ -26,82 +33,124 @@ import net.minecraft.launchwrapper.IClassTransformer;
 public class CallbackInjectionTransformer implements IClassTransformer
 {
 	/**
-	 * A callback method
-	 * 
-	 * @author Adam Mummery-Smith
+	 * Mappings for profiler method invokations
 	 */
-	public class Callback
-	{
-		public final String callbackClass;
-		public final String callbackMethod;
-		public int refNumber;
-		
-		public Callback(String callbackMethod)
-		{
-			this(callbackMethod, Obf.InjectedCallbackProxy.ref);
-		}
-		
-		public Callback(String callbackMethod, String callbackClass)
-		{
-			this.callbackClass = callbackClass;
-			this.callbackMethod = callbackMethod;
-		}
-		
-		private Callback(String callbackMethod, String callbackClass, int refNumber)
-		{
-			this(callbackMethod, callbackClass);
-			this.refNumber = refNumber;
-		}
-		
-		public Callback getNextCallback()
-		{
-			return new Callback(this.callbackMethod, this.callbackClass, this.refNumber++);
-		}
-	}
+	private Map<String, Map<String, Callback>> profilerCallbackMappings = new HashMap<String, Map<String, Callback>>();
 	
-	private Map<String, Map<String, Callback>> mappings = new HashMap<String, Map<String, Callback>>();
+	/**
+	 * Mappings for pre-return and method start callbacks
+	 */
+	private Map<String, Map<String, Callback>> callbackMappings = new HashMap<String, Map<String, Callback>>();
 	
 	public CallbackInjectionTransformer()
+	{
+		this.addMappings();
+	}
+
+	/**
+	 * 
+	 */
+	protected void addMappings()
 	{
 		this.addMappings(Obf.MCP); // @MCPONLY
 		this.addMappings(Obf.SRG);
 		this.addMappings(Obf.OBF);
 	}
 
-	protected void addMappings(int type)
+	private void addMappings(int type)
 	{
-		this.addMapping(Obf.Minecraft.names[type],      Obf.runGameLoop.names[type],           "()V",     Obf.startSection.names[type],    "tick",         new Callback("onTimerUpdate"));
-		this.addMapping(Obf.Minecraft.names[type],      Obf.runGameLoop.names[type],           "()V",     Obf.endStartSection.names[type], "gameRenderer", new Callback("onRender"));
-		this.addMapping(Obf.Minecraft.names[type],      Obf.runTick.names[type],               "()V",     Obf.endStartSection.names[type], "animateTick",  new Callback("onAnimateTick"));
-		this.addMapping(Obf.Minecraft.names[type],      Obf.runGameLoop.names[type],           "()V",     Obf.endSection.names[type],      "",             new Callback("onTick")); // ref 2
-		this.addMapping(Obf.EntityRenderer.names[type], Obf.updateCameraAndRender.names[type], "(F)V",    Obf.endSection.names[type],      "",             new Callback("preRenderGUI")); // ref 1
-		this.addMapping(Obf.EntityRenderer.names[type], Obf.updateCameraAndRender.names[type], "(F)V",    Obf.endSection.names[type],      "",             new Callback("postRenderHUDandGUI")); // ref 2
-		this.addMapping(Obf.EntityRenderer.names[type], Obf.updateCameraAndRender.names[type], "(F)V",    Obf.endStartSection.names[type], "gui",          new Callback("onRenderHUD"));
-		this.addMapping(Obf.EntityRenderer.names[type], Obf.renderWorld.names[type],           "(FJ)V",   Obf.endStartSection.names[type], "frustrum",     new Callback("onSetupCameraTransform"));
-		this.addMapping(Obf.EntityRenderer.names[type], Obf.renderWorld.names[type],           "(FJ)V",   Obf.endStartSection.names[type], "litParticles", new Callback("postRenderEntities"));
-		this.addMapping(Obf.EntityRenderer.names[type], Obf.renderWorld.names[type],           "(FJ)V",   Obf.endSection.names[type],      "",             new Callback("postRender"));
-		this.addMapping(Obf.GuiIngame.names[type],      Obf.renderGameOverlay.names[type],     "(FZII)V", Obf.startSection.names[type],    "chat",         new Callback("onRenderChat"));
-		this.addMapping(Obf.GuiIngame.names[type],      Obf.renderGameOverlay.names[type],     "(FZII)V", Obf.endSection.names[type],      "",             new Callback("postRenderChat")); // ref 10
+		this.addProfilerCallbackMapping(type, Obf.Minecraft,      Obf.runGameLoop,           "()V",     Obf.startSection,    "tick",         new Callback("onTimerUpdate"));
+		this.addProfilerCallbackMapping(type, Obf.Minecraft,      Obf.runGameLoop,           "()V",     Obf.endStartSection, "gameRenderer", new Callback("onRender"));
+		this.addProfilerCallbackMapping(type, Obf.Minecraft,      Obf.runTick,               "()V",     Obf.endStartSection, "animateTick",  new Callback("onAnimateTick"));
+		this.addProfilerCallbackMapping(type, Obf.Minecraft,      Obf.runGameLoop,           "()V",     Obf.endSection,      "",             new Callback("onTick")); // ref 2
+		this.addProfilerCallbackMapping(type, Obf.EntityRenderer, Obf.updateCameraAndRender, "(F)V",    Obf.endSection,      "",             new Callback("preRenderGUI")); // ref 1
+		this.addProfilerCallbackMapping(type, Obf.EntityRenderer, Obf.updateCameraAndRender, "(F)V",    Obf.endSection,      "",             new Callback("postRenderHUDandGUI")); // ref 2
+		this.addProfilerCallbackMapping(type, Obf.EntityRenderer, Obf.updateCameraAndRender, "(F)V",    Obf.endStartSection, "gui",          new Callback("onRenderHUD"));
+		this.addProfilerCallbackMapping(type, Obf.EntityRenderer, Obf.renderWorld,           "(FJ)V",   Obf.endStartSection, "frustrum",     new Callback("onSetupCameraTransform"));
+		this.addProfilerCallbackMapping(type, Obf.EntityRenderer, Obf.renderWorld,           "(FJ)V",   Obf.endStartSection, "litParticles", new Callback("postRenderEntities"));
+		this.addProfilerCallbackMapping(type, Obf.EntityRenderer, Obf.renderWorld,           "(FJ)V",   Obf.endSection,      "",             new Callback("postRender"));
+		this.addProfilerCallbackMapping(type, Obf.GuiIngame,      Obf.renderGameOverlay,     "(FZII)V", Obf.startSection,    "chat",         new Callback("onRenderChat"));
+		this.addProfilerCallbackMapping(type, Obf.GuiIngame,      Obf.renderGameOverlay,     "(FZII)V", Obf.endSection,      "",             new Callback("postRenderChat")); // ref 10
+		
+		String integratedServerCtorDescriptor = CallbackInjectionTransformer.generateDescriptor(type, Type.VOID_TYPE, Obf.Minecraft, String.class, String.class, Obf.WorldSettings);
+		String initPlayerConnectionDescriptor = CallbackInjectionTransformer.generateDescriptor(type, Type.VOID_TYPE, Obf.NetworkManager, Obf.EntityPlayerMP);
+		String playerLoggedInOutDescriptor    = CallbackInjectionTransformer.generateDescriptor(type, Type.VOID_TYPE, Obf.EntityPlayerMP);
+		String spawnPlayerDescriptor          = CallbackInjectionTransformer.generateDescriptor(type, Obf.EntityPlayerMP, Obf.GameProfile);
+		String respawnPlayerDescriptor        = CallbackInjectionTransformer.generateDescriptor(type, Obf.EntityPlayerMP, Obf.EntityPlayerMP, Type.INT_TYPE, Type.BOOLEAN_TYPE);
+		
+		this.addCallbackMapping(type, Obf.IntegratedServer,           Obf.constructor,                  integratedServerCtorDescriptor, CallBackType.RETURN, new Callback("IntegratedServerCtor"));
+		this.addCallbackMapping(type, Obf.ServerConfigurationManager, Obf.initializeConnectionToPlayer, initPlayerConnectionDescriptor, CallBackType.RETURN, new Callback("onInitializePlayerConnection", false));
+		this.addCallbackMapping(type, Obf.ServerConfigurationManager, Obf.playerLoggedIn,               playerLoggedInOutDescriptor,    CallBackType.RETURN, new Callback("onPlayerLogin",                false));
+		this.addCallbackMapping(type, Obf.ServerConfigurationManager, Obf.playerLoggedOut,              playerLoggedInOutDescriptor,    CallBackType.RETURN, new Callback("onPlayerLogout",               false));
+		this.addCallbackMapping(type, Obf.ServerConfigurationManager, Obf.spawnPlayer,                  spawnPlayerDescriptor,          CallBackType.RETURN, new Callback("onSpawnPlayer",                true));
+		this.addCallbackMapping(type, Obf.ServerConfigurationManager, Obf.respawnPlayer,                respawnPlayerDescriptor,        CallBackType.RETURN, new Callback("onRespawnPlayer",              true));
+		
+	}
+	
+	/**
+	 * @param type
+	 * @param className
+	 * @param methodName
+	 * @param methodSignature
+	 * @param invokeMethod
+	 * @param section
+	 * @param callback
+	 */
+	private void addProfilerCallbackMapping(int type, Obf className, Obf methodName, String methodSignature, Obf invokeMethod, String section, Callback callback)
+	{
+		this.addProfilerCallbackMapping(className.names[type], methodName.names[type], methodSignature, invokeMethod.names[type], section, callback);
 	}
 	
 	/**
 	 * @param className
 	 * @param methodName
 	 * @param methodSignature
-	 * @param invokeName
+	 * @param invokeMethod
 	 * @param section
 	 * @param callback
 	 */
-	protected void addMapping(String className, String methodName, String methodSignature, String invokeName, String section, Callback callback)
+	protected final void addProfilerCallbackMapping(String className, String methodName, String methodSignature, String invokeMethod, String section, Callback callback)
 	{
-		if (!this.mappings.containsKey(className))
+		if (!this.profilerCallbackMappings.containsKey(className))
 		{
-			this.mappings.put(className, new HashMap<String, Callback>());
+			this.profilerCallbackMappings.put(className, new HashMap<String, Callback>());
 		}
 		
 		String invokeDesc = section == null || section.length() == 0 ? "()V" : "(Ljava/lang/String;)V";
-		String signature = CallbackInjectionTransformer.generateSignature(className, methodName, methodSignature, invokeName, invokeDesc, section);
-		this.mappings.get(className).put(signature, callback);
+		String signature = CallbackInjectionTransformer.generateSignature(className, methodName, methodSignature, invokeMethod, invokeDesc, section);
+		this.profilerCallbackMappings.get(className).put(signature, callback);
+	}
+	
+	/**
+	 * @param type
+	 * @param className
+	 * @param methodName
+	 * @param methodSignature
+	 * @param callbackType
+	 * @param callback
+	 */
+	private void addCallbackMapping(int type, Obf className, Obf methodName, String methodSignature, Callback.CallBackType callbackType, Callback callback)
+	{
+		this.addCallbackMapping(className.names[type], methodName.names[type], methodSignature, callbackType, callback);
+	}
+	
+	/**
+	 * @param className
+	 * @param methodName
+	 * @param methodSignature
+	 * @param invokeMethod
+	 * @param section
+	 * @param callback
+	 */
+	protected final void addCallbackMapping(String className, String methodName, String methodSignature, Callback.CallBackType callbackType, Callback callback)
+	{
+		if (!this.callbackMappings.containsKey(className))
+		{
+			this.callbackMappings.put(className, new HashMap<String, Callback>());
+		}
+		
+		String signature = CallbackInjectionTransformer.generateSignature(className, methodName, methodSignature, callbackType);
+		this.callbackMappings.get(className).put(signature, callback);
 	}
 
 	/* (non-Javadoc)
@@ -110,9 +159,9 @@ public class CallbackInjectionTransformer implements IClassTransformer
 	@Override
 	public byte[] transform(String name, String transformedName, byte[] basicClass)
 	{
-		if (basicClass != null && this.mappings.containsKey(transformedName))
+		if (basicClass != null && this.profilerCallbackMappings.containsKey(transformedName) || this.callbackMappings.containsKey(transformedName))
 		{
-			return this.injectCallbacks(basicClass, this.mappings.get(transformedName));
+			return this.injectCallbacks(basicClass, this.profilerCallbackMappings.get(transformedName), this.callbackMappings.get(transformedName));
 		}
 		
 		return basicClass;
@@ -120,24 +169,44 @@ public class CallbackInjectionTransformer implements IClassTransformer
 
 	/**
 	 * @param basicClass
-	 * @param mapping
+	 * @param profilerMappings
 	 * @return
 	 */
-	private byte[] injectCallbacks(byte[] basicClass, Map<String, Callback> mapping)
+	private byte[] injectCallbacks(byte[] basicClass, Map<String, Callback> profilerMappings, Map<String, Callback> mappings)
 	{
 		ClassNode classNode = this.readClass(basicClass);
+		String classType = Type.getObjectType(classNode.name).toString();
 
 		for (MethodNode method : classNode.methods)
 		{
+			int returnNumber = 0;
 			String section = null;
-			Map<MethodInsnNode, Callback> injectionNodes = new HashMap<MethodInsnNode, Callback>();
+			int methodReturnOpcode = Type.getReturnType(method.desc).getOpcode(Opcodes.IRETURN);
+			
+			if (mappings != null)
+			{
+				String headSignature = CallbackInjectionTransformer.generateSignature(classNode.name, method.name, method.desc, CallBackType.REDIRECT);
+				if (mappings.containsKey(headSignature))
+				{
+					Callback callback = mappings.get(headSignature);
+					InsnList callbackInsns = this.genCallback(classType, method, callback);
+					if (callbackInsns != null)
+					{
+						LiteLoaderLogger.info("Injecting %s callback for %s in class %s", callback.returnFrom ? "redirect" : "event", callback, classNode.name);
+						method.instructions.insert(callbackInsns);
+						if (callback.returnFrom) continue;
+					}
+				}
+			}
+			
+			Map<MethodInsnNode, Callback> profilerCallbackInjectionNodes = new HashMap<MethodInsnNode, Callback>();
 			
 			Iterator<AbstractInsnNode> iter = method.instructions.iterator();
 			AbstractInsnNode lastInsn = null;
 			while (iter.hasNext())
 			{
 				AbstractInsnNode insn = iter.next();
-				if (insn.getOpcode() == Opcodes.INVOKEVIRTUAL)
+				if (profilerMappings != null && insn.getOpcode() == Opcodes.INVOKEVIRTUAL)
 				{
 					MethodInsnNode invokeNode = (MethodInsnNode)insn;
 					if (Obf.Profiler.ref.equals(invokeNode.owner) || Obf.Profiler.obf.equals(invokeNode.owner))
@@ -150,10 +219,27 @@ public class CallbackInjectionTransformer implements IClassTransformer
 
 						String signature = CallbackInjectionTransformer.generateSignature(classNode.name, method.name, method.desc, invokeNode.name, invokeNode.desc, section);
 						
-						if (mapping.containsKey(signature))
+						if (profilerMappings.containsKey(signature))
 						{
-//							System.out.println("   Adding callback for " + mapping.get(signature).callbackMethod + " at " + signature + " index is " + mapping.get(signature).refNumber);
-							injectionNodes.put(invokeNode, mapping.get(signature).getNextCallback());
+							profilerCallbackInjectionNodes.put(invokeNode, profilerMappings.get(signature).getNextCallback());
+						}
+					}
+				}
+				else if (mappings != null && insn.getOpcode() == methodReturnOpcode)
+				{
+					String returnSignature = CallbackInjectionTransformer.generateSignature(classNode.name, method.name, method.desc, CallBackType.RETURN);
+					if (mappings.containsKey(returnSignature))
+					{
+						Callback callback = mappings.get(returnSignature);
+						InsnList callbackInsns = this.genCallback(classType, method, callback, returnNumber);
+						if (callbackInsns != null)
+						{
+							LiteLoaderLogger.info("Injecting method return callback for %s in class %s", callback, classNode.name);
+							method.instructions.insertBefore(insn, callbackInsns);
+						}
+						else
+						{
+							LiteLoaderLogger.severe("Skipping callback mapping %s because the return behaviour does not match the method signature", returnSignature);
 						}
 					}
 				}
@@ -161,15 +247,92 @@ public class CallbackInjectionTransformer implements IClassTransformer
 				lastInsn = insn;
 			}
 			
-			for (Entry<MethodInsnNode, Callback> node : injectionNodes.entrySet())
+			for (Entry<MethodInsnNode, Callback> profilerCallbackNode : profilerCallbackInjectionNodes.entrySet())
 			{
-				Callback callback = node.getValue();
-				method.instructions.insert(node.getKey(), new MethodInsnNode(Opcodes.INVOKESTATIC, callback.callbackClass, callback.callbackMethod, "(I)V"));
-				method.instructions.insert(node.getKey(), new LdcInsnNode(callback.refNumber++));
+				Callback callback = profilerCallbackNode.getValue();
+				LiteLoaderLogger.info("Injecting profiler invokation callback for %s in class %s", callback, classNode.name);
+				method.instructions.insert(profilerCallbackNode.getKey(), new MethodInsnNode(Opcodes.INVOKESTATIC, callback.callbackClass, callback.callbackMethod, "(I)V"));
+				method.instructions.insert(profilerCallbackNode.getKey(), new LdcInsnNode(callback.refNumber++));
 			}
 		}
 		
 		return this.writeClass(classNode);
+	}
+
+	/**
+	 * Generate bytecode for injecting the specified callback into the specified methodNode
+	 * 
+	 * @param classType
+	 * @param methodNode
+	 * @param callback
+	 * @return
+	 */
+	private InsnList genCallback(String classType, MethodNode methodNode, Callback callback)
+	{
+		return this.genCallback(classType, methodNode, callback, -1);
+	}
+	
+	/**
+	 * Generate bytecode for injecting the specified callback into the specified methodNode
+	 * 
+	 * @param classType
+	 * @param methodNode
+	 * @param callback
+	 * @param returnNumber
+	 * @return
+	 */
+	private InsnList genCallback(String classType, MethodNode methodNode, Callback callback, int returnNumber)
+	{
+		// First work out some flags which alter the behaviour of this injection
+		boolean methodReturnsVoid = Type.getReturnType(methodNode.desc).equals(Type.VOID_TYPE);
+		boolean methodIsStatic = (methodNode.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC;
+		boolean callbackReturnsValue = returnNumber > -1;
+		
+		// If the callback returns a value but the method doesn't, we can't support that behaviour!
+		if (callbackReturnsValue && callback.returnFrom == methodReturnsVoid)
+			return null;
+		
+		// Generate the parts of the callback signature that we need
+		Type callbackReturnType = callback.returnFrom ? Type.getReturnType(methodNode.desc) : Type.VOID_TYPE;
+		String callbackReturnValueArg = methodReturnsVoid || !callbackReturnsValue ? "" : callbackReturnType.toString();
+		String classInstanceArg = methodIsStatic ? "" : classType;
+		
+		// Instruction list containing our injected insns
+		InsnList injected = new InsnList();
+		
+		// If this is a pre-return injection, push the invokation reference onto the call stack
+		if (callbackReturnsValue) injected.insert(new IntInsnNode(Opcodes.BIPUSH, returnNumber++));
+		
+		// If the method is non-static, then we pass in the class instance as an argument
+		if (!methodIsStatic) injected.add(new VarInsnNode(Opcodes.ALOAD, 0));
+		
+		// Push the method arguments onto the stack
+		int argNumber = methodIsStatic ? 0 : 1;
+		for (Type type : Type.getArgumentTypes(methodNode.desc))
+		{
+			injected.add(new VarInsnNode(type.getOpcode(Opcodes.ILOAD), argNumber++));
+		}
+		
+		// Generate the callback method descriptor
+		String callbackMethodDesc = String.format("(%s%s%s%s)%s", callbackReturnValueArg, callbackReturnsValue ? "I" : "", classInstanceArg, CallbackInjectionTransformer.getMethodArgs(methodNode), callbackReturnType);
+		
+		// Add the callback method insn to the injected instructions list
+		injected.add(new MethodInsnNode(Opcodes.INVOKESTATIC, callback.callbackClass, callback.callbackMethod, callbackMethodDesc));
+		
+		// If the callback RETURNs a value then push the appropriate RETURN opcode into the insns list
+		if (callback.returnFrom) injected.add(new InsnNode(callbackReturnType.getOpcode(Opcodes.IRETURN)));
+		
+		// return the generated code
+		return injected;
+	}
+
+	/**
+	 * @param method
+	 * @return
+	 */
+	private static String getMethodArgs(MethodNode method)
+	{
+		return method.desc.substring(1, method.desc.lastIndexOf(')'));
 	}
 
 	/**
@@ -187,10 +350,24 @@ public class CallbackInjectionTransformer implements IClassTransformer
 	}
 	
 	/**
+	 * @param className
+	 * @param methodName
+	 * @param methodSignature
+	 * @param invokeName
+	 * @param invokeSig
+	 * @param section
+	 * @return
+	 */
+	private static String generateSignature(String className, String methodName, String methodSignature, Callback.CallBackType callbackType)
+	{
+		return String.format("%s::%s%s@%s", className.replace('.', '/'), methodName, methodSignature, callbackType.toString().toLowerCase());
+	}
+	
+	/**
 	 * @param basicClass
 	 * @return
 	 */
-	protected ClassNode readClass(byte[] basicClass)
+	protected final ClassNode readClass(byte[] basicClass)
 	{
 		ClassReader classReader = new ClassReader(basicClass);
 		ClassNode classNode = new ClassNode();
@@ -202,10 +379,85 @@ public class CallbackInjectionTransformer implements IClassTransformer
 	 * @param classNode
 	 * @return
 	 */
-	protected byte[] writeClass(ClassNode classNode)
+	protected final byte[] writeClass(ClassNode classNode)
 	{
 		ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
 		classNode.accept(writer);
 		return writer.toByteArray();
+	}
+	
+	/**
+	 * @param returnType
+	 * @param args
+	 * @return
+	 */
+	public static String generateDescriptor(Type returnType, Object... args)
+	{
+		return CallbackInjectionTransformer.generateDescriptor(Obf.MCP, returnType, args);
+	}
+	
+	/**
+	 * @param returnType
+	 * @param args
+	 * @return
+	 */
+	public static String generateDescriptor(Obf returnType, Object... args)
+	{
+		return CallbackInjectionTransformer.generateDescriptor(Obf.MCP, returnType, args);
+	}
+	
+	/**
+	 * @param returnType
+	 * @param args
+	 * @return
+	 */
+	public static String generateDescriptor(String returnType, Object... args)
+	{
+		return CallbackInjectionTransformer.generateDescriptor(Obf.MCP, returnType, args);
+	}
+	
+	/**
+	 * @param obfType
+	 * @param returnType
+	 * @param args
+	 * @return
+	 */
+	public static String generateDescriptor(int obfType, Object returnType, Object... args)
+	{
+		StringBuilder sb = new StringBuilder().append('(');;
+
+		for (Object arg : args)
+		{
+			sb.append(CallbackInjectionTransformer.toDescriptor(obfType, arg));
+		}
+		
+		return sb.append(')').append(returnType != null ? CallbackInjectionTransformer.toDescriptor(obfType, returnType) : "V").toString();
+	}
+
+	/**
+	 * @param obfType
+	 * @param sb
+	 * @param arg
+	 */
+	private static String toDescriptor(int obfType, Object arg)
+	{
+		if (arg instanceof Obf)
+		{
+			return ((Obf)arg).getDescriptor(obfType);
+		}
+		else if (arg instanceof String)
+		{
+			return (String)arg;
+		}
+		else if (arg instanceof Type)
+		{
+			return arg.toString();
+		}
+		else if (arg instanceof Class)
+		{
+			return Type.getDescriptor((Class<?>)arg).toString();
+		}
+		
+		return "?";
 	}
 }

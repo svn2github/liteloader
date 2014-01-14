@@ -1,7 +1,5 @@
 package com.mumfrey.liteloader.core;
 
-import io.netty.util.concurrent.GenericFutureListener;
-
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.Collections;
@@ -12,87 +10,67 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.network.NetHandlerLoginClient;
-import net.minecraft.network.INetHandler;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.login.INetHandlerLoginClient;
-import net.minecraft.network.login.server.S02PacketLoginSuccess;
-import net.minecraft.network.play.INetHandlerPlayClient;
-import net.minecraft.network.play.client.C17PacketCustomPayload;
-import net.minecraft.network.play.server.S01PacketJoinGame;
-import net.minecraft.network.play.server.S3FPacketCustomPayload;
-
-import com.mumfrey.liteloader.LiteMod;
-import com.mumfrey.liteloader.PluginChannelListener;
-import com.mumfrey.liteloader.core.exceptions.UnregisteredChannelException;
-import com.mumfrey.liteloader.permissions.PermissionsManagerClient;
-import com.mumfrey.liteloader.util.PrivateFields;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
+
+import net.minecraft.network.INetHandler;
 
 /**
  * Manages plugin channel connections and subscriptions for LiteLoader
  *
  * @author Adam Mummery-Smith
  */
-public class PluginChannels
+public abstract class PluginChannels<L extends CommonPluginChannelListener>
 {
 	// reserved channel consts
-	private static final String CHANNEL_REGISTER = "REGISTER";
-	private static final String CHANNEL_UNREGISTER = "UNREGISTER";
+	protected static final String CHANNEL_REGISTER = "REGISTER";
+	protected static final String CHANNEL_UNREGISTER = "UNREGISTER";
 	
 	/**
 	 * Number of faults for a specific listener before a warning is generated
 	 */
-	private static final int WARN_FAULT_THRESHOLD = 1000;
-	
-	/**
-	 * Active instance
-	 */
-	private static PluginChannels instance;
+	protected static final int WARN_FAULT_THRESHOLD = 1000;
 
 	/**
 	 * Mapping of plugin channel names to listeners
 	 */
-	private HashMap<String, LinkedList<PluginChannelListener>> pluginChannels = new HashMap<String, LinkedList<PluginChannelListener>>();
+	protected HashMap<String, LinkedList<L>> pluginChannels = new HashMap<String, LinkedList<L>>();
 	
 	/**
 	 * List of mods which implement PluginChannelListener interface
 	 */
-	private LinkedList<PluginChannelListener> pluginChannelListeners = new LinkedList<PluginChannelListener>();
+	protected LinkedList<L> pluginChannelListeners = new LinkedList<L>();
 	
 	/**
 	 * Plugin channels that we know the server supports
 	 */
-	private Set<String> serverPluginChannels = new HashSet<String>();
+	protected Set<String> remotePluginChannels = new HashSet<String>();
 	
 	/**
 	 * Keep track of faulting listeners so that we can periodically log a message if a listener is throwing LOTS of exceptions
 	 */
-	private Map<PluginChannelListener, Integer> faultingPluginChannelListeners = new HashMap<PluginChannelListener, Integer>();
+	protected Map<L, Integer> faultingPluginChannelListeners = new HashMap<L, Integer>();
 	
 	/**
 	 * Package private
 	 */
 	PluginChannels()
 	{
-		PluginChannels.instance = this;
 	}
 	
 	/**
 	 * Get the current set of registered client-side channels
 	 */
-	public static Set<String> getLocalChannels()
+	public Set<String> getLocalChannels()
 	{
-		return Collections.unmodifiableSet(PluginChannels.instance.pluginChannels.keySet());
+		return Collections.unmodifiableSet(this.pluginChannels.keySet());
 	}
 	
 	/**
 	 * Get the current set of registered server channels
 	 */
-	public static Set<String> getServerChannels()
+	public Set<String> getRemoteChannels()
 	{
-		return Collections.unmodifiableSet(PluginChannels.instance.serverPluginChannels);
+		return Collections.unmodifiableSet(this.remotePluginChannels);
 	}
 	
 	/**
@@ -101,26 +79,15 @@ public class PluginChannels
 	 * @param channel
 	 * @return
 	 */
-	public static boolean isServerChannelRegistered(String channel)
+	public boolean isRemoteChannelRegistered(String channel)
 	{
-		return PluginChannels.instance.serverPluginChannels.contains(channel);
-	}
-
-	/**
-	 * @param listener
-	 */
-	void addListener(LiteMod listener)
-	{
-		if (listener instanceof PluginChannelListener)
-		{
-			this.addPluginChannelListener((PluginChannelListener)listener);
-		}
+		return this.remotePluginChannels.contains(channel);
 	}
 	
 	/**
 	 * @param pluginChannelListener
 	 */
-	private void addPluginChannelListener(PluginChannelListener pluginChannelListener)
+	void addPluginChannelListener(L pluginChannelListener)
 	{
 		if (!this.pluginChannelListeners.contains(pluginChannelListener))
 		{
@@ -129,165 +96,65 @@ public class PluginChannels
 	}
 	
 	/**
-	 * @param netHandler
-	 * @param loginPacket
-	 */
-	void onPostLogin(INetHandlerLoginClient netHandler, S02PacketLoginSuccess loginPacket)
-	{
-		this.clearPluginChannels(netHandler);
-	}
-
-	/**
-	 * @param netHandler
-	 * @param loginPacket
-	 */
-	void onJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
-	{
-		this.sendRegisteredPluginChannels(netHandler);
-	}
-	
-	/**
-	 * Callback for the plugin channel hook
-	 * 
-	 * @param customPayload
-	 */
-	public void onPluginChannelMessage(S3FPacketCustomPayload customPayload)
-	{
-		if (customPayload != null && customPayload.getChannel() != null)
-		{
-			if (PluginChannels.CHANNEL_REGISTER.equals(customPayload.getChannel()))
-			{
-				this.onRegisterPacketReceived(customPayload);
-			}
-			else if (this.pluginChannels.containsKey(customPayload.getChannel()))
-			{
-				try
-				{
-					PermissionsManagerClient permissionsManager = LiteLoader.getPermissionsManager();
-					if (permissionsManager != null)
-					{
-						permissionsManager.onCustomPayload(customPayload.getChannel(), customPayload.getData().length, customPayload.getData());
-					}
-				}
-				catch (Exception ex) {}
-				
-				this.onModPacketReceived(customPayload);
-			}
-		}
-	}
-
-	/**
-	 * @param customPayload
-	 */
-	private void onRegisterPacketReceived(S3FPacketCustomPayload customPayload)
-	{
-		try
-		{
-			String channels = new String(customPayload.getData(), "UTF8");
-			for (String channel : channels.split("\u0000"))
-			{
-				this.serverPluginChannels.add(channel);
-			}
-		}
-		catch (UnsupportedEncodingException ex)
-		{
-			LiteLoaderLogger.warning(ex, "Error decoding REGISTER packet from server %s", ex.getClass().getSimpleName());
-		}
-	}
-
-	/**
-	 * @param customPayload
-	 */
-	private void onModPacketReceived(S3FPacketCustomPayload customPayload)
-	{
-		String channel = customPayload.getChannel();
-		byte[] data = customPayload.getData();
-		int length = data.length;
-		
-		for (PluginChannelListener pluginChannelListener : this.pluginChannels.get(channel))
-		{
-			try
-			{
-				pluginChannelListener.onCustomPayload(channel, length, data);
-				throw new RuntimeException();
-			}
-			catch (Exception ex)
-			{
-				int failCount = 1;
-				if (this.faultingPluginChannelListeners.containsKey(pluginChannelListener))
-					failCount = this.faultingPluginChannelListeners.get(pluginChannelListener).intValue() + 1;
-				
-				if (failCount >= PluginChannels.WARN_FAULT_THRESHOLD)
-				{
-					LiteLoaderLogger.warning(String.format("Plugin channel listener %s exceeded fault threshold on channel %s with %s", pluginChannelListener.getName(), channel, ex.getClass().getSimpleName()));
-					this.faultingPluginChannelListeners.remove(pluginChannelListener);
-				}
-				else
-				{
-					this.faultingPluginChannelListeners.put(pluginChannelListener, Integer.valueOf(failCount));
-				}
-			}
-		}
-	}
-	
-	/**
 	 * Connecting to a new server, clear plugin channels
 	 * 
 	 * @param netHandler
 	 */
-	private void clearPluginChannels(INetHandler netHandler)
+	protected void clearPluginChannels(INetHandler netHandler)
 	{
 		this.pluginChannels.clear();
-		this.serverPluginChannels.clear();
+		this.remotePluginChannels.clear();
 		this.faultingPluginChannelListeners.clear();
 	}
-	
+
 	/**
-	 * Query loaded mods for registered channels
+	 * @param data
 	 */
-	private void sendRegisteredPluginChannels(INetHandler netHandler)
+	protected void onRegisterPacketReceived(byte[] data)
 	{
 		try
 		{
-			// Add the permissions manager channels
-			this.addPluginChannelsFor(LiteLoader.getPermissionsManager());
-			
-			// Enumerate mods for plugin channels
-			for (PluginChannelListener pluginChannelListener : this.pluginChannelListeners)
+			String channels = new String(data, "UTF8");
+			for (String channel : channels.split("\u0000"))
 			{
-				this.addPluginChannelsFor(pluginChannelListener);
-			}
-			
-			// If any mods have registered channels, send the REGISTER packet
-			if (this.pluginChannels.keySet().size() > 0)
-			{
-				StringBuilder channelList = new StringBuilder();
-				boolean separator = false;
-				
-				for (String channel : this.pluginChannels.keySet())
-				{
-					if (separator) channelList.append("\u0000");
-					channelList.append(channel);
-					separator = true;
-				}
-				
-				byte[] registrationData = channelList.toString().getBytes(Charset.forName("UTF8"));
-
-				if (netHandler instanceof INetHandlerLoginClient)
-				{
-					NetworkManager networkManager = PrivateFields.netManager.get(((NetHandlerLoginClient)netHandler));
-					networkManager.func_150725_a(new C17PacketCustomPayload(CHANNEL_REGISTER, registrationData), new GenericFutureListener[0]);
-				}
-				else if (netHandler instanceof INetHandlerPlayClient)
-				{
-					PluginChannels.dispatch(new C17PacketCustomPayload(CHANNEL_REGISTER, registrationData));
-				}
+				this.remotePluginChannels.add(channel);
 			}
 		}
-		catch (Exception ex)
+		catch (UnsupportedEncodingException ex)
 		{
-			LiteLoaderLogger.warning(ex, "Error dispatching REGISTER packet to server %s", ex.getClass().getSimpleName());
+			LiteLoaderLogger.warning(ex, "Error decoding REGISTER packet from remote host %s", ex.getClass().getSimpleName());
 		}
+	}
+
+	/**
+	 * @return 
+	 * 
+	 */
+	protected byte[] getRegistrationData()
+	{
+		// Enumerate mods for plugin channels
+		for (L pluginChannelListener : this.pluginChannelListeners)
+		{
+			this.addPluginChannelsFor(pluginChannelListener);
+		}
+		
+		// If any mods have registered channels, send the REGISTER packet
+		if (this.pluginChannels.keySet().size() > 0)
+		{
+			StringBuilder channelList = new StringBuilder();
+			boolean separator = false;
+			
+			for (String channel : this.pluginChannels.keySet())
+			{
+				if (separator) channelList.append("\u0000");
+				channelList.append(channel);
+				separator = true;
+			}
+			
+			return channelList.toString().getBytes(Charset.forName("UTF8"));
+		}
+		
+		return null;
 	}
 	
 	/**
@@ -296,7 +163,7 @@ public class PluginChannels
 	 * 
 	 * @param pluginChannelListener
 	 */
-	private void addPluginChannelsFor(PluginChannelListener pluginChannelListener)
+	protected void addPluginChannelsFor(L pluginChannelListener)
 	{
 		List<String> channels = pluginChannelListener.getChannels();
 		
@@ -309,7 +176,7 @@ public class PluginChannels
 				
 				if (!this.pluginChannels.containsKey(channel))
 				{
-					this.pluginChannels.put(channel, new LinkedList<PluginChannelListener>());
+					this.pluginChannels.put(channel, new LinkedList<L>());
 				}
 				
 				this.pluginChannels.get(channel).add(pluginChannelListener);
@@ -322,41 +189,13 @@ public class PluginChannels
 	 * 
 	 * @param channel Channel to send, must not be a reserved channel name
 	 * @param data
+	 * 
+	 * @deprecated Use ClientPluginChannels.sendMessage instead
 	 */
+	@Deprecated
 	public static boolean sendMessage(String channel, byte[] data, ChannelPolicy policy)
 	{
-		if (!policy.allows(channel))
-		{
-			if (policy.isSilent()) return false;
-			throw new UnregisteredChannelException(channel);
-		}
-		
-		if (channel == null || channel.length() > 16 || CHANNEL_REGISTER.equals(channel) || CHANNEL_UNREGISTER.equals(channel))
-			throw new RuntimeException("Invalid channel name specified"); 
-		
-		C17PacketCustomPayload payload = new C17PacketCustomPayload(channel, data);
-		return PluginChannels.dispatch(payload);
-	}
-
-	/**
-	 * @param channel
-	 * @param data
-	 */
-	private static boolean dispatch(C17PacketCustomPayload payload)
-	{
-		try
-		{
-			Minecraft minecraft = Minecraft.getMinecraft();
-			
-			if (minecraft.thePlayer != null && minecraft.thePlayer.sendQueue != null)
-			{
-				minecraft.thePlayer.sendQueue.addToSendQueue(payload);
-				return true;
-			}
-		}
-		catch (Exception ex) {}
-		
-		return false;
+		return ClientPluginChannels.sendMessage(channel, data, policy);
 	}
 	
 	/**
@@ -387,10 +226,10 @@ public class PluginChannels
 		 * @param channel
 		 * @return
 		 */
-		public boolean allows(String channel)
+		public boolean allows(PluginChannels<?> channels, String channel)
 		{
 			if (this == ChannelPolicy.DISPATCH_ALWAYS) return true;
-			return PluginChannels.isServerChannelRegistered(channel);
+			return channels.isRemoteChannelRegistered(channel);
 		}
 		
 		/**

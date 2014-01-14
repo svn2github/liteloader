@@ -5,19 +5,28 @@ import java.util.LinkedList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiNewChat;
 import net.minecraft.client.gui.ScaledResolution;
+import net.minecraft.command.ICommandManager;
+import net.minecraft.command.ServerCommandManager;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.INetHandler;
+import net.minecraft.network.NetHandlerPlayServer;
+import net.minecraft.network.NetworkManager;
 import net.minecraft.network.login.INetHandlerLoginClient;
 import net.minecraft.network.login.server.S02PacketLoginSuccess;
+import net.minecraft.network.play.INetHandlerPlayServer;
+import net.minecraft.network.play.client.C01PacketChatMessage;
 import net.minecraft.network.play.server.S01PacketJoinGame;
 import net.minecraft.network.play.server.S02PacketChat;
-import net.minecraft.profiler.IPlayerUsage;
-import net.minecraft.profiler.PlayerUsageSnooper;
 import net.minecraft.profiler.Profiler;
+import net.minecraft.server.integrated.IntegratedServer;
+import net.minecraft.server.management.ServerConfigurationManager;
 import net.minecraft.util.IChatComponent;
 import net.minecraft.util.Timer;
+import net.minecraft.world.WorldSettings;
 
 import org.lwjgl.input.Mouse;
 
+import com.mojang.authlib.GameProfile;
 import com.mumfrey.liteloader.*;
 import com.mumfrey.liteloader.core.gen.GenProfiler;
 import com.mumfrey.liteloader.util.PrivateFields;
@@ -27,7 +36,7 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
  *
  * @author Adam Mummery-Smith
  */
-public class Events implements IPlayerUsage
+public class Events
 {
 	/**
 	 * Reference to the loader instance
@@ -40,9 +49,14 @@ public class Events implements IPlayerUsage
 	private final Minecraft minecraft;
 	
 	/**
-	 * Plugin channel manager
+	 * Client plugin channel manager
 	 */
-	private final PluginChannels pluginChannels;
+	private final ClientPluginChannels clientPluginChannels;
+	
+	/**
+	 * Server plugin channel manager
+	 */
+	private final ServerPluginChannels serverPluginChannels;
 	
 	/**
 	 * Reference to the minecraft timer
@@ -145,6 +159,21 @@ public class Events implements IPlayerUsage
 	private LinkedList<PreJoinGameListener> preJoinGameListeners = new LinkedList<PreJoinGameListener>();
 	
 	/**
+	 * List of mods which can filter server chat
+	 */
+	private LinkedList<ServerChatFilter> serverChatFilters = new LinkedList<ServerChatFilter>();
+	
+	/**
+	 * List of mods which provide server commands
+	 */
+	private LinkedList<ServerCommandProvider> serverCommandProviders = new LinkedList<ServerCommandProvider>();
+	
+	/**
+	 * List of mods which monitor server player events
+	 */
+	private LinkedList<ServerPlayerListener> serverPlayerListeners = new LinkedList<ServerPlayerListener>();
+	
+	/**
 	 * Hash code of the current world. We don't store the world reference here because we don't want
 	 * to mess with world GC by mistake
 	 */
@@ -157,11 +186,12 @@ public class Events implements IPlayerUsage
 	 * @param minecraft
 	 * @param pluginChannels
 	 */
-	Events(LiteLoader loader, Minecraft minecraft, PluginChannels pluginChannels, boolean genMappings)
+	Events(LiteLoader loader, Minecraft minecraft, ClientPluginChannels pluginChannels, ServerPluginChannels serverPluginChannels, boolean genMappings)
 	{
 		this.loader = loader;
 		this.minecraft = minecraft;
-		this.pluginChannels = pluginChannels;
+		this.clientPluginChannels = pluginChannels;
+		this.serverPluginChannels = serverPluginChannels;
 		try
 		{
 			if (genMappings)
@@ -244,7 +274,23 @@ public class Events implements IPlayerUsage
 			this.addJoinGameListener((JoinGameListener)listener);
 		}
 		
-		this.pluginChannels.addListener(listener);
+		if (listener instanceof ServerChatFilter)
+		{
+			this.addServerChatFilter((ServerChatFilter)listener);
+		}
+		
+		if (listener instanceof ServerCommandProvider)
+		{
+			this.addServerCommandProvider((ServerCommandProvider)listener);
+		}
+		
+		if (listener instanceof ServerPlayerListener)
+		{
+			this.addServerPlayerListener((ServerPlayerListener)listener);
+		}
+		
+		this.clientPluginChannels.addListener(listener);
+		this.serverPluginChannels.addListener(listener);
 	}
 	
 	/**
@@ -264,10 +310,6 @@ public class Events implements IPlayerUsage
 					this.profilerHooked = true;
 					PrivateFields.minecraftProfiler.setFinal(this.minecraft, this.genProfiler);
 				}
-				
-				// Sanity hook
-				PlayerUsageSnooper snooper = this.minecraft.getPlayerUsageSnooper();
-				PrivateFields.playerStatsCollector.setFinal(snooper, this);
 			}
 			catch (Exception ex)
 			{
@@ -422,6 +464,39 @@ public class Events implements IPlayerUsage
 		if (!this.joinGameListeners.contains(joinGameListener))
 		{
 			this.joinGameListeners.add(joinGameListener);
+		}
+	}
+
+	/**
+	 * @param serverChatFilter
+	 */
+	public void addServerChatFilter(ServerChatFilter serverChatFilter)
+	{
+		if (!this.serverChatFilters.contains(serverChatFilter))
+		{
+			this.serverChatFilters.add(serverChatFilter);
+		}
+	}
+
+	/**
+	 * @param serverCommandProvider
+	 */
+	public void addServerCommandProvider(ServerCommandProvider serverCommandProvider)
+	{
+		if (!this.serverCommandProviders.contains(serverCommandProvider))
+		{
+			this.serverCommandProviders.add(serverCommandProvider);
+		}
+	}
+
+	/**
+	 * @param serverPlayerListener
+	 */
+	public void addServerPlayerListener(ServerPlayerListener serverPlayerListener)
+	{
+		if (!this.serverPlayerListeners.contains(serverPlayerListener))
+		{
+			this.serverPlayerListeners.add(serverPlayerListener);
 		}
 	}
 
@@ -627,7 +702,7 @@ public class Events implements IPlayerUsage
 	}
 	
 	/**
-	 * Callback from the reflective chat hook
+	 * Callback from the chat hook
 	 * 
 	 * @param chatPacket
 	 * @return
@@ -668,7 +743,7 @@ public class Events implements IPlayerUsage
 	 */
 	public void onPostLogin(INetHandlerLoginClient netHandler, S02PacketLoginSuccess loginPacket)
 	{
-		this.pluginChannels.onPostLogin(netHandler, loginPacket);
+		this.clientPluginChannels.onPostLogin(netHandler, loginPacket);
 
 		for (PostLoginListener loginListener : this.postLoginListeners)
 			loginListener.onPostLogin(netHandler, loginPacket);
@@ -702,48 +777,104 @@ public class Events implements IPlayerUsage
 	public void onJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
 		this.loader.onJoinGame(netHandler, loginPacket);
-		this.pluginChannels.onJoinGame(netHandler, loginPacket);
+		this.clientPluginChannels.onJoinGame(netHandler, loginPacket);
 		
 		for (JoinGameListener joinGameListener : this.joinGameListeners)
 			joinGameListener.onJoinGame(netHandler, loginPacket);
 	}
 	
-	/* (non-Javadoc)
-	 * @see net.minecraft.profiler.IPlayerUsage#addServerStatsToSnooper(net.minecraft.profiler.PlayerUsageSnooper)
+	/**
+	 * Callback from the chat hook
+	 * @param netHandler 
+	 * 
+	 * @param chatPacket
+	 * @return
 	 */
-	@Override
-	public void addServerStatsToSnooper(PlayerUsageSnooper var1)
+	public boolean onServerChat(INetHandlerPlayServer netHandler, C01PacketChatMessage chatPacket)
 	{
-		this.minecraft.addServerStatsToSnooper(var1);
+		EntityPlayerMP player = netHandler instanceof NetHandlerPlayServer ? ((NetHandlerPlayServer)netHandler).field_147369_b : null;
+		
+		for (ServerChatFilter chatFilter : this.serverChatFilters)
+		{
+			if (!chatFilter.onChat(player, chatPacket, chatPacket.func_149439_c()))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see net.minecraft.profiler.IPlayerUsage#addServerTypeToSnooper(net.minecraft.profiler.PlayerUsageSnooper)
+
+	/**
+	 * @param instance
+	 * @param folderName
+	 * @param worldName
+	 * @param worldSettings
 	 */
-	@Override
-	public void addServerTypeToSnooper(PlayerUsageSnooper var1)
+	public void onStartIntegratedServer(IntegratedServer instance, String folderName, String worldName, WorldSettings worldSettings)
 	{
-		this.sanityCheck();
-		this.minecraft.addServerTypeToSnooper(var1);
+		ICommandManager commandManager = instance.getCommandManager();
+		
+		if (commandManager instanceof ServerCommandManager)
+		{
+			ServerCommandManager serverCommandManager = (ServerCommandManager)commandManager;
+			
+			for (ServerCommandProvider commandProvider : this.serverCommandProviders)
+				commandProvider.provideCommands(serverCommandManager);
+		}
 	}
-	
-	/* (non-Javadoc)
-	 * @see net.minecraft.profiler.IPlayerUsage#isSnooperEnabled()
+
+	/**
+	 * @param scm
+	 * @param player
+	 * @param profile
 	 */
-	@Override
-	public boolean isSnooperEnabled()
+	public void onSpawnPlayer(ServerConfigurationManager scm, EntityPlayerMP player, GameProfile profile)
 	{
-		return this.minecraft.isSnooperEnabled();
+		for (ServerPlayerListener serverPlayerListener : this.serverPlayerListeners)
+			serverPlayerListener.onPlayerConnect(player, profile);
 	}
 	
 	/**
-	 * Check that the profiler hook hasn't been overridden by something else
+	 * @param scm
+	 * @param player
 	 */
-	private void sanityCheck()
+	public void onPlayerLogin(ServerConfigurationManager scm, EntityPlayerMP player)
 	{
-		if (this.profilerHooked && this.genProfiler != null && this.minecraft.mcProfiler != this.genProfiler)
-		{
-			PrivateFields.minecraftProfiler.setFinal(this.minecraft, this.genProfiler);
-		}
+		this.serverPluginChannels.onPlayerJoined(player);
+	}
+	
+	/**
+	 * @param scm
+	 * @param netManager
+	 * @param player
+	 */
+	public void onInitializePlayerConnection(ServerConfigurationManager scm, NetworkManager netManager, EntityPlayerMP player)
+	{
+		for (ServerPlayerListener serverPlayerListener : this.serverPlayerListeners)
+			serverPlayerListener.onPlayerLoggedIn(player);
+	}
+
+	/**
+	 * @param scm
+	 * @param player
+	 * @param oldPlayer
+	 * @param dimension
+	 * @param copy
+	 */
+	public void onRespawnPlayer(ServerConfigurationManager scm, EntityPlayerMP player, EntityPlayerMP oldPlayer, int dimension, boolean won)
+	{
+		for (ServerPlayerListener serverPlayerListener : this.serverPlayerListeners)
+			serverPlayerListener.onPlayerRespawn(player, oldPlayer, dimension, won);
+	}
+
+	/**
+	 * @param scm
+	 * @param player
+	 */
+	public void onPlayerLogout(ServerConfigurationManager scm, EntityPlayerMP player)
+	{
+		for (ServerPlayerListener serverPlayerListener : this.serverPlayerListeners)
+			serverPlayerListener.onPlayerLogout(player);
 	}
 }

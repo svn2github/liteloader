@@ -1,16 +1,27 @@
 package com.mumfrey.liteloader.core.transformers;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.INetHandler;
+import net.minecraft.network.NetworkManager;
 import net.minecraft.network.login.INetHandlerLoginClient;
 import net.minecraft.network.login.server.S02PacketLoginSuccess;
 import net.minecraft.network.play.INetHandlerPlayClient;
+import net.minecraft.network.play.INetHandlerPlayServer;
+import net.minecraft.network.play.client.C01PacketChatMessage;
+import net.minecraft.network.play.client.C17PacketCustomPayload;
 import net.minecraft.network.play.server.S01PacketJoinGame;
 import net.minecraft.network.play.server.S02PacketChat;
 import net.minecraft.network.play.server.S3FPacketCustomPayload;
+import net.minecraft.server.integrated.IntegratedServer;
+import net.minecraft.server.management.ServerConfigurationManager;
+import net.minecraft.world.WorldSettings;
 
+import com.mojang.authlib.GameProfile;
+import com.mumfrey.liteloader.core.ClientPluginChannels;
 import com.mumfrey.liteloader.core.Events;
 import com.mumfrey.liteloader.core.LiteLoader;
-import com.mumfrey.liteloader.core.PluginChannels;
+import com.mumfrey.liteloader.core.ServerPluginChannels;
 
 /**
  * Proxy class which handles the redirected calls from the injected packet hooks and routes them to the
@@ -55,6 +66,21 @@ public class InjectedCallbackProxy
 	}
 	
 	/**
+	 * S02PacketChat::processPacket()
+	 * 
+	 * @param netHandler
+	 * @param packet
+	 */
+	public static void handleServerChatPacket(INetHandler netHandler, C01PacketChatMessage packet)
+	{
+		Events events = LiteLoader.getEvents();
+		if (events.onServerChat((INetHandlerPlayServer)netHandler, packet))
+		{
+			((INetHandlerPlayServer)netHandler).func_147354_a(packet);
+		}
+	}
+	
+	/**
 	 * S01PacketJoinGame::processPacket()
 	 * 
 	 * @param netHandler
@@ -80,8 +106,22 @@ public class InjectedCallbackProxy
 	{
 		((INetHandlerPlayClient)netHandler).func_147240_a(packet);;
 		
-		PluginChannels pluginChannels = LiteLoader.getPluginChannels();
+		ClientPluginChannels pluginChannels = LiteLoader.getClientPluginChannels();
 		pluginChannels.onPluginChannelMessage(packet);
+	}
+	
+	/**
+	 * C17PacketCustomPayload::processPacket()
+	 * 
+	 * @param netHandler
+	 * @param packet
+	 */
+	public static void handleCustomPayloadPacket(INetHandler netHandler, C17PacketCustomPayload packet)
+	{
+		((INetHandlerPlayServer)netHandler).func_147349_a(packet);;
+		
+		ServerPluginChannels pluginChannels = LiteLoader.getServerPluginChannels();
+		pluginChannels.onPluginChannelMessage((INetHandlerPlayServer)netHandler, packet);
 	}
 	
 	public static void onTimerUpdate(int ref)
@@ -162,5 +202,57 @@ public class InjectedCallbackProxy
 			InjectedCallbackProxy.events.postRenderHUD();
 			InjectedCallbackProxy.events.preRenderGUI();
 		}
+	}
+	
+	public static void IntegratedServerCtor(int ref, IntegratedServer instance, Minecraft minecraft, String folderName, String worldName, WorldSettings worldSettings)
+	{
+		if (ref == 0)
+		{
+			InjectedCallbackProxy.events.onStartIntegratedServer(instance, folderName, worldName, worldSettings);
+		}
+	}
+	
+	public static void onInitializePlayerConnection(int ref, ServerConfigurationManager scm, NetworkManager netManager, EntityPlayerMP player)
+	{
+		if (ref == 0)
+		{
+			InjectedCallbackProxy.events.onInitializePlayerConnection(scm, netManager, player);
+		}
+	}
+
+	public static void onPlayerLogin(int ref, ServerConfigurationManager scm, EntityPlayerMP player)
+	{
+		if (ref == 0)
+		{
+			InjectedCallbackProxy.events.onPlayerLogin(scm, player);
+		}
+	}
+	
+	public static void onPlayerLogout(int ref, ServerConfigurationManager scm, EntityPlayerMP player)
+	{
+		if (ref == 0)
+		{
+			InjectedCallbackProxy.events.onPlayerLogout(scm, player);
+		}
+	}
+	
+	public static EntityPlayerMP onSpawnPlayer(EntityPlayerMP returnValue, int ref, ServerConfigurationManager scm, GameProfile profile)
+	{
+		if (ref == 0)
+		{
+			InjectedCallbackProxy.events.onSpawnPlayer(scm, returnValue, profile);
+		}
+
+		return returnValue;
+	}
+
+	public static EntityPlayerMP onRespawnPlayer(EntityPlayerMP returnValue, int ref, ServerConfigurationManager scm, EntityPlayerMP oldPlayer, int dimension, boolean won)
+	{
+		if (ref == 0)
+		{
+			InjectedCallbackProxy.events.onRespawnPlayer(scm, returnValue, oldPlayer, dimension, won);
+		}
+
+		return returnValue;
 	}
 }

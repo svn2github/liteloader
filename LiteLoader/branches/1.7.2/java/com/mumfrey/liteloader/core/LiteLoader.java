@@ -146,7 +146,12 @@ public final class LiteLoader
 	/**
 	 * Plugin channel manager 
 	 */
-	private final PluginChannels pluginChannels = new PluginChannels();
+	private final ClientPluginChannels clientPluginChannels = new ClientPluginChannels();
+	
+	/**
+	 * Server channel manager 
+	 */
+	private final ServerPluginChannels serverPluginChannels = new ServerPluginChannels();
 	
 	/**
 	 * Permission Manager
@@ -339,7 +344,7 @@ public final class LiteLoader
 		this.registerModResourcePack(new InternalResourcePack("LiteLoader", LiteLoader.class, "liteloader"));
 		
 		// Create the event broker
-		this.events = new Events(this, this.minecraft, this.pluginChannels, this.bootstrap.getBooleanProperty(OPTION_GENERATE_MAPPINGS));
+		this.events = new Events(this, this.minecraft, this.clientPluginChannels, this.serverPluginChannels, this.bootstrap.getBooleanProperty(OPTION_GENERATE_MAPPINGS));
 		
 		// Spawn mod instances
 		this.loadMods();
@@ -493,12 +498,34 @@ public final class LiteLoader
 	 * Get the plugin channel manager
 	 * 
 	 * @return
+	 * @deprecated use LiteLoader.getClientPluginChannels()
 	 */
-	public static PluginChannels getPluginChannels()
+	@Deprecated
+	public static ClientPluginChannels getPluginChannels()
 	{
-		return LiteLoader.getInstance().pluginChannels;
+		return LiteLoader.getInstance().clientPluginChannels;
 	}
 
+	/**
+	 * Get the client-side plugin channel manager
+	 * 
+	 * @return
+	 */
+	public static ClientPluginChannels getClientPluginChannels()
+	{
+		return LiteLoader.getInstance().clientPluginChannels;
+	}
+	
+	/**
+	 * Get the server-side plugin channel manager
+	 * 
+	 * @return
+	 */
+	public static ServerPluginChannels getServerPluginChannels()
+	{
+		return LiteLoader.getInstance().serverPluginChannels;
+	}
+	
 	/**
 	 * Get the "mods" folder
 	 */

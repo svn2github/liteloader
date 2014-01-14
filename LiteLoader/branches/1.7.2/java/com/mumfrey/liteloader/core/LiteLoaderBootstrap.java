@@ -231,6 +231,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		Logger logger = LiteLoaderLogger.getLogger();
 		Layout<? extends Serializable> layout = PatternLayout.createLayout("[%d{HH:mm:ss}] [%t/%level]: %msg%n", logger.getContext().getConfiguration(), null, "UTF-8", "True");
 		FileAppender fileAppender = FileAppender.createAppender(this.logFile.getAbsolutePath(), "False", "False", "LiteLoader", "True", "True", "True", layout, null, "False", "", logger.getContext().getConfiguration());
+		fileAppender.start();
 		logger.addAppender(fileAppender);
 	}
 
