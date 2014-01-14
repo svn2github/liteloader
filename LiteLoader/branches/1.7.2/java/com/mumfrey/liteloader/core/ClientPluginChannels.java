@@ -144,7 +144,10 @@ public class ClientPluginChannels extends PluginChannels<PluginChannelListener>
 		try
 		{
 			byte[] registrationData = this.getRegistrationData();
-			this.sendRegistrationData(netHandler, registrationData);
+			if (registrationData != null)
+			{
+				this.sendRegistrationData(netHandler, registrationData);
+			}
 		}
 		catch (Exception ex)
 		{

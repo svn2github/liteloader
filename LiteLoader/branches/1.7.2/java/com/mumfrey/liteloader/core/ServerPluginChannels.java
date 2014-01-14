@@ -144,7 +144,10 @@ public class ServerPluginChannels extends PluginChannels<ServerPluginChannelList
 		try
 		{
 			byte[] registrationData = this.getRegistrationData();
-			this.sendRegistrationData(player, registrationData);
+			if (registrationData != null)
+			{
+				this.sendRegistrationData(player, registrationData);
+			}
 		}
 		catch (Exception ex)
 		{
