@@ -341,28 +341,28 @@ public class LiteLoaderTweaker implements ITweaker
 				
 				if (PacketTransformer.class.isAssignableFrom(transformerClass))
 				{
-					PacketTransformer transformer = (PacketTransformer)transformerClass.newInstance();
-					String packetClass = transformer.getPacketClass();
-					if (!this.packetTransformers.containsKey(packetClass))
-						this.packetTransformers.put(packetClass, new TreeSet<SortableValue<String>>());
-					this.packetTransformers.get(packetClass).add(transformer.getInfo(transformerClassName));
-					registeredTransformers++;
-					iter.remove();
+					if (tempLoader.isValid())
+					{
+						PacketTransformer transformer = (PacketTransformer)transformerClass.newInstance();
+						String packetClass = transformer.getPacketClass();
+						if (!this.packetTransformers.containsKey(packetClass))
+							this.packetTransformers.put(packetClass, new TreeSet<SortableValue<String>>());
+						this.packetTransformers.get(packetClass).add(transformer.getInfo(transformerClassName));
+						registeredTransformers++;
+						iter.remove();
+					}
+					else
+					{
+						LiteLoaderLogger.warning("Packet transformer class '%s' references class '%s' which is not allowed. Packet transformers must not contain references to other classes", transformerClassName, tempLoader.getInvalidClassName()); 
+						iter.remove();
+					}
 				}
 			}
 			catch (NoClassDefFoundError err)
 			{
-				if (err.getCause() instanceof InvalidTransformerException)
-				{
-					InvalidTransformerException ex = (InvalidTransformerException)err.getCause();
-					LiteLoaderLogger.warning(String.format("Packet transformer class '%s' references class '%s' which is not allowed. Packet transformers must not contain references to other classes", transformerClassName, ex.getAccessedClass())); 
-					ex.printStackTrace();
-					iter.remove();
-				}
-				else
-				{
-					throw err;
-				}
+				LiteLoaderLogger.warning(err, "Packet transformer class '%s' references a missing class. Packet transformers must not contain references to other classes", transformerClassName); 
+				err.printStackTrace();
+				iter.remove();
 			}
 			catch (Exception ex)
 			{
@@ -370,7 +370,7 @@ public class LiteLoaderTweaker implements ITweaker
 			}
 		}
 		
-		LiteLoaderLogger.info(String.format("Added %d packet transformer classes to the transformer list", registeredTransformers));
+		LiteLoaderLogger.info("Added %d packet transformer classes to the transformer list", registeredTransformers);
 	}
 
 	@Override

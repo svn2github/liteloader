@@ -35,6 +35,10 @@ public class NonDelegatingClassLoader extends URLClassLoader
 	
 	private final ClassLoader parent;
 	
+	private boolean valid = true;
+	
+	private String invalidClassName = null;
+	
 	NonDelegatingClassLoader(URL[] urls, ClassLoader parent)
 	{
 		super(urls, null);
@@ -43,6 +47,22 @@ public class NonDelegatingClassLoader extends URLClassLoader
 		
 		this.validClassNames.add("java.lang.Object");
 		this.validPackages.add("java.");
+	}
+	
+	public boolean isValid()
+	{
+		return this.valid;
+	}
+	
+	public String getInvalidClassName()
+	{
+		return this.invalidClassName;
+	}
+	
+	public void reset()
+	{
+		this.valid = true;
+		this.invalidClassName = null;
 	}
 	
 	public void addValidClassName(String className)
@@ -71,6 +91,7 @@ public class NonDelegatingClassLoader extends URLClassLoader
 	
 	public Class<?> addAndLoadClass(String name) throws ClassNotFoundException
 	{
+		this.reset();
 		this.addValidClassName(name);
 		return this.loadClass(name);
 	}
@@ -106,7 +127,10 @@ public class NonDelegatingClassLoader extends URLClassLoader
 			if (name.startsWith(validPackage))
 				return super.findClass(name);
 		}
+
+		this.valid = false;
+		this.invalidClassName = name;
 		
-		throw new InvalidTransformerException(name);
+		return super.findClass(name);
 	}
 }
