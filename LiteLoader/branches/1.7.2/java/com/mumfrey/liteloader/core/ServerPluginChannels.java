@@ -75,7 +75,7 @@ public class ServerPluginChannels extends PluginChannels<ServerPluginChannelList
 			String channel = customPayload.func_149559_c();
 			byte[] data = customPayload.func_149558_e();
 			
-			EntityPlayerMP sender = ((NetHandlerPlayServer)netHandler).field_147369_b;
+			EntityPlayerMP sender = ((NetHandlerPlayServer)netHandler).playerEntity;
 			this.onPluginChannelMessage(sender, channel, data);
 		}
 	}
@@ -174,7 +174,7 @@ public class ServerPluginChannels extends PluginChannels<ServerPluginChannelList
 		{
 			if (recipient != null && recipient.playerNetServerHandler != null)
 			{
-				recipient.playerNetServerHandler.func_147359_a(payload);
+				recipient.playerNetServerHandler.sendPacket(payload);
 				return true;
 			}
 		}

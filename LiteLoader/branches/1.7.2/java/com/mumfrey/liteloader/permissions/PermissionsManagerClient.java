@@ -226,7 +226,7 @@ public class PermissionsManagerClient implements PermissionsManager, PluginChann
 	{
 		String modName = mod.getPermissibleModName();
 		
-		if (this.minecraft != null && this.minecraft.thePlayer != null && this.minecraft.theWorld != null && this.minecraft.theWorld.isRemote)
+		if (this.minecraft != null && this.minecraft.thePlayer != null && this.minecraft.theWorld != null && this.minecraft.theWorld.isClient)
 		{
 			if (!this.registeredClientMods.containsValue(mod))
 			{

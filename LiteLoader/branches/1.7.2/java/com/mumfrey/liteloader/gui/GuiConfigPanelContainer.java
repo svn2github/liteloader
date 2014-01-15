@@ -60,7 +60,7 @@ public class GuiConfigPanelContainer extends ModInfoScreenPanel implements Confi
 	String getPanelTitle()
 	{
 		String panelTitle = this.panel.getPanelTitle();
-		return panelTitle != null ? panelTitle : I18n.getStringParams("gui.settings.title", this.mod.getName());
+		return panelTitle != null ? panelTitle : I18n.format("gui.settings.title", this.mod.getName());
 	}
 
 	/* (non-Javadoc)
@@ -103,7 +103,7 @@ public class GuiConfigPanelContainer extends ModInfoScreenPanel implements Confi
 		super.setSize(width, height);
 		
 		this.panel.onPanelResize(this);
-		this.controls.add(new GuiButton(0, this.width - 99 - MARGIN, this.height - BOTTOM + 9, 100, 20, I18n.getStringParams("gui.saveandclose")));
+		this.controls.add(new GuiButton(0, this.width - 99 - MARGIN, this.height - BOTTOM + 9, 100, 20, I18n.format("gui.saveandclose")));
 	}
 	
 	/**

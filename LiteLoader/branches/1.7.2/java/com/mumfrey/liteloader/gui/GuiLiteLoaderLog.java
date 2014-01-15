@@ -73,8 +73,8 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 	{
 		super.setSize(width, height);
 		
-		this.controls.add(new GuiButton(0, this.width - 99 - MARGIN, this.height - BOTTOM + 9, 100, 20, I18n.getStringParams("gui.done")));
-		this.controls.add(this.chkScale = new GuiCheckbox(1, MARGIN, this.height - BOTTOM + 15, I18n.getStringParams("gui.log.scalecheckbox")));
+		this.controls.add(new GuiButton(0, this.width - 99 - MARGIN, this.height - BOTTOM + 9, 100, 20, I18n.format("gui.done")));
+		this.controls.add(this.chkScale = new GuiCheckbox(1, MARGIN, this.height - BOTTOM + 15, I18n.format("gui.log.scalecheckbox")));
 		
 		this.chkScale.checked = GuiLiteLoaderLog.useNativeRes;
 		
@@ -126,7 +126,7 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 		this.innerTop = TOP - this.scrollBar.getValue();
 	
 		// Draw panel title
-		this.mc.fontRenderer.drawString(I18n.getStringParams("gui.log.title"), MARGIN, TOP - 14, 0xFFFFFFFF);
+		this.mc.fontRenderer.drawString(I18n.format("gui.log.title"), MARGIN, TOP - 14, 0xFFFFFFFF);
 		
 		// Draw top and bottom horizontal bars
 		drawRect(MARGIN, TOP - 4, this.width - MARGIN, TOP - 3, 0xFF999999);

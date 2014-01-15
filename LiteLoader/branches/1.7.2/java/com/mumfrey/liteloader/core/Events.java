@@ -718,7 +718,7 @@ public class Events
 			return true;
 		
 		IChatComponent chat = chatPacket.func_148915_c();
-		String message = chat.func_150260_c();
+		String message = chat.getUnformattedText();
 		
 		// Chat filters get a stab at the chat first, if any filter returns
 		// false the chat is discarded
@@ -727,7 +727,7 @@ public class Events
 			if (chatFilter.onChat(chatPacket, chat, message))
 			{
 				chat = chatPacket.func_148915_c();
-				message = chat.func_150260_c();
+				message = chat.getUnformattedText();
 			}
 			else
 			{
@@ -797,7 +797,7 @@ public class Events
 	 */
 	public boolean onServerChat(INetHandlerPlayServer netHandler, C01PacketChatMessage chatPacket)
 	{
-		EntityPlayerMP player = netHandler instanceof NetHandlerPlayServer ? ((NetHandlerPlayServer)netHandler).field_147369_b : null;
+		EntityPlayerMP player = netHandler instanceof NetHandlerPlayServer ? ((NetHandlerPlayServer)netHandler).playerEntity : null;
 		
 		for (ServerChatFilter chatFilter : this.serverChatFilters)
 		{

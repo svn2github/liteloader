@@ -157,16 +157,16 @@ public class GuiScreenModInfo extends GuiScreen
 	public GuiScreenModInfo(Minecraft minecraft, GuiScreen mainMenu, LiteLoader loader, EnabledModsList enabledModsList, ConfigManager configManager, boolean hideTab)
 	{
 		this.mc = minecraft;
-		this.fontRenderer = minecraft.fontRenderer;
+		this.fontRendererObj = minecraft.fontRenderer;
 		this.mainMenu = mainMenu;
 		this.configManager = configManager;
 		this.hideTab = hideTab;
 		
-		this.versionText = I18n.getStringParams("gui.about.versiontext", LiteLoader.getVersion());
-		this.checkUpdatesText = I18n.getStringParams("gui.about.checkupdates");
+		this.versionText = I18n.format("gui.about.versiontext", LiteLoader.getVersion());
+		this.checkUpdatesText = I18n.format("gui.about.checkupdates");
 		
-		this.versionTextWidth = this.fontRenderer.getStringWidth(this.versionText);
-		this.checkUpdatesTextWidth = this.fontRenderer.getStringWidth(this.checkUpdatesText);
+		this.versionTextWidth = this.fontRendererObj.getStringWidth(this.versionText);
+		this.checkUpdatesTextWidth = this.fontRendererObj.getStringWidth(this.checkUpdatesText);
 
 		this.populateModList(loader, enabledModsList);
 	}
@@ -179,7 +179,7 @@ public class GuiScreenModInfo extends GuiScreen
 	 */
 	private void populateModList(LiteLoader loader, EnabledModsList enabledModsList)
 	{
-		this.activeModText = I18n.getStringParams("gui.about.modsloaded", loader.getLoadedMods().size());
+		this.activeModText = I18n.format("gui.about.modsloaded", loader.getLoadedMods().size());
 		
 		// Add mods to this treeset first, in order to sort them
 		Map<String, GuiModListEntry> sortedMods = new TreeMap<String, GuiModListEntry>();
@@ -252,11 +252,11 @@ public class GuiScreenModInfo extends GuiScreen
 		int rightPanelLeftEdge = LEFT_EDGE + MARGIN + 4 + (this.width - LEFT_EDGE - MARGIN - MARGIN - 4) / 2;
 		
 		this.buttonList.clear();
-		this.buttonList.add(this.btnToggle = new GuiButton(0, rightPanelLeftEdge, this.height - PANEL_BOTTOM - 24, 90, 20, I18n.getStringParams("gui.enablemod")));
-		this.buttonList.add(this.btnConfig = new GuiButton(1, rightPanelLeftEdge + 92, this.height - PANEL_BOTTOM - 24, 69, 20, I18n.getStringParams("gui.modsettings")));
+		this.buttonList.add(this.btnToggle = new GuiButton(0, rightPanelLeftEdge, this.height - PANEL_BOTTOM - 24, 90, 20, I18n.format("gui.enablemod")));
+		this.buttonList.add(this.btnConfig = new GuiButton(1, rightPanelLeftEdge + 92, this.height - PANEL_BOTTOM - 24, 69, 20, I18n.format("gui.modsettings")));
 		if (!this.hideTab)
 		{
-			this.buttonList.add(this.chkEnabled = new GuiCheckbox(2, LEFT_EDGE + MARGIN, this.height - PANEL_BOTTOM + 9, I18n.getStringParams("gui.about.showtabmessage")));
+			this.buttonList.add(this.chkEnabled = new GuiCheckbox(2, LEFT_EDGE + MARGIN, this.height - PANEL_BOTTOM + 9, I18n.format("gui.about.showtabmessage")));
 		}
 		
 		this.selectMod(this.selectedMod);
@@ -353,8 +353,8 @@ public class GuiScreenModInfo extends GuiScreen
 		
 		if (mouseOverTab && this.tweenAmount < 0.01)
 		{
-			GuiScreenModInfo.drawTooltip(this.fontRenderer, LiteLoader.getVersionDisplayString(), mouseX, mouseY, this.width, this.height, 0xFFFFFF, 0xB0000000);
-			GuiScreenModInfo.drawTooltip(this.fontRenderer, this.activeModText, mouseX, mouseY + 13, this.width, this.height, 0xCCCCCC, 0xB0000000);
+			GuiScreenModInfo.drawTooltip(this.fontRendererObj, LiteLoader.getVersionDisplayString(), mouseX, mouseY, this.width, this.height, 0xFFFFFF, 0xB0000000);
+			GuiScreenModInfo.drawTooltip(this.fontRendererObj, this.activeModText, mouseX, mouseY + 13, this.width, this.height, 0xCCCCCC, 0xB0000000);
 		}
 	}
 
@@ -448,9 +448,9 @@ public class GuiScreenModInfo extends GuiScreen
 		glDrawTexturedRect(this.width - 32 - MARGIN, 12, 32, 45, 0, 80, 64, 170, 1.0F); // chicken
 		
 		// Draw header text
-		this.fontRenderer.drawString(this.versionText, LEFT_EDGE + MARGIN + 38, 50, 0xFFFFFFFF);
-		this.fontRenderer.drawString(this.checkUpdatesText, updateTextPos, 50, this.mouseOverUpdateText ? 0xFFFFFFAA : 0xFF4785D1);
-		this.fontRenderer.drawString(this.activeModText, LEFT_EDGE + MARGIN + 38, 60, 0xFFAAAAAA);
+		this.fontRendererObj.drawString(this.versionText, LEFT_EDGE + MARGIN + 38, 50, 0xFFFFFFFF);
+		this.fontRendererObj.drawString(this.checkUpdatesText, updateTextPos, 50, this.mouseOverUpdateText ? 0xFFFFFFAA : 0xFF4785D1);
+		this.fontRendererObj.drawString(this.activeModText, LEFT_EDGE + MARGIN + 38, 60, 0xFFAAAAAA);
 		
 		// Draw top and bottom horizontal rules
 		drawRect(LEFT_EDGE + MARGIN, 80, this.width - MARGIN, 81, 0xFF999999);
@@ -531,15 +531,15 @@ public class GuiScreenModInfo extends GuiScreen
 	public void selectMod(GuiModListEntry mod)
 	{
 		this.selectedMod = mod;
-		this.btnToggle.drawButton = false;
-		this.btnConfig.drawButton = false;
+		this.btnToggle.field_146125_m = false;
+		this.btnConfig.field_146125_m = false;
 		
 		if (this.selectedMod != null && this.selectedMod.canBeToggled())
 		{
-			this.btnToggle.drawButton = true;
-			this.btnToggle.displayString = this.selectedMod.willBeEnabled() ? I18n.getStringParams("gui.disablemod") : I18n.getStringParams("gui.enablemod");
+			this.btnToggle.field_146125_m = true;
+			this.btnToggle.displayString = this.selectedMod.willBeEnabled() ? I18n.format("gui.disablemod") : I18n.format("gui.enablemod");
 			
-			this.btnConfig.drawButton = this.configManager.hasPanel(this.selectedMod.getModClass());
+			this.btnConfig.field_146125_m = this.configManager.hasPanel(this.selectedMod.getModClass());
 		}
 	}
 
@@ -578,7 +578,7 @@ public class GuiScreenModInfo extends GuiScreen
 			
 			if (!this.chkEnabled.checked)
 			{
-				this.chkEnabled.displayString = I18n.getStringParams("gui.about.showtabmessage") + I18n.getStringParams("gui.about.keystrokehint");
+				this.chkEnabled.displayString = I18n.format("gui.about.showtabmessage") + I18n.format("gui.about.keystrokehint");
 			}
 		}
 	}
@@ -685,7 +685,7 @@ public class GuiScreenModInfo extends GuiScreen
 						this.selectMod(mod);
 						
 						// handle double-click
-						if (mod == lastSelectedMod && this.doubleClickTime > 0 && this.btnConfig.drawButton)
+						if (mod == lastSelectedMod && this.doubleClickTime > 0 && this.btnConfig.field_146125_m)
 						{
 							this.actionPerformed(this.btnConfig);
 						}

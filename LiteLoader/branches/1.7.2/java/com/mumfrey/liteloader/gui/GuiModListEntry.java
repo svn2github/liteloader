@@ -51,7 +51,7 @@ public class GuiModListEntry extends Gui
 	/**
 	 * Mod author, from the metadata
 	 */
-	private String author = I18n.getStringParams("gui.unknown");
+	private String author = I18n.format("gui.unknown");
 	
 	/**
 	 * Mod URL, from the metadata
@@ -175,15 +175,15 @@ public class GuiModListEntry extends Gui
 		drawGradientRect(xPosition, yPosition, xPosition + width, yPosition + PANEL_HEIGHT, colour1, 0xB0333333);
 		
 		this.fontRenderer.drawString(this.name, xPosition + 5, yPosition + 2, this.enabled ? (this.external ? 0xFF47d1aa : 0xFFFFFFFF) : 0xFF999999);
-		this.fontRenderer.drawString(I18n.getStringParams("gui.about.versiontext", this.version), xPosition + 5, yPosition + 12, 0xFF999999);
+		this.fontRenderer.drawString(I18n.format("gui.about.versiontext", this.version), xPosition + 5, yPosition + 12, 0xFF999999);
 		
-		String status = this.external ? I18n.getStringParams("gui.status.loaded") : I18n.getStringParams("gui.status.active");
+		String status = this.external ? I18n.format("gui.status.loaded") : I18n.format("gui.status.active");
 		
 		if (this.canBeToggled)
 		{
-			if (!this.enabled && !this.willBeEnabled) status = "\2477" + I18n.getStringParams("gui.status.disabled");
-			if (!this.enabled &&  this.willBeEnabled) status = "\247a" + I18n.getStringParams("gui.status.pending.enabled"); 
-			if ( this.enabled && !this.willBeEnabled) status = "\247c" + I18n.getStringParams("gui.status.pending.disabled");
+			if (!this.enabled && !this.willBeEnabled) status = "\2477" + I18n.format("gui.status.disabled");
+			if (!this.enabled &&  this.willBeEnabled) status = "\247a" + I18n.format("gui.status.pending.enabled"); 
+			if ( this.enabled && !this.willBeEnabled) status = "\247c" + I18n.format("gui.status.pending.disabled");
 		}
 		
 		this.fontRenderer.drawString(status, xPosition + 5, yPosition + 22, this.external ? 0xB047d1aa : 0xFF4785D1);
@@ -197,8 +197,8 @@ public class GuiModListEntry extends Gui
 	public int postRenderListEntry(int mouseX, int mouseY, float partialTicks, int xPosition, int yPosition, int width, boolean selected)
 	{
 		int iconX = xPosition + width - 14;
-		if (this.providesTweak)       iconX = this.drawPropertyIcon(iconX, yPosition + PANEL_HEIGHT - 14, mouseX, mouseY, 158, 80, I18n.getStringParams("gui.mod.providestweak"));
-		if (this.providesTransformer) iconX = this.drawPropertyIcon(iconX, yPosition + PANEL_HEIGHT - 14, mouseX, mouseY, 170, 80, I18n.getStringParams("gui.mod.providestransformer"));
+		if (this.providesTweak)       iconX = this.drawPropertyIcon(iconX, yPosition + PANEL_HEIGHT - 14, mouseX, mouseY, 158, 80, I18n.format("gui.mod.providestweak"));
+		if (this.providesTransformer) iconX = this.drawPropertyIcon(iconX, yPosition + PANEL_HEIGHT - 14, mouseX, mouseY, 170, 80, I18n.format("gui.mod.providestransformer"));
 		
 		return PANEL_HEIGHT + PANEL_SPACING;
 	}
@@ -247,11 +247,11 @@ public class GuiModListEntry extends Gui
 		yPosition += 2;
 
 		this.fontRenderer.drawString(this.name, xPosition + 5, yPosition, 0xFFFFFFFF); yPosition += 10;
-		this.fontRenderer.drawString(I18n.getStringParams("gui.about.versiontext", this.version), xPosition + 5, yPosition, 0xFF999999); yPosition += 10;
+		this.fontRenderer.drawString(I18n.format("gui.about.versiontext", this.version), xPosition + 5, yPosition, 0xFF999999); yPosition += 10;
 
 		drawRect(xPosition + 5, yPosition, xPosition + width, yPosition + 1, 0xFF999999); yPosition += 4;
 
-		this.fontRenderer.drawString(I18n.getStringParams("gui.about.authors") + ": \2477" + this.author, xPosition + 5, yPosition, 0xFFFFFFFF); yPosition += 10;
+		this.fontRenderer.drawString(I18n.format("gui.about.authors") + ": \2477" + this.author, xPosition + 5, yPosition, 0xFFFFFFFF); yPosition += 10;
 		if (this.url != null)
 		{
 			this.fontRenderer.drawString(this.url, xPosition + 5, yPosition, 0xB04785D1); yPosition += 10;

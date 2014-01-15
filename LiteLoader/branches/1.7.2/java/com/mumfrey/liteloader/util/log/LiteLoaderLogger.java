@@ -17,6 +17,8 @@ import org.apache.logging.log4j.core.appender.AbstractAppender;
  */
 public class LiteLoaderLogger extends AbstractAppender
 {
+	private static final int LOG_TAIL_SIZE = 500;
+
 	private static Logger logger = (Logger)LogManager.getLogger("LiteLoader");
 	
 	private static LinkedList<String> logTail = new LinkedList<String>();
@@ -45,10 +47,11 @@ public class LiteLoaderLogger extends AbstractAppender
 			{
 				int LF = message.indexOf('\n');
 				LiteLoaderLogger.logTail.add(message.substring(0, LF));
+				if (LiteLoaderLogger.logTail.size() > 500) LiteLoaderLogger.logTail.remove();
 				message = message.substring(LF + 1);
 			}
 			LiteLoaderLogger.logTail.add(message);
-			if (LiteLoaderLogger.logTail.size() > 500) LiteLoaderLogger.logTail.remove();
+			if (LiteLoaderLogger.logTail.size() > LOG_TAIL_SIZE) LiteLoaderLogger.logTail.remove();
 		}
 	}
 	

@@ -48,7 +48,7 @@ public class GuiCheckUpdatePanel extends ModInfoScreenPanel
 		super(minecraft);
 		
 		this.updateSite = updateSite;
-		this.panelTitle = I18n.getStringParams("gui.updates.title", updateName);
+		this.panelTitle = I18n.format("gui.updates.title", updateName);
 	}
 	
 	@Override
@@ -56,9 +56,9 @@ public class GuiCheckUpdatePanel extends ModInfoScreenPanel
 	{
 		super.setSize(width, height);
 		
-		this.controls.add(new GuiButton(0, this.width - 99 - MARGIN, this.height - BOTTOM + 9, 100, 20, I18n.getStringParams("gui.done")));
-		this.controls.add(this.btnCheck = new GuiButton(1, MARGIN + 16, TOP + 16, 100, 20, I18n.getStringParams("gui.checknow")));
-		this.controls.add(this.btnDownload = new GuiButton(2, MARGIN + 16, TOP + 118, 100, 20, I18n.getStringParams("gui.downloadupdate")));
+		this.controls.add(new GuiButton(0, this.width - 99 - MARGIN, this.height - BOTTOM + 9, 100, 20, I18n.format("gui.done")));
+		this.controls.add(this.btnCheck = new GuiButton(1, MARGIN + 16, TOP + 16, 100, 20, I18n.format("gui.checknow")));
+		this.controls.add(this.btnDownload = new GuiButton(2, MARGIN + 16, TOP + 118, 100, 20, I18n.format("gui.downloadupdate")));
 	}
 	
 	@Override
@@ -74,38 +74,38 @@ public class GuiCheckUpdatePanel extends ModInfoScreenPanel
 		drawRect(MARGIN, this.height - BOTTOM + 2, this.width - MARGIN, this.height - BOTTOM + 3, 0xFF999999);
 		
 		this.btnCheck.enabled = !this.updateSite.isCheckInProgress();
-		this.btnDownload.drawButton = false;
+		this.btnDownload.field_146125_m = false;
 
 		if (this.updateSite.isCheckInProgress())
 		{
 			this.drawThrobber(MARGIN, TOP + 40, this.throb);
-			fontRenderer.drawString(I18n.getStringParams("gui.updates.status.checking", ""), MARGIN + 18, TOP + 44, 0xFFFFFFFF);
+			fontRenderer.drawString(I18n.format("gui.updates.status.checking", ""), MARGIN + 18, TOP + 44, 0xFFFFFFFF);
 		}
 		else if (this.updateSite.isCheckComplete())
 		{
 			boolean success = this.updateSite.isCheckSucceess();
-			String status = success ? I18n.getStringParams("gui.updates.status.success") : I18n.getStringParams("gui.updates.status.failed");
-			fontRenderer.drawString(I18n.getStringParams("gui.updates.status.checking", status), MARGIN + 18, TOP + 44, 0xFFFFFFFF);
+			String status = success ? I18n.format("gui.updates.status.success") : I18n.format("gui.updates.status.failed");
+			fontRenderer.drawString(I18n.format("gui.updates.status.checking", status), MARGIN + 18, TOP + 44, 0xFFFFFFFF);
 			
 			if (success)
 			{
-				fontRenderer.drawString(I18n.getStringParams("gui.updates.available.title"), MARGIN + 18, TOP + 70, 0xFFFFFFFF);
+				fontRenderer.drawString(I18n.format("gui.updates.available.title"), MARGIN + 18, TOP + 70, 0xFFFFFFFF);
 				if (this.updateSite.isUpdateAvailable())
 				{
-					this.btnDownload.drawButton = true;
-					fontRenderer.drawString(I18n.getStringParams("gui.updates.available.newversion"), MARGIN + 18, TOP + 84, 0xFFFFFFFF);
-					fontRenderer.drawString(I18n.getStringParams("gui.updates.available.version", this.updateSite.getAvailableVersion()), MARGIN + 18, TOP + 94, 0xFFFFFFFF);
-					fontRenderer.drawString(I18n.getStringParams("gui.updates.available.date", this.updateSite.getAvailableVersionDate()), MARGIN + 18, TOP + 104, 0xFFFFFFFF);
+					this.btnDownload.field_146125_m = true;
+					fontRenderer.drawString(I18n.format("gui.updates.available.newversion"), MARGIN + 18, TOP + 84, 0xFFFFFFFF);
+					fontRenderer.drawString(I18n.format("gui.updates.available.version", this.updateSite.getAvailableVersion()), MARGIN + 18, TOP + 94, 0xFFFFFFFF);
+					fontRenderer.drawString(I18n.format("gui.updates.available.date", this.updateSite.getAvailableVersionDate()), MARGIN + 18, TOP + 104, 0xFFFFFFFF);
 				}
 				else
 				{
-					fontRenderer.drawString(I18n.getStringParams("gui.updates.available.nonewversion"), MARGIN + 18, TOP + 84, 0xFFFFFFFF);
+					fontRenderer.drawString(I18n.format("gui.updates.available.nonewversion"), MARGIN + 18, TOP + 84, 0xFFFFFFFF);
 				}
 			}
 		}
 		else
 		{
-			fontRenderer.drawString(I18n.getStringParams("gui.updates.status.idle"), MARGIN + 18, TOP + 44, 0xFFFFFFFF);
+			fontRenderer.drawString(I18n.format("gui.updates.status.idle"), MARGIN + 18, TOP + 44, 0xFFFFFFFF);
 		}
 		
 		super.draw(mouseX, mouseY, partialTicks);

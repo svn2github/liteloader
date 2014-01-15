@@ -77,10 +77,10 @@ public class ClientPluginChannels extends PluginChannels<PluginChannelListener>
 	 */
 	public void onPluginChannelMessage(S3FPacketCustomPayload customPayload)
 	{
-		if (customPayload != null && customPayload.getChannel() != null)
+		if (customPayload != null && customPayload.func_149169_c() != null) // getChannel
 		{
-			String channel = customPayload.getChannel();
-			byte[] data = customPayload.getData();
+			String channel = customPayload.func_149169_c(); // getChannel
+			byte[] data = customPayload.func_149168_d(); // getData
 			
 			if (PluginChannels.CHANNEL_REGISTER.equals(channel))
 			{
@@ -164,7 +164,7 @@ public class ClientPluginChannels extends PluginChannels<PluginChannelListener>
 		if (netHandler instanceof INetHandlerLoginClient)
 		{
 			NetworkManager networkManager = PrivateFields.netManager.get(((NetHandlerLoginClient)netHandler));
-			networkManager.func_150725_a(new C17PacketCustomPayload(CHANNEL_REGISTER, registrationData), new GenericFutureListener[0]);
+			networkManager.scheduleOutboundPacket(new C17PacketCustomPayload(CHANNEL_REGISTER, registrationData), new GenericFutureListener[0]);
 		}
 		else if (netHandler instanceof INetHandlerPlayClient)
 		{

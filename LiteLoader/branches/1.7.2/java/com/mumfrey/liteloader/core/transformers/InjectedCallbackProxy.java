@@ -46,7 +46,7 @@ public class InjectedCallbackProxy
 	
 	public static void handleLoginSuccessPacket(INetHandler netHandler, S02PacketLoginSuccess packet)
 	{
-		((INetHandlerLoginClient)netHandler).func_147390_a(packet);
+		((INetHandlerLoginClient)netHandler).handleLoginSuccess(packet);
 		LiteLoader.getEvents().onPostLogin((INetHandlerLoginClient)netHandler, packet);
 	}
 	
@@ -61,7 +61,7 @@ public class InjectedCallbackProxy
 		Events events = LiteLoader.getEvents();
 		if (events.onChat(packet))
 		{
-			((INetHandlerPlayClient)netHandler).func_147251_a(packet);
+			((INetHandlerPlayClient)netHandler).handleChat(packet);
 		}
 	}
 	
@@ -76,7 +76,7 @@ public class InjectedCallbackProxy
 		Events events = LiteLoader.getEvents();
 		if (events.onServerChat((INetHandlerPlayServer)netHandler, packet))
 		{
-			((INetHandlerPlayServer)netHandler).func_147354_a(packet);
+			((INetHandlerPlayServer)netHandler).processChatMessage(packet);
 		}
 	}
 	
@@ -91,7 +91,7 @@ public class InjectedCallbackProxy
 		Events events = LiteLoader.getEvents();
 		if (events.onPreJoinGame(netHandler, packet))
 		{
-			((INetHandlerPlayClient)netHandler).func_147282_a(packet);
+			((INetHandlerPlayClient)netHandler).handleJoinGame(packet);
 			events.onJoinGame(netHandler, packet);
 		}
 	}
@@ -104,7 +104,7 @@ public class InjectedCallbackProxy
 	 */
 	public static void handleCustomPayloadPacket(INetHandler netHandler, S3FPacketCustomPayload packet)
 	{
-		((INetHandlerPlayClient)netHandler).func_147240_a(packet);;
+		((INetHandlerPlayClient)netHandler).handleCustomPayload(packet);;
 		
 		ClientPluginChannels pluginChannels = LiteLoader.getClientPluginChannels();
 		pluginChannels.onPluginChannelMessage(packet);
@@ -118,7 +118,7 @@ public class InjectedCallbackProxy
 	 */
 	public static void handleCustomPayloadPacket(INetHandler netHandler, C17PacketCustomPayload packet)
 	{
-		((INetHandlerPlayServer)netHandler).func_147349_a(packet);;
+		((INetHandlerPlayServer)netHandler).processVanilla250Packet(packet);;
 		
 		ServerPluginChannels pluginChannels = LiteLoader.getServerPluginChannels();
 		pluginChannels.onPluginChannelMessage((INetHandlerPlayServer)netHandler, packet);
