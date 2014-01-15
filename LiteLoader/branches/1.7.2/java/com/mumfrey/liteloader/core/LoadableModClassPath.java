@@ -50,12 +50,12 @@ public class LoadableModClassPath extends LoadableModFile
 		{
 			if (this.isDirectory())
 			{
-				LiteLoaderLogger.info(String.format("Setting up \"%s/%s\" as mod resource pack with identifier \"%s\"", this.getParentFile().getName(), this.getName(), name));
+				LiteLoaderLogger.info("Setting up \"%s/%s\" as mod resource pack with identifier \"%s\"", this.getParentFile().getName(), this.getName(), name);
 				this.resourcePack = new ModResourcePackDir(name, this);
 			}
 			else
 			{
-				LiteLoaderLogger.info(String.format("Setting up \"%s\" as mod resource pack with identifier \"%s\"", this.getName(), name));
+				LiteLoaderLogger.info("Setting up \"%s\" as mod resource pack with identifier \"%s\"", this.getName(), name);
 				this.resourcePack = new ModResourcePack(name, this);
 			}
 		}

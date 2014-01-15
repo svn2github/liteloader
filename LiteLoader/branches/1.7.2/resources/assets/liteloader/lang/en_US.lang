@@ -45,3 +45,6 @@ gui.updates.available.date=Release date: §a%s
 gui.checknow=Check now
 gui.installupdate=Install now
 gui.downloadupdate=Download now
+
+gui.log.title=LiteLoader Log Viewer
+gui.log.scalecheckbox=Use native resolution

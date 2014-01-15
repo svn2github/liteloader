@@ -5,7 +5,7 @@ import java.util.List;
 import com.mumfrey.liteloader.LiteMod;
 
 /**
- * Common interface for the client/server plugin channel listeners
+ * Common interface for the client/server plugin channel listeners. DO NOT IMPLEMENT THIS INTERFACE DIRECTLY, nothing will happen!
  * 
  * @author Adam Mummery-Smith
  */

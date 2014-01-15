@@ -47,7 +47,7 @@ public abstract class Start
 		LoginManager loginManager = new LoginManager(loginJson);
 		loginManager.login(usernameFromCmdLine, passwordFromCmdLine, 5);
 
-		LiteLoaderLogger.info(String.format("Launching game as %s", loginManager.getProfileName()));
+		LiteLoaderLogger.info("Launching game as %s", loginManager.getProfileName());
 		
 		File gameDir = new File(System.getProperty("user.dir"));
 		File assetsDir = new File(gameDir, "assets/virtual/legacy");

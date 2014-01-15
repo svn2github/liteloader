@@ -115,7 +115,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	{
 		if (this.directory.exists() && this.directory.isDirectory())
 		{
-			LiteLoaderLogger.info("Mods folder found, searching %s", this.directory.getPath());
+			LiteLoaderLogger.info("Discovering valid mod files in folder %s", this.directory.getPath());
 
 			this.findValidFiles(enumerator, enabledModsList, profile);
 			this.sortAndAllocateFiles(enumerator);
@@ -272,6 +272,8 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	@SuppressWarnings("unchecked")
 	public void registerMods(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
 	{
+		LiteLoaderLogger.info("Discovering mods in valid mod files...");
+
 		for (LoadableMod<?> modFile : this.loadableMods)
 		{
 			LiteLoaderLogger.info("Searching %s...", modFile.getLocation());

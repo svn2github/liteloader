@@ -15,7 +15,7 @@
 	<classpathentry kind="lib" path="/Client/jars/libraries/net/sf/jopt-simple/jopt-simple/4.5/jopt-simple-4.5.jar"/>
 	<classpathentry exported="true" kind="lib" path="/Client/jars/libraries/io/netty/netty-all/4.0.10.Final/netty-all-4.0.10.Final.jar"/>
 	<classpathentry exported="true" kind="lib" path="/Client/jars/libraries/com/mojang/authlib/1.3/authlib-1.3.jar"/>
-	<classpathentry kind="lib" path="/Client/jars/libraries/org/apache/logging/log4j/log4j-api/2.0-beta9/log4j-api-2.0-beta9.jar"/>
-	<classpathentry kind="lib" path="/Client/jars/libraries/org/apache/logging/log4j/log4j-core/2.0-beta9/log4j-core-2.0-beta9.jar"/>
+	<classpathentry exported="true" kind="lib" path="/Client/jars/libraries/org/apache/logging/log4j/log4j-api/2.0-beta9/log4j-api-2.0-beta9.jar"/>
+	<classpathentry exported="true" kind="lib" path="/Client/jars/libraries/org/apache/logging/log4j/log4j-core/2.0-beta9/log4j-core-2.0-beta9.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

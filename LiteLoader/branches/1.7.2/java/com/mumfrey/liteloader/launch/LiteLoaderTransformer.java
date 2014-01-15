@@ -16,19 +16,15 @@ public class LiteLoaderTransformer implements IClassTransformer
 	private static final String LITELOADER_TWEAKER_CLASS = LiteLoaderTweaker.class.getName().replace('.', '/');
 	
 	private static final String METHOD_PRE_BEGIN_GAME = "preBeginGame";
-
 	private static final String METHOD_INIT = "init";
-	
 	private static final String METHOD_POSTINIT = "postInit";
 
-	private static final String mainClass = "net.minecraft.client.main.Main";
-	
 	private static boolean postInit = false;
 	
 	@Override
 	public byte[] transform(String name, String transformedName, byte[] basicClass)
 	{
-		if (mainClass.equals(name))
+		if (Obf.MinecraftMain.name.equals(name))
 		{
 			return this.transformMain(basicClass);
 		}

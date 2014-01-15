@@ -1,17 +1,73 @@
 package com.mumfrey.liteloader.util.log;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
 
 /**
  * Gateway class for the log4j logger
  *
  * @author Adam Mummery-Smith
  */
-public class LiteLoaderLogger
+public class LiteLoaderLogger extends AbstractAppender
 {
-	private static Logger logger = (Logger)LogManager.getLogger("LiteLoader");;
+	private static Logger logger = (Logger)LogManager.getLogger("LiteLoader");
+	
+	private static LinkedList<String> logTail = new LinkedList<String>();
+	
+	private static long logIndex = 0;
+	
+	static
+	{
+		LiteLoaderLogger.logger.addAppender(new LiteLoaderLogger());
+	}
+	
+	protected LiteLoaderLogger()
+	{
+		super("Internal Log Appender", null, null);
+		this.start();
+	}
+	
+	@Override
+	public void append(LogEvent event)
+	{
+		synchronized (LiteLoaderLogger.logTail)
+		{
+			LiteLoaderLogger.logIndex++;
+			String message = event.getMessage().getFormattedMessage();
+			while (message.indexOf('\n') > -1)
+			{
+				int LF = message.indexOf('\n');
+				LiteLoaderLogger.logTail.add(message.substring(0, LF));
+				message = message.substring(LF + 1);
+			}
+			LiteLoaderLogger.logTail.add(message);
+			if (LiteLoaderLogger.logTail.size() > 500) LiteLoaderLogger.logTail.remove();
+		}
+	}
+	
+	public static long getLogIndex()
+	{
+		return LiteLoaderLogger.logIndex;
+	}
+	
+	public static List<String> getLogTail()
+	{
+		List<String> log = new ArrayList<String>();
+		
+		synchronized (LiteLoaderLogger.logTail)
+		{
+			log.addAll(LiteLoaderLogger.logTail);
+		}
+		
+		return log;
+	}
 	
 	public static Logger getLogger()
 	{

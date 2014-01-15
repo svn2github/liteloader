@@ -97,7 +97,7 @@ public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 	@Override
 	public void registerMods(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
 	{
-		LiteLoaderLogger.info("Searching protection domain code source...");
+		LiteLoaderLogger.info("Discovering mods in protection domain...");
 
 		try
 		{

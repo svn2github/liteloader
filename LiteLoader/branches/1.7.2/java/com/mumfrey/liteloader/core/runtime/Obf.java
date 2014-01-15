@@ -10,9 +10,10 @@ public enum Obf
 {
 	// Non-obfuscated references, here for convenience
 	// -----------------------------------------------------------------------------------------
-	     InjectedCallbackProxy("com.mumfrey.liteloader.core.transformers.InjectedCallbackProxy"      ),
-	               GameProfile("com.mojang.authlib.GameProfile"                                      ),
-	               constructor("<init>"                                                              ),
+	       InjectedCallbackProxy("com.mumfrey.liteloader.core.transformers.InjectedCallbackProxy"    ),
+	                 GameProfile("com.mojang.authlib.GameProfile"                                    ),
+	               MinecraftMain("net.minecraft.client.main.Main"                                    ),
+	                 constructor("<init>"                                                            ),
 
 	// Classes
 	// -----------------------------------------------------------------------------------------

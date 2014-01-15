@@ -244,7 +244,7 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 	{
 		if (this.resourcePack == null)
 		{
-			LiteLoaderLogger.info(String.format("Setting up \"%s\" as mod resource pack with identifier \"%s\"", this.getName(), name));
+			LiteLoaderLogger.info("Setting up \"%s\" as mod resource pack with identifier \"%s\"", this.getName(), name);
 			this.resourcePack = new ModResourcePack(name, this);
 		}
 	}

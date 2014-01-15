@@ -113,7 +113,7 @@ public abstract class PacketTransformer implements IClassTransformer
 	{
 		if (this.packetClass.equals(name) || this.packetClassObf.equals(name))
 		{
-			LiteLoaderLogger.info(String.format("PacketTransformer: Running transformer %s for %s", this.getClass().getName(), name));
+			LiteLoaderLogger.info("PacketTransformer: Running transformer %s for %s", this.getClass().getName(), name);
 			
 			try
 			{
@@ -146,7 +146,7 @@ public abstract class PacketTransformer implements IClassTransformer
 			// Try to transform non-obf for use in dev env
 			if (!this.tryTransformMethod(className, classNode, Obf.processPacket.name, Obf.INetHandler.ref))
 			{
-				LiteLoaderLogger.warning(String.format("PacketTransformer: failed transforming class '%s' (%s)", this.packetClass, this.packetClassObf));
+				LiteLoaderLogger.warning("PacketTransformer: failed transforming class '%s' (%s)", this.packetClass, this.packetClassObf);
 			}
 		}
 		

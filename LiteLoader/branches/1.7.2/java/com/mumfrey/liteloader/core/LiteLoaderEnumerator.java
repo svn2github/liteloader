@@ -324,7 +324,7 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 			String tweakClass = container.getTweakClassName();
 			int tweakPriority = container.getTweakPriority();
 			LiteLoaderLogger.info("Mod file '%s' provides tweakClass '%s', adding to Launch queue with priority %d", container.getName(), tweakClass, tweakPriority);
-			if (LiteLoaderTweaker.addTweaker(tweakClass, tweakPriority))
+			if (LiteLoaderTweaker.addCascadedTweaker(tweakClass, tweakPriority))
 			{
 				LiteLoaderLogger.info("tweakClass '%s' was successfully added", tweakClass);
 				container.injectIntoClassPath(this.classLoader, true);
@@ -365,7 +365,7 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 			for (String classTransformerClass : classTransformerClasses)
 			{
 				LiteLoaderLogger.info("Mod file '%s' provides classTransformer '%s', adding to class loader", container.getName(), classTransformerClass);
-				if (LiteLoaderTweaker.addClassTransformer(classTransformerClass))
+				if (LiteLoaderTweaker.getTransformerManager().injectTransformer(classTransformerClass))
 				{
 					LiteLoaderLogger.info("classTransformer '%s' was successfully added", classTransformerClass);
 					container.injectIntoClassPath(classLoader, true);

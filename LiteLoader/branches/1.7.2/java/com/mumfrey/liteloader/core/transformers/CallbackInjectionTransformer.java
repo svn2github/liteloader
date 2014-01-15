@@ -26,11 +26,11 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 import net.minecraft.launchwrapper.IClassTransformer;
 
 /**
- * Transformer which injects method calls in place of the old profiler hook
+ * Transformer which injects callbacks by searching for profiler invokations and RETURN opcodes
  * 
  * @author Adam Mummery-Smith
  */
-public class CallbackInjectionTransformer implements IClassTransformer
+public abstract class CallbackInjectionTransformer implements IClassTransformer
 {
 	/**
 	 * Mappings for profiler method invokations
@@ -48,58 +48,9 @@ public class CallbackInjectionTransformer implements IClassTransformer
 	}
 
 	/**
-	 * 
+	 * Subclasses must override this method and add their mappings
 	 */
-	protected void addMappings()
-	{
-		this.addMappings(Obf.MCP); // @MCPONLY
-		this.addMappings(Obf.SRG);
-		this.addMappings(Obf.OBF);
-	}
-
-	private void addMappings(int type)
-	{
-		this.addProfilerCallbackMapping(type, Obf.Minecraft,      Obf.runGameLoop,           "()V",     Obf.startSection,    "tick",         new Callback("onTimerUpdate"));
-		this.addProfilerCallbackMapping(type, Obf.Minecraft,      Obf.runGameLoop,           "()V",     Obf.endStartSection, "gameRenderer", new Callback("onRender"));
-		this.addProfilerCallbackMapping(type, Obf.Minecraft,      Obf.runTick,               "()V",     Obf.endStartSection, "animateTick",  new Callback("onAnimateTick"));
-		this.addProfilerCallbackMapping(type, Obf.Minecraft,      Obf.runGameLoop,           "()V",     Obf.endSection,      "",             new Callback("onTick")); // ref 2
-		this.addProfilerCallbackMapping(type, Obf.EntityRenderer, Obf.updateCameraAndRender, "(F)V",    Obf.endSection,      "",             new Callback("preRenderGUI")); // ref 1
-		this.addProfilerCallbackMapping(type, Obf.EntityRenderer, Obf.updateCameraAndRender, "(F)V",    Obf.endSection,      "",             new Callback("postRenderHUDandGUI")); // ref 2
-		this.addProfilerCallbackMapping(type, Obf.EntityRenderer, Obf.updateCameraAndRender, "(F)V",    Obf.endStartSection, "gui",          new Callback("onRenderHUD"));
-		this.addProfilerCallbackMapping(type, Obf.EntityRenderer, Obf.renderWorld,           "(FJ)V",   Obf.endStartSection, "frustrum",     new Callback("onSetupCameraTransform"));
-		this.addProfilerCallbackMapping(type, Obf.EntityRenderer, Obf.renderWorld,           "(FJ)V",   Obf.endStartSection, "litParticles", new Callback("postRenderEntities"));
-		this.addProfilerCallbackMapping(type, Obf.EntityRenderer, Obf.renderWorld,           "(FJ)V",   Obf.endSection,      "",             new Callback("postRender"));
-		this.addProfilerCallbackMapping(type, Obf.GuiIngame,      Obf.renderGameOverlay,     "(FZII)V", Obf.startSection,    "chat",         new Callback("onRenderChat"));
-		this.addProfilerCallbackMapping(type, Obf.GuiIngame,      Obf.renderGameOverlay,     "(FZII)V", Obf.endSection,      "",             new Callback("postRenderChat")); // ref 10
-		
-		String integratedServerCtorDescriptor = CallbackInjectionTransformer.generateDescriptor(type, Type.VOID_TYPE, Obf.Minecraft, String.class, String.class, Obf.WorldSettings);
-		String initPlayerConnectionDescriptor = CallbackInjectionTransformer.generateDescriptor(type, Type.VOID_TYPE, Obf.NetworkManager, Obf.EntityPlayerMP);
-		String playerLoggedInOutDescriptor    = CallbackInjectionTransformer.generateDescriptor(type, Type.VOID_TYPE, Obf.EntityPlayerMP);
-		String spawnPlayerDescriptor          = CallbackInjectionTransformer.generateDescriptor(type, Obf.EntityPlayerMP, Obf.GameProfile);
-		String respawnPlayerDescriptor        = CallbackInjectionTransformer.generateDescriptor(type, Obf.EntityPlayerMP, Obf.EntityPlayerMP, Type.INT_TYPE, Type.BOOLEAN_TYPE);
-		
-		this.addCallbackMapping(type, Obf.IntegratedServer,           Obf.constructor,                  integratedServerCtorDescriptor, CallBackType.RETURN, new Callback("IntegratedServerCtor"));
-		this.addCallbackMapping(type, Obf.ServerConfigurationManager, Obf.initializeConnectionToPlayer, initPlayerConnectionDescriptor, CallBackType.RETURN, new Callback("onInitializePlayerConnection", false));
-		this.addCallbackMapping(type, Obf.ServerConfigurationManager, Obf.playerLoggedIn,               playerLoggedInOutDescriptor,    CallBackType.RETURN, new Callback("onPlayerLogin",                false));
-		this.addCallbackMapping(type, Obf.ServerConfigurationManager, Obf.playerLoggedOut,              playerLoggedInOutDescriptor,    CallBackType.RETURN, new Callback("onPlayerLogout",               false));
-		this.addCallbackMapping(type, Obf.ServerConfigurationManager, Obf.spawnPlayer,                  spawnPlayerDescriptor,          CallBackType.RETURN, new Callback("onSpawnPlayer",                true));
-		this.addCallbackMapping(type, Obf.ServerConfigurationManager, Obf.respawnPlayer,                respawnPlayerDescriptor,        CallBackType.RETURN, new Callback("onRespawnPlayer",              true));
-		
-	}
-	
-	/**
-	 * @param type
-	 * @param className
-	 * @param methodName
-	 * @param methodSignature
-	 * @param invokeMethod
-	 * @param section
-	 * @param callback
-	 */
-	private void addProfilerCallbackMapping(int type, Obf className, Obf methodName, String methodSignature, Obf invokeMethod, String section, Callback callback)
-	{
-		this.addProfilerCallbackMapping(className.names[type], methodName.names[type], methodSignature, invokeMethod.names[type], section, callback);
-	}
+	protected abstract void addMappings();
 	
 	/**
 	 * @param className
@@ -119,19 +70,6 @@ public class CallbackInjectionTransformer implements IClassTransformer
 		String invokeDesc = section == null || section.length() == 0 ? "()V" : "(Ljava/lang/String;)V";
 		String signature = CallbackInjectionTransformer.generateSignature(className, methodName, methodSignature, invokeMethod, invokeDesc, section);
 		this.profilerCallbackMappings.get(className).put(signature, callback);
-	}
-	
-	/**
-	 * @param type
-	 * @param className
-	 * @param methodName
-	 * @param methodSignature
-	 * @param callbackType
-	 * @param callback
-	 */
-	private void addCallbackMapping(int type, Obf className, Obf methodName, String methodSignature, Callback.CallBackType callbackType, Callback callback)
-	{
-		this.addCallbackMapping(className.names[type], methodName.names[type], methodSignature, callbackType, callback);
 	}
 	
 	/**
@@ -157,7 +95,7 @@ public class CallbackInjectionTransformer implements IClassTransformer
 	 * @see net.minecraft.launchwrapper.IClassTransformer#transform(java.lang.String, java.lang.String, byte[])
 	 */
 	@Override
-	public byte[] transform(String name, String transformedName, byte[] basicClass)
+	public final byte[] transform(String name, String transformedName, byte[] basicClass)
 	{
 		if (basicClass != null && this.profilerCallbackMappings.containsKey(transformedName) || this.callbackMappings.containsKey(transformedName))
 		{
@@ -189,7 +127,7 @@ public class CallbackInjectionTransformer implements IClassTransformer
 				if (mappings.containsKey(headSignature))
 				{
 					Callback callback = mappings.get(headSignature);
-					InsnList callbackInsns = this.genCallback(classType, method, callback);
+					InsnList callbackInsns = this.genCallbackInsns(classType, method, callback);
 					if (callbackInsns != null)
 					{
 						LiteLoaderLogger.info("Injecting %s callback for %s in class %s", callback.returnFrom ? "redirect" : "event", callback, classNode.name);
@@ -231,7 +169,7 @@ public class CallbackInjectionTransformer implements IClassTransformer
 					if (mappings.containsKey(returnSignature))
 					{
 						Callback callback = mappings.get(returnSignature);
-						InsnList callbackInsns = this.genCallback(classType, method, callback, returnNumber);
+						InsnList callbackInsns = this.genCallbackInsns(classType, method, callback, returnNumber);
 						if (callbackInsns != null)
 						{
 							LiteLoaderLogger.info("Injecting method return callback for %s in class %s", callback, classNode.name);
@@ -267,9 +205,9 @@ public class CallbackInjectionTransformer implements IClassTransformer
 	 * @param callback
 	 * @return
 	 */
-	private InsnList genCallback(String classType, MethodNode methodNode, Callback callback)
+	private InsnList genCallbackInsns(String classType, MethodNode methodNode, Callback callback)
 	{
-		return this.genCallback(classType, methodNode, callback, -1);
+		return this.genCallbackInsns(classType, methodNode, callback, -1);
 	}
 	
 	/**
@@ -281,7 +219,7 @@ public class CallbackInjectionTransformer implements IClassTransformer
 	 * @param returnNumber
 	 * @return
 	 */
-	private InsnList genCallback(String classType, MethodNode methodNode, Callback callback, int returnNumber)
+	private InsnList genCallbackInsns(String classType, MethodNode methodNode, Callback callback, int returnNumber)
 	{
 		// First work out some flags which alter the behaviour of this injection
 		boolean methodReturnsVoid = Type.getReturnType(methodNode.desc).equals(Type.VOID_TYPE);
@@ -458,6 +396,6 @@ public class CallbackInjectionTransformer implements IClassTransformer
 			return Type.getDescriptor((Class<?>)arg).toString();
 		}
 		
-		return "?";
+		return arg == null ? "" : arg.toString();
 	}
 }

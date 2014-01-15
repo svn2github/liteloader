@@ -291,6 +291,11 @@ public class Events
 		
 		this.clientPluginChannels.addListener(listener);
 		this.serverPluginChannels.addListener(listener);
+		
+		if (listener instanceof CommonPluginChannelListener && !(listener instanceof PluginChannelListener) && !(listener instanceof ServerPluginChannelListener))
+		{
+			LiteLoaderLogger.warning("Interface error for mod '%1s'. Implementing CommonPluginChannelListener has no effect! Use PluginChannelListener or ServerPluginChannelListener instead", listener.getName());
+		}
 	}
 	
 	/**

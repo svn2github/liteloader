@@ -142,6 +142,8 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	@Override
 	public void preInit(LaunchClassLoader classLoader, boolean loadTweaks, List<String> modsToLoad)
 	{
+		LiteLoaderLogger.info("LiteLoader begin PREINIT...");
+
 		// Set up the bootstrap
 		if (!this.prepare()) return;
 		
@@ -161,7 +163,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		this.enumerator = new LiteLoaderEnumerator(this, classLoader, this.enabledModsList, loadTweaks);
 		this.enumerator.discoverMods();
 		
-		LiteLoaderLogger.info("LiteLoader PreInit completed");
+		LiteLoaderLogger.info("LiteLoader PREINIT complete");
 	}
 	
 	/* (non-Javadoc)
@@ -173,7 +175,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		// PreInit failed
 		if (this.enumerator == null) return;
 		
-		LiteLoaderLogger.info("Beginning LiteLoader Init...");
+		LiteLoaderLogger.info("LiteLoader begin INIT...");
 		LiteLoader.init(this, this.enumerator, this.enabledModsList, classLoader);
 	}
 
@@ -186,7 +188,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		// PreInit failed
 		if (this.enumerator == null) return;
 		
-		LiteLoaderLogger.info("Beginning LiteLoader PostInit...");
+		LiteLoaderLogger.info("LiteLoader begin POSTINIT...");
 		LiteLoader.postInit();
 	}
 

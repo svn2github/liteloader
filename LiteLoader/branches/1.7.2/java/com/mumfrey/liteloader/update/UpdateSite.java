@@ -271,7 +271,7 @@ public class UpdateSite implements Comparator<Long>
 		}
 		catch (JsonSyntaxException ex)
 		{
-			LiteLoaderLogger.warning(String.format("Error parsing update site JSON: %s: %s", ex.getClass().getSimpleName(), ex.getMessage()));
+			LiteLoaderLogger.warning("Error parsing update site JSON: %s: %s", ex.getClass().getSimpleName(), ex.getMessage());
 		}
 	}
 
@@ -289,7 +289,7 @@ public class UpdateSite implements Comparator<Long>
 		}
 		else
 		{
-			LiteLoaderLogger.warning(String.format("No version entry for current version '%s' in update site JSON", this.targetVersion));
+			LiteLoaderLogger.warning("No version entry for current version '%s' in update site JSON", this.targetVersion);
 		}
 	}
 
@@ -307,7 +307,7 @@ public class UpdateSite implements Comparator<Long>
 			}
 			else
 			{
-				LiteLoaderLogger.warning(String.format("No artefacts entry for specified artefact '%s' in update site JSON", this.artefact));
+				LiteLoaderLogger.warning("No artefacts entry for specified artefact '%s' in update site JSON", this.artefact);
 			}
 		}
 	}

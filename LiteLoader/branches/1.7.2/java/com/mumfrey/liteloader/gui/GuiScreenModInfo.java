@@ -616,6 +616,10 @@ public class GuiScreenModInfo extends GuiScreen
 		{
 			this.toggleSelectedMod();
 		}
+		else if (keyCode == Keyboard.KEY_F3)
+		{
+			this.setCurrentPanel(new GuiLiteLoaderLog(this.mc));
+		}
 	}
 	
 	private void scrollSelectedModIntoView()
