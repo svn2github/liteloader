@@ -3,7 +3,9 @@ package com.mumfrey.liteloader.core;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.mumfrey.liteloader.launch.InjectionStrategy;
@@ -71,6 +73,16 @@ public interface LoadableMod<L> extends Loadable<L>, Injectable
 	 * Initialise the resource pack with the specified name
 	 */
 	public abstract void initResourcePack(String name);
+	
+	/**
+	 * Get all class names in this container
+	 */
+	public abstract List<String> getContainedClassNames();
+
+	/**
+	 * Callback from the enumerator, whenever a mod is registered to this container
+	 */
+	public abstract void addContainedMod(String modName);
 	
 	/**
 	 * Container returned instead of null when a mod does not actually have a container or a container is requested for
@@ -245,6 +257,17 @@ public interface LoadableMod<L> extends Loadable<L>, Injectable
 
 		@Override
 		public void initResourcePack(String name)
+		{
+		}
+		
+		@Override
+		public List<String> getContainedClassNames()
+		{
+			return new ArrayList<String>();
+		}
+		
+		@Override
+		public void addContainedMod(String modName)
 		{
 		}
 	}

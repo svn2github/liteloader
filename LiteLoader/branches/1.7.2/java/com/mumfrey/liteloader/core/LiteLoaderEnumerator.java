@@ -1,9 +1,6 @@
 package com.mumfrey.liteloader.core;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -12,8 +9,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
@@ -33,11 +28,6 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 	private static final String OPTION_SEARCH_MODS      = "search.mods";
 	private static final String OPTION_SEARCH_JAR       = "search.jar";
 	private static final String OPTION_SEARCH_CLASSPATH = "search.classpath";
-
-	/**
-	 * Maximum recursion depth for mod discovery
-	 */
-	private static final int MAX_DISCOVERY_DEPTH = 16;
 
 	/**
 	 * Reference to the bootstrap agent 
@@ -378,6 +368,24 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 	}
 
 	/* (non-Javadoc)
+	 * @see com.mumfrey.liteloader.core.PluggableEnumerator#registerMods(com.mumfrey.liteloader.core.LoadableMod, boolean)
+	 */
+	@Override
+	public void registerMods(LoadableMod<?> container, boolean registerContainer)
+	{
+		LinkedList<Class<? extends LiteMod>> modClasses = LiteLoaderEnumerator.<LiteMod>getSubclassesFor(container, this.classLoader, LiteMod.class, PluggableEnumerator.MOD_CLASS_PREFIX);
+		for (Class<? extends LiteMod> mod : modClasses)
+		{
+			this.registerMod(mod, registerContainer ? container : null);
+		}
+		
+		if (modClasses.size() > 0)
+		{
+			LiteLoaderLogger.info("Found %s potential matches", modClasses.size());
+		}
+	}
+
+	/* (non-Javadoc)
 	 * @see com.mumfrey.liteloader.core.PluggableEnumerator#addMod(java.lang.Class, com.mumfrey.liteloader.core.LoadableMod)
 	 */
 	@Override
@@ -389,7 +397,11 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 		}
 		
 		this.modsToLoad.put(mod.getSimpleName(), mod);
-		if (container != null) this.modContainers.put(mod.getSimpleName(), container);
+		if (container != null)
+		{
+			this.modContainers.put(mod.getSimpleName(), container);
+			container.addContainedMod(mod.getSimpleName().substring(7));
+		}
 	}
 
 	/**
@@ -399,21 +411,22 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 	 * @param superClass
 	 * @return
 	 */
-	static LinkedList<Class<?>> getSubclassesFor(File packagePath, ClassLoader classloader, Class<?> superClass, String prefix)
+	static <T> LinkedList<Class<? extends T>> getSubclassesFor(LoadableMod<?> packagePath, ClassLoader classloader, Class<T> superClass, String prefix)
 	{
-		LinkedList<Class<?>> classes = new LinkedList<Class<?>>();
+		LinkedList<Class<? extends T>> classes = new LinkedList<Class<? extends T>>();
 		
 		if (packagePath != null)
 		{
 			try
 			{
-				if (packagePath.isDirectory())
+				for (String fullClassName : packagePath.getContainedClassNames())
 				{
-					LiteLoaderEnumerator.enumerateDirectory(prefix, superClass, classloader, classes, packagePath);
-				}
-				else if (packagePath.isFile())
-				{
-					LiteLoaderEnumerator.enumerateCompressedPackage(prefix, superClass, classloader, classes, packagePath);
+					boolean isDefaultPackage = fullClassName.lastIndexOf('.') == -1;
+					String className = isDefaultPackage ? fullClassName : fullClassName.substring(fullClassName.lastIndexOf('.') + 1);
+					if (prefix == null || className.startsWith(prefix))
+					{
+						LiteLoaderEnumerator.<T>checkAndAddClass(classloader, superClass, classes, fullClassName);
+					}
 				}
 			}
 			catch (OutdatedLoaderException ex)
@@ -431,103 +444,13 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 	}
 
 	/**
-	 * @param superClass
-	 * @param classloader
-	 * @param classes
-	 * @param packagePath
-	 * @throws FileNotFoundException
-	 * @throws IOException
-	 */
-	private static void enumerateCompressedPackage(String prefix, Class<?> superClass, ClassLoader classloader, LinkedList<Class<?>> classes, File packagePath) throws FileNotFoundException, IOException
-	{
-		FileInputStream fileinputstream = new FileInputStream(packagePath);
-		ZipInputStream zipinputstream = new ZipInputStream(fileinputstream);
-		
-		ZipEntry zipentry = null;
-		
-		do
-		{
-			zipentry = zipinputstream.getNextEntry();
-			
-			if (zipentry != null && zipentry.getName().endsWith(".class"))
-			{
-				String classFileName = zipentry.getName();
-				String className = classFileName.lastIndexOf('/') > -1 ? classFileName.substring(classFileName.lastIndexOf('/') + 1) : classFileName;
-				
-				if (prefix == null || className.startsWith(prefix))
-				{
-					try
-					{
-						String fullClassName = classFileName.substring(0, classFileName.length() - 6).replaceAll("/", ".");
-						LiteLoaderEnumerator.checkAndAddClass(classloader, superClass, classes, fullClassName);
-					}
-					catch (Exception ex) {}
-				}
-			}
-		} while (zipentry != null);
-		
-		fileinputstream.close();
-	}
-
-	/**
-	 * Recursive function to enumerate classes inside a classpath folder
-	 * 
-	 * @param superClass
-	 * @param classloader
-	 * @param classes
-	 * @param packagePath
-	 * @param packageName
-	 * @throws OutdatedLoaderException 
-	 */
-	private static void enumerateDirectory(String prefix, Class<?> superClass, ClassLoader classloader, LinkedList<Class<?>> classes, File packagePath) throws OutdatedLoaderException
-	{
-		LiteLoaderEnumerator.enumerateDirectory(prefix, superClass, classloader, classes, packagePath, "", 0);
-	}
-
-	/**
-	 * Recursive function to enumerate classes inside a classpath folder
-	 * 
-	 * @param superClass
-	 * @param classloader
-	 * @param classes
-	 * @param packagePath
-	 * @param packageName
-	 * @throws OutdatedLoaderException 
-	 */
-	private static void enumerateDirectory(String prefix, Class<?> superClass, ClassLoader classloader, LinkedList<Class<?>> classes, File packagePath, String packageName, int depth) throws OutdatedLoaderException
-	{
-		// Prevent crash due to broken recursion
-		if (depth > MAX_DISCOVERY_DEPTH)
-			return;
-		
-		File[] classFiles = packagePath.listFiles();
-		
-		for (File classFile : classFiles)
-		{
-			if (classFile.isDirectory())
-			{
-				LiteLoaderEnumerator.enumerateDirectory(prefix, superClass, classloader, classes, classFile, packageName + classFile.getName() + ".", depth + 1);
-			}
-			else
-			{
-				if (classFile.getName().endsWith(".class") && (prefix == null || classFile.getName().startsWith(prefix)))
-				{
-					String classFileName = classFile.getName();
-					String className = packageName + classFileName.substring(0, classFileName.length() - 6);
-					LiteLoaderEnumerator.checkAndAddClass(classloader, superClass, classes, className);
-				}
-			}
-		}
-	}
-
-	/**
 	 * @param classloader
 	 * @param superClass
 	 * @param classes
 	 * @param className
 	 * @throws OutdatedLoaderException 
 	 */
-	private static void checkAndAddClass(ClassLoader classloader, Class<?> superClass, LinkedList<Class<?>> classes, String className) throws OutdatedLoaderException
+	private static <T> void checkAndAddClass(ClassLoader classloader, Class<T> superClass, LinkedList<Class<? extends T>> classes, String className) throws OutdatedLoaderException
 	{
 		if (className.indexOf('$') > -1)
 			return;
@@ -538,7 +461,9 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 			
 			if (subClass != null && !superClass.equals(subClass) && superClass.isAssignableFrom(subClass) && !subClass.isInterface() && !classes.contains(subClass))
 			{
-				classes.add(subClass);
+				@SuppressWarnings("unchecked")
+				Class<? extends T> matchingClass = (Class<? extends T>)subClass;
+				classes.add(matchingClass);
 			}
 		}
 		catch (Throwable th)

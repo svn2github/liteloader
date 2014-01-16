@@ -1,11 +1,11 @@
 package com.mumfrey.liteloader.core;
 
 import java.io.File;
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.List;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
-import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
@@ -19,6 +19,11 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	 * Array of class path entries specified to the JVM instance 
 	 */
 	private final String[] classPathEntries;
+	
+	/**
+	 * URLs to add once init is completed
+	 */
+	private final List<LoadableMod<File>> loadableMods = new ArrayList<LoadableMod<File>>();
 	
 	private boolean loadTweaks;
 
@@ -80,7 +85,8 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 				File packagePath = new File(classPathPart);
 				if (packagePath.exists())
 				{
-					LoadableModClassPath classPathMod = new LoadableModClassPath(packagePath, null);
+					LoadableModClassPath classPathMod = new LoadableModClassPath(packagePath);
+					this.loadableMods.add(classPathMod);
 					
 					if (classPathMod.hasTweakClass() || classPathMod.hasClassTransformers())
 					{
@@ -99,27 +105,15 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	/**
 	 * @param classLoader
 	 */
-	@SuppressWarnings("unchecked")
 	@Override
 	public void registerMods(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 		LiteLoaderLogger.info("Discovering mods on class path...");
 		
-		for (String classPathPart : this.classPathEntries)
+		for (LoadableMod<File> classPathMod : this.loadableMods)
 		{
-			LiteLoaderLogger.info("Searching %s...", classPathPart);
-			
-			File packagePath = new File(classPathPart);
-			LinkedList<Class<?>> modClasses = LiteLoaderEnumerator.getSubclassesFor(packagePath, classLoader, LiteMod.class, PluggableEnumerator.MOD_CLASS_PREFIX);
-			
-			for (Class<?> mod : modClasses)
-			{
-				LoadableModClassPath container = new LoadableModClassPath(packagePath, mod.getSimpleName().substring(7).toLowerCase());
-				enumerator.registerMod((Class<? extends LiteMod>)mod, container);
-			}
-			
-			if (modClasses.size() > 0)
-				LiteLoaderLogger.info("Found %s potential matches", modClasses.size());
+			LiteLoaderLogger.info("Searching %s...", classPathMod);
+			enumerator.registerMods(classPathMod, true);
 		}
 	}
 }

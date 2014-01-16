@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,11 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 {
 	private static final long serialVersionUID = -7952147161905688459L;
 
+	/**
+	 * Maximum recursion depth for mod discovery
+	 */
+	private static final int MAX_DISCOVERY_DEPTH = 16;
+	
 	/**
 	 * Gson parser for JSON
 	 */
@@ -82,6 +88,11 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 	 * ALL of the parsed metadata from the file, associated with the mod later on for retrieval via the loader
 	 */
 	protected Map<String, String> metaData = new HashMap<String, String>();
+	
+	/**
+	 * Classes in this container 
+	 */
+	protected List<String> classNames = null;
 	
 	/**
 	 * @param file
@@ -262,6 +273,32 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 	}
 	
 	@Override
+	public List<String> getContainedClassNames()
+	{
+		if (this.classNames == null)
+		{
+			this.classNames = this.enumerateClassNames();
+		}
+		
+		return this.classNames;
+	}
+	
+	protected List<String> enumerateClassNames()
+	{
+		if (this.isDirectory())
+		{
+			return LoadableModFile.enumerateDirectory(new ArrayList<String>(), this, "", 0);
+		}
+
+		return LoadableModFile.enumerateZipFile(this);
+	}
+	
+	@Override
+	public void addContainedMod(String modName)
+	{
+	}
+
+	@Override
 	public int compareTo(File other)
 	{
 		if (other == null || !(other instanceof LoadableModFile)) return -1;
@@ -284,6 +321,77 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 		return (int)(otherMod.timeStamp - this.timeStamp);
 	}
 
+	/**
+	 * @return
+	 */
+	protected static List<String> enumerateZipFile(File file)
+	{
+		List<String> classes = new ArrayList<String>();
+		
+		ZipFile zipFile;
+		try
+		{
+			zipFile = new ZipFile(file);
+		}
+		catch (IOException ex)
+		{
+			return classes;
+		}
+		
+		@SuppressWarnings("unchecked")
+		Enumeration<ZipEntry> entries = (Enumeration<ZipEntry>)zipFile.entries();
+		while (entries.hasMoreElements())
+		{
+			ZipEntry entry = entries.nextElement();
+			String entryName = entry.getName();
+			if (entry.getSize() > 0 && entryName.endsWith(".class"))
+			{
+				classes.add(entryName.substring(0, entryName.length() - 6).replace('/', '.'));
+			}
+		}
+		
+		try
+		{
+			zipFile.close();
+		}
+		catch (IOException ex) {}
+		
+		return classes;
+	}
+	
+	/**
+	 * Recursive function to enumerate classes inside a classpath folder
+	 * 
+	 * @param classes
+	 * @param packagePath
+	 * @param packageName
+	 */
+	protected static List<String> enumerateDirectory(List<String> classes, File packagePath, String packageName, int depth)
+	{
+		// Prevent crash due to broken recursion
+		if (depth > MAX_DISCOVERY_DEPTH)
+			return classes;
+		
+		File[] classFiles = packagePath.listFiles();
+		
+		for (File classFile : classFiles)
+		{
+			if (classFile.isDirectory())
+			{
+				LoadableModFile.enumerateDirectory(classes, classFile, packageName + classFile.getName() + ".", depth + 1);
+			}
+			else
+			{
+				if (classFile.getName().endsWith(".class"))
+				{
+					String classFileName = classFile.getName();
+					classes.add(packageName + classFileName.substring(0, classFileName.length() - 6));
+				}
+			}
+		}
+		
+		return classes;
+	}
 
 	/**
 	 * @param zip

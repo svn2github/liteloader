@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -16,7 +15,6 @@ import java.util.zip.ZipFile;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
-import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
@@ -35,7 +33,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	private final Map<String, TreeSet<LoadableMod<File>>> versionOrderingSets = new HashMap<String, TreeSet<LoadableMod<File>>>();
 	
 	/**
-	 * URLs to add once init is completed
+	 * Mods to add once init is completed
 	 */
 	private final List<LoadableMod<File>> loadableMods = new ArrayList<LoadableMod<File>>();
 
@@ -269,7 +267,6 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	}
 	
 	@Override
-	@SuppressWarnings("unchecked")
 	public void registerMods(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 		LiteLoaderLogger.info("Discovering mods in valid mod files...");
@@ -277,18 +274,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 		for (LoadableMod<?> modFile : this.loadableMods)
 		{
 			LiteLoaderLogger.info("Searching %s...", modFile.getLocation());
-			
-			LinkedList<Class<?>> modClasses = LiteLoaderEnumerator.getSubclassesFor(modFile.toFile(), classLoader, LiteMod.class, PluggableEnumerator.MOD_CLASS_PREFIX);
-			
-			for (Class<?> mod : modClasses)
-			{
-				enumerator.registerMod((Class<? extends LiteMod>)mod, modFile);
-			}
-			
-			if (modClasses.size() > 0)
-			{
-				LiteLoaderLogger.info("Found %s potential matches", modClasses.size());
-			}
+			enumerator.registerMods(modFile, true);
 		}
 	}
 }

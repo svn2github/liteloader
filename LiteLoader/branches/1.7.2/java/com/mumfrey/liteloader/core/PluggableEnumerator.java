@@ -24,6 +24,12 @@ public interface PluggableEnumerator
 	public abstract void addTweaksFrom(TweakContainer<File> container);
 	
 	/**
+	 * @param container
+	 * @param registerContainer
+	 */
+	public abstract void registerMods(LoadableMod<?> container, boolean registerContainer);
+
+	/**
 	 * @param mod
 	 * @param container
 	 */

@@ -22,12 +22,35 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 public class LoadableModClassPath extends LoadableModFile
 {
 	private static final long serialVersionUID = -4759310661966590773L;
+
+	private boolean modNameRequired = false;
+	
+	LoadableModClassPath(File file)
+	{
+		this(file, null);
+	}
 	
 	LoadableModClassPath(File file, String fallbackName)
 	{
 		super(file, LoadableModClassPath.getVersionMetaDataString(file));
 
-		if (this.modName == null) this.modName = fallbackName;
+		if (this.modName == null)
+		{
+			if (fallbackName != null)
+			{
+				this.modName = fallbackName;
+			}
+			else if (this.isFile())
+			{
+				this.modName = this.getName().substring(0, this.getName().lastIndexOf('.'));
+			}
+			else
+			{
+				this.modName = String.format("%s.%s", this.getParentFile() != null ? this.getParentFile().getName().toLowerCase() : "", this.getName().toLowerCase());
+				this.modNameRequired = true;
+			}
+		}
+		
 		if (this.targetVersion == null) this.targetVersion = LiteLoaderVersion.CURRENT.getMinecraftVersion();
 	}
 	
@@ -74,6 +97,16 @@ public class LoadableModClassPath extends LoadableModFile
 		return true;
 	}
 	
+	@Override
+	public void addContainedMod(String modName)
+	{
+		if (this.modNameRequired)
+		{
+			this.modNameRequired = false;
+			this.modName = modName;
+		}
+	}
+
 	private static String getVersionMetaDataString(File file)
 	{
 		try
