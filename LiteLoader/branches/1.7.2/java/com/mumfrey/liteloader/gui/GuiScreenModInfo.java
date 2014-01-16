@@ -517,9 +517,10 @@ public class GuiScreenModInfo extends GuiScreen
 		{
 			int left = LEFT_EDGE + MARGIN + width;
 			int right = this.width - MARGIN;
-
-			glEnableClipping(left, right, PANEL_TOP, this.height - PANEL_BOTTOM - 28);
-			this.selectedMod.drawInfo(mouseX, mouseY, partialTicks, left, PANEL_TOP, right - left);
+			
+			int spaceForButtons = this.btnConfig.field_146125_m || this.btnToggle.field_146125_m ? 28 : 0;
+			glEnableClipping(left, right, PANEL_TOP, this.height - PANEL_BOTTOM - spaceForButtons);
+			this.selectedMod.drawInfo(mouseX, mouseY, partialTicks, left, PANEL_TOP, right - left, height - spaceForButtons);
 			glDisableClipping();
 		}
 	}
@@ -530,6 +531,11 @@ public class GuiScreenModInfo extends GuiScreen
 	 */
 	public void selectMod(GuiModListEntry mod)
 	{
+		if (this.selectedMod != null)
+		{
+			this.selectedMod.mouseReleased();
+		}
+		
 		this.selectedMod = mod;
 		this.btnToggle.field_146125_m = false;
 		this.btnConfig.field_146125_m = false;
@@ -680,7 +686,7 @@ public class GuiScreenModInfo extends GuiScreen
 				
 				for (GuiModListEntry mod : this.mods)
 				{
-					if (mod.mouseWasOver())
+					if (mod.mouseWasOverListEntry())
 					{
 						this.selectMod(mod);
 						
@@ -692,6 +698,11 @@ public class GuiScreenModInfo extends GuiScreen
 						
 						this.doubleClickTime = 5;
 					}
+				}
+				
+				if (this.selectedMod != null && this.selectedMod == lastSelectedMod)
+				{
+					this.selectedMod.mousePressed();
 				}
 			}
 		}
@@ -718,6 +729,11 @@ public class GuiScreenModInfo extends GuiScreen
 		if (button == 0)
 		{
 			this.scrollBar.setDragging(false);
+			
+			if (this.selectedMod != null)
+			{
+				this.selectedMod.mouseReleased();
+			}
 		}
 		
 		super.mouseMovedOrUp(mouseX, mouseY, button);
@@ -735,10 +751,21 @@ public class GuiScreenModInfo extends GuiScreen
 			if (this.currentPanel != null)
 				this.currentPanel.mouseWheelScrolled(mouseWheelDelta);
 			else
-				this.scrollBar.offsetValue(-mouseWheelDelta / 8);
+				mouseWheelScrolled(mouseWheelDelta / 8);
 		}
 		
 		super.handleMouseInput();
+	}
+
+	/**
+	 * @param mouseWheelDelta
+	 */
+	private void mouseWheelScrolled(int mouseWheelDelta)
+	{
+		if (this.selectedMod == null || !this.selectedMod.mouseWheelScrolled(mouseWheelDelta))
+		{
+			this.scrollBar.offsetValue(-mouseWheelDelta);
+		}
 	}
 
 	/**

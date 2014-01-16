@@ -82,7 +82,7 @@ public class GuiModListEntry extends Gui
 	/**
 	 * True if the mouse was over this mod on the last render
 	 */
-	private boolean mouseOver;
+	private boolean mouseOverListEntry, mouseOverInfo, mouseOverScrollBar;
 	
 	/**
 	 * True if this is not a mod but an external jar 
@@ -90,7 +90,12 @@ public class GuiModListEntry extends Gui
 	private boolean external;
 	
 	private boolean providesTweak, providesTransformer;
-	
+
+	/**
+	 * Scroll bar control for the mod info
+	 */
+	private GuiSimpleScrollBar scrollBar = new GuiSimpleScrollBar();
+
 	/**
 	 * Mod list entry for an ACTIVE mod
 	 * 
@@ -188,8 +193,8 @@ public class GuiModListEntry extends Gui
 		
 		this.fontRenderer.drawString(status, xPosition + 5, yPosition + 22, this.external ? 0xB047d1aa : 0xFF4785D1);
 		
-		this.mouseOver = mouseX > xPosition && mouseX < xPosition + width && mouseY > yPosition && mouseY < yPosition + PANEL_HEIGHT; 
-		drawRect(xPosition, yPosition, xPosition + 1, yPosition + PANEL_HEIGHT, this.mouseOver ? 0xFFFFFFFF : 0xFF999999);
+		this.mouseOverListEntry = this.isMouseOver(mouseX, mouseY, xPosition, yPosition, width, PANEL_HEIGHT); 
+		drawRect(xPosition, yPosition, xPosition + 1, yPosition + PANEL_HEIGHT, this.mouseOverListEntry ? 0xFFFFFFFF : 0xFF999999);
 		
 		return PANEL_HEIGHT + PANEL_SPACING;
 	}
@@ -242,9 +247,12 @@ public class GuiModListEntry extends Gui
 	 * @param yPosition
 	 * @param width
 	 */
-	public void drawInfo(int mouseX, int mouseY, float partialTicks, int xPosition, int yPosition, int width)
+	public void drawInfo(int mouseX, int mouseY, float partialTicks, int xPosition, int yPosition, int width, int height)
 	{
+		int bottom = height + yPosition;
 		yPosition += 2;
+		
+		this.mouseOverInfo = this.isMouseOver(mouseX, mouseY, xPosition, yPosition, width, height);
 
 		this.fontRenderer.drawString(this.name, xPosition + 5, yPosition, 0xFFFFFFFF); yPosition += 10;
 		this.fontRenderer.drawString(I18n.format("gui.about.versiontext", this.version), xPosition + 5, yPosition, 0xFF999999); yPosition += 10;
@@ -258,8 +266,45 @@ public class GuiModListEntry extends Gui
 		}
 
 		drawRect(xPosition + 5, yPosition, xPosition + width, yPosition + 1, 0xFF999999); yPosition += 4;
+		drawRect(xPosition + 5, bottom - 1, xPosition + width, bottom, 0xFF999999);
 		
-		this.fontRenderer.drawSplitString(this.description, xPosition + 5, yPosition, width - 5, 0xFFFFFFFF);
+		int scrollHeight = bottom - yPosition - 3;
+		int totalHeight = this.fontRenderer.splitStringWidth(this.description, width - 11);
+		
+		this.scrollBar.setMaxValue(totalHeight - scrollHeight);
+		this.scrollBar.drawScrollBar(mouseX, mouseY, partialTicks, xPosition + width - 5, yPosition, 5, scrollHeight, totalHeight);
+		
+		this.mouseOverScrollBar = this.isMouseOver(mouseX, mouseY, xPosition + width - 5, yPosition, 5, scrollHeight);
+
+		GuiScreenModInfo.glEnableClipping(-1, -1, yPosition, bottom - 3);
+		this.fontRenderer.drawSplitString(this.description, xPosition + 5, yPosition - this.scrollBar.getValue(), width - 11, 0xFFFFFFFF);
+	}
+
+	/**
+	 * @param mouseX
+	 * @param mouseY
+	 * @param x
+	 * @param y
+	 * @param width
+	 * @param height
+	 * @return
+	 */
+	private boolean isMouseOver(int mouseX, int mouseY, int x, int y, int width, int height)
+	{
+		return mouseX > x && mouseX < x + width && mouseY > y && mouseY < y + height;
+	}
+	
+	public void mousePressed()
+	{
+		if (this.mouseOverScrollBar)
+		{
+			this.scrollBar.setDragging(true);
+		}
+	}
+
+	public void mouseReleased()
+	{
+		this.scrollBar.setDragging(false);
 	}
 
 	/**
@@ -324,8 +369,19 @@ public class GuiModListEntry extends Gui
 		return this.willBeEnabled;
 	}
 	
-	public boolean mouseWasOver()
+	public boolean mouseWasOverListEntry()
 	{
-		return this.mouseOver;
+		return this.mouseOverListEntry;
+	}
+
+	public boolean mouseWheelScrolled(int mouseWheelDelta)
+	{
+		if (this.mouseOverInfo)
+		{
+			this.scrollBar.offsetValue(-mouseWheelDelta);
+			return true;
+		}
+		
+		return false;
 	}
 }
