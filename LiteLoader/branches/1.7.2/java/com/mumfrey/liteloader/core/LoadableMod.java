@@ -44,6 +44,26 @@ public interface LoadableMod<L> extends Loadable<L>, Injectable
 	 * Get whether this mod's metadata is valid
 	 */
 	public abstract boolean hasValidMetaData();
+	
+	/**
+	 * Get whether this mod has any dependencies 
+	 */
+	public abstract boolean hasDependencies();
+	
+	/**
+	 * Get this mod's list of dependencies
+	 */
+	public abstract Set<String> getDependencies();
+	
+	/**
+	 * Callback to notify the container that it's missing a specific dependency
+	 */
+	public abstract void registerMissingDependency(String dependency);
+	
+	/**
+	 * Get this mod's list of missing dependencies
+	 */
+	public abstract Set<String> getMissingDependencies();
 
 	/**
 	 * Get the specified metadata value and return the default value if not present
@@ -258,6 +278,29 @@ public interface LoadableMod<L> extends Loadable<L>, Injectable
 		@Override
 		public void initResourcePack(String name)
 		{
+		}
+		
+		@Override
+		public boolean hasDependencies()
+		{
+			return false;
+		}
+		
+		@Override
+		public Set<String> getDependencies()
+		{
+			return new HashSet<String>();
+		}
+		
+		@Override
+		public void registerMissingDependency(String dependency)
+		{
+		}
+		
+		@Override
+		public Set<String> getMissingDependencies()
+		{
+			return new HashSet<String>();
 		}
 		
 		@Override

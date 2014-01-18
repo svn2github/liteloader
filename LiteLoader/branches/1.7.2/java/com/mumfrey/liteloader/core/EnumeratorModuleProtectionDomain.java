@@ -38,11 +38,13 @@ public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 	{
 		try
 		{
-			URL protectionDomainLocation = LiteLoader.class.getProtectionDomain().getCodeSource().getLocation();
+			URL protectionDomainLocation = EnumeratorModuleProtectionDomain.class.getProtectionDomain().getCodeSource().getLocation();
 			if (protectionDomainLocation != null)
 			{
+				LiteLoaderLogger.info("Determining code source using protection domain");
 				if (protectionDomainLocation.toString().indexOf('!') > -1 && protectionDomainLocation.toString().startsWith("jar:"))
 				{
+					LiteLoaderLogger.info("Protection domain references a jar file");
 					protectionDomainLocation = new URL(protectionDomainLocation.toString().substring(4, protectionDomainLocation.toString().indexOf('!')));
 				}
 				
@@ -56,8 +58,8 @@ public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 			}
 			else
 			{
-				// Fix (?) for forge and other mods which mangle the protection domain
-				String reflectionClassPath = EnumeratorModuleProtectionDomain.class.getResource("/com/mumfrey/liteloader/core/EnumeratorModuleProtectionDomain.class").getPath();
+				LiteLoaderLogger.info("Determining code source using resource");
+				String reflectionClassPath = EnumeratorModuleProtectionDomain.class.getResource("/net/minecraft/client/main/Main.class").getPath();
 				
 				if (reflectionClassPath.indexOf('!') > -1)
 				{
@@ -88,7 +90,7 @@ public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 	}
 	
 	@Override
-	public void injectIntoClassLoader(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
+	public void injectIntoClassLoader(PluggableEnumerator enumerator, LaunchClassLoader classLoader, EnabledModsList enabledModsList, String profile)
 	{
 	}
 
@@ -104,7 +106,7 @@ public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 		{
 			if (this.codeSource != null)
 			{
-				enumerator.registerMods(this.codeSource, false);
+				enumerator.registerModsFrom(this.codeSource, false);
 			}
 		}
 		catch (Throwable th)

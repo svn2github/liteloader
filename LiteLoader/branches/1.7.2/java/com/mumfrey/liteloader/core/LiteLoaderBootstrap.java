@@ -189,7 +189,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		if (this.enumerator == null) return;
 		
 		LiteLoaderLogger.info("LiteLoader begin POSTINIT...");
-		LiteLoader.postInit();
+		LiteLoader.getInstance().postInit();
 	}
 
 	/**

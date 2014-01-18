@@ -113,6 +113,7 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 	private byte[] injectCallbacks(byte[] basicClass, Map<String, Callback> profilerMappings, Map<String, Callback> mappings)
 	{
 		ClassNode classNode = this.readClass(basicClass);
+		String className = classNode.name.replace('/', '.');
 		String classType = Type.getObjectType(classNode.name).toString();
 
 		for (MethodNode method : classNode.methods)
@@ -130,7 +131,7 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 					InsnList callbackInsns = this.genCallbackInsns(classType, method, callback);
 					if (callbackInsns != null)
 					{
-						LiteLoaderLogger.info("Injecting %s callback for %s in class %s", callback.returnFrom ? "redirect" : "event", callback, classNode.name);
+						LiteLoaderLogger.info("Injecting %s callback for %s in class %s", callback.returnFrom ? "redirect" : "event", callback, className);
 						method.instructions.insert(callbackInsns);
 						if (callback.returnFrom) continue;
 					}
@@ -172,7 +173,7 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 						InsnList callbackInsns = this.genCallbackInsns(classType, method, callback, returnNumber);
 						if (callbackInsns != null)
 						{
-							LiteLoaderLogger.info("Injecting method return callback for %s in class %s", callback, classNode.name);
+							LiteLoaderLogger.info("Injecting method return callback for %s in class %s", callback, className);
 							method.instructions.insertBefore(insn, callbackInsns);
 						}
 						else
@@ -188,7 +189,7 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 			for (Entry<MethodInsnNode, Callback> profilerCallbackNode : profilerCallbackInjectionNodes.entrySet())
 			{
 				Callback callback = profilerCallbackNode.getValue();
-				LiteLoaderLogger.info("Injecting profiler invokation callback for %s in class %s", callback, classNode.name);
+				LiteLoaderLogger.info("Injecting profiler invokation callback for %s in class %s", callback, className);
 				method.instructions.insert(profilerCallbackNode.getKey(), new MethodInsnNode(Opcodes.INVOKESTATIC, callback.callbackClass, callback.callbackMethod, "(I)V"));
 				method.instructions.insert(profilerCallbackNode.getKey(), new LdcInsnNode(callback.refNumber++));
 			}

@@ -20,14 +20,20 @@ public interface PluggableEnumerator
 	
 	/**
 	 * @param container
+	 * @return
 	 */
-	public abstract void addTweaksFrom(TweakContainer<File> container);
+	public abstract boolean isContainerEnabled(LoadableMod<?> container);
+
+	/**
+	 * @param container
+	 */
+	public abstract void registerTweakContainer(TweakContainer<File> container);
 	
 	/**
 	 * @param container
 	 * @param registerContainer
 	 */
-	public abstract void registerMods(LoadableMod<?> container, boolean registerContainer);
+	public abstract void registerModsFrom(LoadableMod<?> container, boolean registerContainer);
 
 	/**
 	 * @param mod
@@ -47,4 +53,16 @@ public interface PluggableEnumerator
 	 * @return
 	 */
 	public abstract boolean getAndStoreBooleanProperty(String propertyName, boolean defaultValue);
+
+	/**
+	 * @param base
+	 * @return
+	 */
+	public abstract boolean checkDependencies(LoadableMod<?> base);
+
+	/**
+	 * @param tweakContainer
+	 * @return
+	 */
+	public abstract boolean checkDependencies(TweakContainer<File> tweakContainer);
 }

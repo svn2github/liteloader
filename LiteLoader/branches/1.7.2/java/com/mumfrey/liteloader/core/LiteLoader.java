@@ -5,16 +5,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 import javax.activity.InvalidActivityException;
 
@@ -164,9 +155,9 @@ public final class LiteLoader
 	private final ConfigManager configManager;
 	
 	/**
-	 * Flag which keeps track of whether late initialisation has been done
+	 * Flag which keeps track of whether late initialisation has completed
 	 */
-	private boolean postInitStarted, startupComplete;
+	private boolean startupComplete;
 
 	/**
 	 * True while initialising mods if we need to do a resource manager reload once the process is completed
@@ -222,38 +213,6 @@ public final class LiteLoader
 	private GuiScreenModInfo modInfoScreen;
 	
 	/**
-	 * Pre-init routine, called using reflection by the tweaker
-	 * 
-	 * @param gameDirectory Game directory passed to the tweaker
-	 * @param assetsDirectory Assets directory passed to the tweaker
-	 * @param profile Launch profile name supplied with --version parameter
-	 * @param modNameFilter List of mod names parsed from the command line
-	 * @param classLoader LaunchClassLoader
-	 */
-	static final void init(LiteLoaderBootstrap bootstrap, LiteLoaderEnumerator enumerator, EnabledModsList enabledModsList, LaunchClassLoader classLoader)
-	{
-		if (LiteLoader.instance == null)
-		{
-			LiteLoader.classLoader = classLoader;
-			
-			LiteLoader.instance = new LiteLoader(bootstrap, enumerator, enabledModsList);
-			LiteLoader.instance.onInit();
-		}
-	}
-	
-	/**
-	 * Post-init routine, initialises and loads mods enumerated in preInit
-	 */
-	static final void postInit()
-	{
-		if (LiteLoader.instance != null)
-		{
-			final Minecraft minecraft = Minecraft.getMinecraft();
-			LiteLoader.instance.onPostInit(minecraft);
-		}
-	}
-
-	/**
 	 * LiteLoader constructor
 	 * @param profile 
 	 * @param modNameFilter 
@@ -301,11 +260,11 @@ public final class LiteLoader
 		
 		return new File(this.configBaseFolder, String.format("config.%s", version.getMinecraftVersion()));
 	}
-
-	/**
+	
+		/**
 	 * Set up reflection methods required by the loader
 	 */
-	private boolean onInit()
+	void init()
 	{
 		try
 		{
@@ -322,23 +281,18 @@ public final class LiteLoader
 			this.displayModInfoScreenTab = this.bootstrap.getAndStoreBooleanProperty(OPTION_MOD_INFO_SCREEN, true);
 			
 			this.enumerator.discoverModClasses();
+			this.disabledMods.addAll(this.enumerator.getDisabledMods());
 		}
 		catch (Throwable th)
 		{
 			LiteLoaderLogger.severe("Error initialising LiteLoader", th);
-			return false;
 		}
-		
-		return true;
 	}
 	
-	private void onPostInit(Minecraft minecraft)
+	void postInit()
 	{
-		if (this.postInitStarted) return;
-		this.postInitStarted = true;
-
 		// Cache local minecraft reference
-		this.minecraft = minecraft;
+		this.minecraft = Minecraft.getMinecraft();
 		
 		// Add self as a resource pack for texture/lang resources
 		this.registerModResourcePack(new InternalResourcePack("LiteLoader", LiteLoader.class, "liteloader"));
@@ -880,24 +834,34 @@ public final class LiteLoader
 		
 		for (Class<? extends LiteMod> mod : this.enumerator.getModsToLoad())
 		{
+			LoadableMod<?> container = this.enumerator.getModContainer(mod);
+
 			try
 			{
 				String identifier = this.getModIdentifier(mod);
 				if (identifier == null || this.enabledModsList.isEnabled(this.bootstrap.getProfile(), identifier))
 				{
-					this.loadMod(identifier, mod);
+					if (this.enumerator.checkDependencies(container))
+					{
+						this.loadMod(identifier, mod, container);
+					}
+					else
+					{
+						LiteLoaderLogger.info("Not loading mod %s, the mod was missing a required dependency", identifier);
+						if (container != LoadableMod.NONE && !this.disabledMods.contains(container)) this.disabledMods.add(container);
+					}
 				}
 				else
 				{
 					LiteLoaderLogger.info("Not loading mod %s, excluded by filter", identifier);
-					LoadableMod<?> modContainer = this.enumerator.getModContainer(mod);
-					if (modContainer != LoadableMod.NONE) this.disabledMods.add(modContainer);
+					if (container != LoadableMod.NONE && !this.disabledMods.contains(container)) this.disabledMods.add(container);
 				}
 			}
 			catch (Throwable th)
 			{
 				th.printStackTrace();
 				LiteLoaderLogger.warning(th, "Error loading mod from %s", mod.getName());
+				if (container != LoadableMod.NONE && !this.disabledMods.contains(container)) this.disabledMods.add(container);
 			}
 		}
 	}
@@ -905,10 +869,11 @@ public final class LiteLoader
 	/**
 	 * @param identifier
 	 * @param mod
+	 * @param container 
 	 * @throws InstantiationException
 	 * @throws IllegalAccessException
 	 */
-	protected void loadMod(String identifier, Class<? extends LiteMod> mod) throws InstantiationException, IllegalAccessException
+	protected void loadMod(String identifier, Class<? extends LiteMod> mod, LoadableMod<?> container) throws InstantiationException, IllegalAccessException
 	{
 		LiteLoaderLogger.info("Loading mod from %s", mod.getName());
 		
@@ -919,20 +884,17 @@ public final class LiteLoader
 		if (modName == null && identifier != null) modName = identifier;
 		LiteLoaderLogger.info("Successfully added mod %s version %s", modName, newMod.getVersion());
 		
-		// Get the mod file and register it as a resource pack if it exists
-		LoadableMod<?> loadableMod = this.enumerator.getModContainer(mod);
-		if (loadableMod != null)
+		// Register the mod as a resource pack if the container exists
+		if (container != null)
 		{
-			this.disabledMods.remove(loadableMod);
-			
-			LiteLoaderLogger.info("Adding \"%s\" to active resource pack set", loadableMod.getLocation());
+			LiteLoaderLogger.info("Adding \"%s\" to active resource pack set", container.getLocation());
 			if (modName != null)
 			{
-				loadableMod.initResourcePack(modName);
+				container.initResourcePack(modName);
 				
-				if (loadableMod.hasResourcePack() && this.registerModResourcePack((IResourcePack)loadableMod.getResourcePack()))
+				if (container.hasResourcePack() && this.registerModResourcePack((IResourcePack)container.getResourcePack()))
 				{
-					LiteLoaderLogger.info("Successfully added \"%s\" to active resource pack set", loadableMod.getLocation());
+					LiteLoaderLogger.info("Successfully added \"%s\" to active resource pack set", container.getLocation());
 				}
 			}
 		}
@@ -1279,6 +1241,17 @@ public final class LiteLoader
 			crashReport.getCategory().addCrashSectionCallable("Mod Pack",        new CallableLiteLoaderBrand(crashReport));
 			crashReport.getCategory().addCrashSectionCallable("LiteLoader Mods", new CallableLiteLoaderMods(crashReport));
 			crashReport.getCategory().addCrashSectionCallable("LaunchWrapper",   new CallableLaunchWrapper(crashReport));
+		}
+	}
+
+	static final void init(LiteLoaderBootstrap bootstrap, LiteLoaderEnumerator enumerator, EnabledModsList enabledModsList, LaunchClassLoader classLoader)
+	{
+		if (LiteLoader.instance == null)
+		{
+			LiteLoader.classLoader = classLoader;
+			
+			LiteLoader.instance = new LiteLoader(bootstrap, enumerator, enabledModsList);
+			LiteLoader.instance.init();
 		}
 	}
 }

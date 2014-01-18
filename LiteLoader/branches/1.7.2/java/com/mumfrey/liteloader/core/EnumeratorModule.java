@@ -33,8 +33,10 @@ public interface EnumeratorModule<T>
 	/**
 	 * @param enumerator
 	 * @param classLoader
+	 * @param enabledModsList
+	 * @param profile
 	 */
-	public abstract void injectIntoClassLoader(PluggableEnumerator enumerator, LaunchClassLoader classLoader);
+	public abstract void injectIntoClassLoader(PluggableEnumerator enumerator, LaunchClassLoader classLoader, EnabledModsList enabledModsList, String profile);
 
 	/**
 	 * @param enumerator

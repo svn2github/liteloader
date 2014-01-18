@@ -23,6 +23,8 @@ gui.status.active=Active
 gui.status.disabled=Disabled
 gui.status.pending.enabled=Enabled on next startup 
 gui.status.pending.disabled=Disabled on next startup
+gui.status.missingdeps=Missing dependencies
+gui.description.missingdeps=Missing dependencies:
 
 gui.mod.providestweak=Provides Tweak
 gui.mod.providestransformer=Provides Transformer

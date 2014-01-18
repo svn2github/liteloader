@@ -199,6 +199,8 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 		if (logLine.startsWith("loading")) return 0x5555FF;
 		if (logLine.startsWith("initialising")) return 0x55FFFF;
 		if (logLine.startsWith("calling late")) return 0x00AAAA;
+		if (logLine.startsWith("dependency check")) return 0xFFAA00;
+		if (logLine.startsWith("dependency")) return 0xFF5500;
 		
 		return 0xCCCCCC;
 	}

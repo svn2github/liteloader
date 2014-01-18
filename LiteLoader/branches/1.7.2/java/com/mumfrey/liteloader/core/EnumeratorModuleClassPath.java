@@ -86,11 +86,17 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 				if (packagePath.exists())
 				{
 					LoadableModClassPath classPathMod = new LoadableModClassPath(packagePath);
-					this.loadableMods.add(classPathMod);
-					
-					if (classPathMod.hasTweakClass() || classPathMod.hasClassTransformers())
+					if (enumerator.isContainerEnabled(classPathMod))
 					{
-						enumerator.addTweaksFrom(classPathMod);
+						this.loadableMods.add(classPathMod);
+						if (classPathMod.hasTweakClass() || classPathMod.hasClassTransformers())
+						{
+							enumerator.registerTweakContainer(classPathMod);
+						}
+					}
+					else
+					{
+						LiteLoaderLogger.info("Mod %s is disabled or missing a required dependency, not injecting tranformers", classPathMod.getIdentifier());
 					}
 				}
 			}
@@ -98,7 +104,7 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	}
 	
 	@Override
-	public void injectIntoClassLoader(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
+	public void injectIntoClassLoader(PluggableEnumerator enumerator, LaunchClassLoader classLoader, EnabledModsList enabledModsList, String profile)
 	{
 	}
 
@@ -113,7 +119,7 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 		for (LoadableMod<File> classPathMod : this.loadableMods)
 		{
 			LiteLoaderLogger.info("Searching %s...", classPathMod);
-			enumerator.registerMods(classPathMod, true);
+			enumerator.registerModsFrom(classPathMod, true);
 		}
 	}
 }

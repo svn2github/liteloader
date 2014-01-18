@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -88,7 +89,17 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 	 * ALL of the parsed metadata from the file, associated with the mod later on for retrieval via the loader
 	 */
 	protected Map<String, String> metaData = new HashMap<String, String>();
-	
+
+	/**
+	 * Dependencies declared in the metadata
+	 */
+	private Set<String> dependencies = new HashSet<String>();
+
+	/**
+	 * Dependencies which are missing 
+	 */
+	private Set<String> missingDependencies = new HashSet<String>();;
+
 	/**
 	 * Classes in this container 
 	 */
@@ -154,6 +165,11 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 		}
 		
 		this.injectionStrategy = InjectionStrategy.parseStrategy(this.metaData.get("injectAt"));
+		
+		for (String dependency : this.getMetaValues("dependsOn", ","))
+		{
+			this.dependencies.add(dependency);
+		}
 	}
 
 	protected String getDefaultName()
@@ -272,6 +288,30 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 		return (this.resourcePack != null);
 	}
 	
+	@Override
+	public boolean hasDependencies()
+	{
+		return this.dependencies.size() > 0;
+	}
+	
+	@Override
+	public Set<String> getDependencies()
+	{
+		return this.dependencies;
+	}
+	
+	@Override
+	public void registerMissingDependency(String dependency)
+	{
+		this.missingDependencies.add(dependency);
+	}
+	
+	@Override
+	public Set<String> getMissingDependencies()
+	{
+		return this.missingDependencies;
+	}
+
 	@Override
 	public List<String> getContainedClassNames()
 	{

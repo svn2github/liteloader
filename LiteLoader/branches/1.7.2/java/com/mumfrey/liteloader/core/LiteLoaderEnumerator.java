@@ -6,9 +6,11 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
@@ -50,9 +52,24 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 	private final Map<String, Class<? extends LiteMod>> modsToLoad = new HashMap<String, Class<? extends LiteMod>>();
 	
 	/**
+	 * Mod containers which are disabled 
+	 */
+	private final Map<String, LoadableMod<?>> disabledMods = new HashMap<String, LoadableMod<?>>();
+
+	/**
+	 * Mapping of identifiers to mod containers 
+	 */
+	private final Map<String, LoadableMod<?>> containers = new HashMap<String, LoadableMod<?>>();
+	
+	/**
 	 * Mapping of mods to mod containers 
 	 */
 	private final Map<String, LoadableMod<?>> modContainers = new HashMap<String, LoadableMod<?>>();
+	
+	/**
+	 * Tweaks to inject 
+	 */
+	private final List<TweakContainer<File>> tweakContainers = new ArrayList<TweakContainer<File>>();
 	
 	/**
 	 * Other tweak-containing jars which we have injected 
@@ -101,16 +118,18 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 		
 		if (this.searchProtectionDomain)
 		{
-			this.registerModule(new EnumeratorModuleProtectionDomain(loadTweaks));
+			LiteLoaderLogger.info("Protection domain searching is no longer required or supported, protection domain search has been disabled");
+			this.searchProtectionDomain = false;
+//			this.registerModule(new EnumeratorModuleProtectionDomain(loadTweaks));
 		}
 		
 		if (this.searchModsFolder)
 		{
 			File modsFolder = this.bootstrap.getModsFolder();
-			this.registerModule(new EnumeratorModuleFolder(modsFolder, loadTweaks, false));
+			this.registerModule(new EnumeratorModuleFolder(modsFolder, loadTweaks, true));
 			
 			File versionedModsFolder = this.bootstrap.getVersionedModsFolder();
-			this.registerModule(new EnumeratorModuleFolder(versionedModsFolder, loadTweaks, true));
+			this.registerModule(new EnumeratorModuleFolder(versionedModsFolder, loadTweaks, false));
 		}
 		
 		this.writeSettings();
@@ -122,7 +141,7 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 	private void readSettings()
 	{
 		this.searchModsFolder       = this.bootstrap.getAndStoreBooleanProperty(OPTION_SEARCH_MODS,      true);
-		this.searchProtectionDomain = this.bootstrap.getAndStoreBooleanProperty(OPTION_SEARCH_JAR,       true);
+		this.searchProtectionDomain = this.bootstrap.getAndStoreBooleanProperty(OPTION_SEARCH_JAR,       false);
 		this.searchClassPath        = this.bootstrap.getAndStoreBooleanProperty(OPTION_SEARCH_CLASSPATH, true);
 		
 		if (!this.searchModsFolder && !this.searchProtectionDomain && !this.searchClassPath)
@@ -130,7 +149,6 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 			LiteLoaderLogger.warning("Invalid configuration, no search locations defined. Enabling all search locations.");
 			
 			this.searchModsFolder       = true;
-			this.searchProtectionDomain = true;
 			this.searchClassPath        = true;
 		}
 	}
@@ -189,6 +207,14 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 	}
 	
 	/**
+	 * @return
+	 */
+	public Collection<LoadableMod<?>> getDisabledMods()
+	{
+		return this.disabledMods.values();
+	}
+	
+	/**
 	 * Get the list of injected tweak containers
 	 */
 	public List<Loadable<File>> getInjectedTweaks()
@@ -229,6 +255,15 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 	 * @param mod
 	 * @return
 	 */
+	public LoadableMod<?> getContainer(String identifier)
+	{
+		return this.containers.get(identifier);
+	}
+	
+	/**
+	 * @param mod
+	 * @return
+	 */
 	public LoadableMod<?> getModContainer(Class<? extends LiteMod> modClass)
 	{
 		return this.modContainers.containsKey(modClass.getSimpleName()) ? this.modContainers.get(modClass.getSimpleName()) : LoadableMod.NONE;
@@ -256,6 +291,11 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 		{
 			module.enumerate(this, this.enabledModsList, this.bootstrap.getProfile());
 		}
+		
+		for (TweakContainer<File> tweakContainer : this.tweakContainers)
+		{
+			this.addTweaksFrom(tweakContainer);
+		}
 	}
 	
 	/**
@@ -267,7 +307,7 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 		{
 			for (EnumeratorModule<?> module : this.modules)
 			{
-				module.injectIntoClassLoader(this, this.classLoader);
+				module.injectIntoClassLoader(this, this.classLoader, this.enabledModsList, this.bootstrap.getProfile());
 			}
 
 			for (EnumeratorModule<?> module : this.modules)
@@ -284,26 +324,56 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 		}
 	}
 
+	@Override
+	public boolean isContainerEnabled(LoadableMod<?> container)
+	{
+		if (container != null)
+		{
+			if (container.isEnabled(this.enabledModsList, this.bootstrap.getProfile()) && this.checkDependencies(container))
+			{
+				this.containers.put(container.getIdentifier(), container);
+			}
+			else
+			{
+				this.disabledMods.put(container.getIdentifier(), container);
+				return false;
+			}
+		}
+
+		return true;
+	}
+	
 	/* (non-Javadoc)
 	 * @see com.mumfrey.liteloader.core.PluggableEnumerator#addTweaksFrom(com.mumfrey.liteloader.core.TweakContainer)
 	 */
 	@Override
-	public void addTweaksFrom(TweakContainer<File> container)
+	public void registerTweakContainer(TweakContainer<File> container)
 	{
 		if (!container.isEnabled(this.enabledModsList, this.bootstrap.getProfile()))
 		{
 			LiteLoaderLogger.info("Mod %s is disabled for profile %s, not injecting tranformers", container.getIdentifier(), this.bootstrap.getProfile());
 			return;
 		}
-		
-		if (container.hasTweakClass())
+
+		this.tweakContainers.add(container);
+	}
+
+	/**
+	 * @param tweakContainer
+	 */
+	private void addTweaksFrom(TweakContainer<File> tweakContainer)
+	{
+		if (this.checkDependencies(tweakContainer))
 		{
-			this.addTweakFrom(container);
-		}
-		
-		if (container.hasClassTransformers())
-		{
-			this.addClassTransformersFrom(container, container.getClassTransformerClassNames());
+			if (tweakContainer.hasTweakClass())
+			{
+				this.addTweakFrom(tweakContainer);
+			}
+			
+			if (tweakContainer.hasClassTransformers())
+			{
+				this.addClassTransformersFrom(tweakContainer, tweakContainer.getClassTransformerClassNames());
+			}
 		}
 	}
 
@@ -371,7 +441,7 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 	 * @see com.mumfrey.liteloader.core.PluggableEnumerator#registerMods(com.mumfrey.liteloader.core.LoadableMod, boolean)
 	 */
 	@Override
-	public void registerMods(LoadableMod<?> container, boolean registerContainer)
+	public void registerModsFrom(LoadableMod<?> container, boolean registerContainer)
 	{
 		LinkedList<Class<? extends LiteMod>> modClasses = LiteLoaderEnumerator.<LiteMod>getSubclassesFor(container, this.classLoader, LiteMod.class, PluggableEnumerator.MOD_CLASS_PREFIX);
 		for (Class<? extends LiteMod> mod : modClasses)
@@ -411,15 +481,15 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 	 * @param superClass
 	 * @return
 	 */
-	static <T> LinkedList<Class<? extends T>> getSubclassesFor(LoadableMod<?> packagePath, ClassLoader classloader, Class<T> superClass, String prefix)
+	private static <T> LinkedList<Class<? extends T>> getSubclassesFor(LoadableMod<?> container, ClassLoader classloader, Class<T> superClass, String prefix)
 	{
 		LinkedList<Class<? extends T>> classes = new LinkedList<Class<? extends T>>();
 		
-		if (packagePath != null)
+		if (container != null)
 		{
 			try
 			{
-				for (String fullClassName : packagePath.getContainedClassNames())
+				for (String fullClassName : container.getContainedClassNames())
 				{
 					boolean isDefaultPackage = fullClassName.lastIndexOf('.') == -1;
 					String className = isDefaultPackage ? fullClassName : fullClassName.substring(fullClassName.lastIndexOf('.') + 1);
@@ -432,7 +502,7 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 			catch (OutdatedLoaderException ex)
 			{
 				classes.clear();
-				LiteLoaderLogger.info("Error searching in '%s', missing API component '%s', your loader is probably out of date", packagePath, ex.getMessage());
+				LiteLoaderLogger.info("Error searching in '%s', missing API component '%s', your loader is probably out of date", container, ex.getMessage());
 			}
 			catch (Throwable th)
 			{
@@ -479,5 +549,70 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 			
 			LiteLoaderLogger.warning(th, "checkAndAddClass error");
 		}
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public boolean checkDependencies(TweakContainer<File> tweakContainer)
+	{
+		if (tweakContainer instanceof LoadableMod)
+		{
+			return this.checkDependencies((LoadableMod<File>)tweakContainer);
+		}
+		
+		return true;
+	}
+
+	@Override
+	public boolean checkDependencies(LoadableMod<?> base)
+	{
+		if (base == null || !base.hasDependencies()) return true;
+		
+		HashSet<String> circularDependencySet = new HashSet<String>();
+		circularDependencySet.add(base.getIdentifier());
+		
+		boolean result = this.checkDependencies(base, base, circularDependencySet);
+		LiteLoaderLogger.info("Dependency check for %s %s", base.getIdentifier(), result ? "passed" : "failed");
+		
+		return result;
+	}
+
+	private boolean checkDependencies(LoadableMod<?> base, LoadableMod<?> container, Set<String> circularDependencySet)
+	{
+		if (container.getDependencies().size() == 0)
+			return true;
+		
+		boolean result = true;
+		
+		for (String dependency : container.getDependencies())
+		{
+			if (!circularDependencySet.contains(dependency))
+			{
+				circularDependencySet.add(dependency);
+				
+				LoadableMod<?> dependencyContainer = this.getContainer(dependency);
+				if (dependencyContainer != null)
+				{
+					if (this.enabledModsList.isEnabled(this.bootstrap.getProfile(), dependency))
+					{
+						result &= this.checkDependencies(base, dependencyContainer, circularDependencySet);
+					}
+					else
+					{
+//						LiteLoaderLogger.warning("Dependency %s required by %s is currently disabled", dependency, base.getIdentifier());
+						base.registerMissingDependency(dependency);
+						result = false;
+					}
+				}
+				else
+				{
+//					LiteLoaderLogger.info("Dependency %s for %s is was not located, no container ", dependency, base.getIdentifier());
+					base.registerMissingDependency(dependency);
+					result = false;
+				}
+			}
+		}
+		
+		return result;
 	}
 }

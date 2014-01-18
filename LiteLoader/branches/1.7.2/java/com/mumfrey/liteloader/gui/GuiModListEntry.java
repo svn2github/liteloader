@@ -1,6 +1,9 @@
 package com.mumfrey.liteloader.gui;
 
 import static org.lwjgl.opengl.GL11.*;
+
+import java.util.Set;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
@@ -67,6 +70,13 @@ public class GuiModListEntry extends Gui
 	 * Whether the mod is currently active
 	 */
 	private boolean enabled;
+	
+	private boolean isMissingDependencies;
+	
+	/**
+	 * True if the mod is missing a dependency which has caused it not to load
+	 */
+	private Set<String> missingDependencies;
 	
 	/**
 	 * Whether the mod can be toggled, not all mods support this, eg. internal mods
@@ -151,14 +161,26 @@ public class GuiModListEntry extends Gui
 		
 		if (modContainer instanceof LoadableMod<?>)
 		{
-			this.url             = ((LoadableMod<?>)modContainer).getMetaValue("url", null);
-			this.description     = ((LoadableMod<?>)modContainer).getMetaValue("description", "");
+			LoadableMod<?> loadableMod = (LoadableMod<?>)modContainer;
+			
+			this.url                   = loadableMod.getMetaValue("url", null);
+			this.description           = loadableMod.getMetaValue("description", "");
+			this.missingDependencies   = loadableMod.getMissingDependencies();
+			this.isMissingDependencies = this.missingDependencies.size() > 0;
+			
+			if (this.isMissingDependencies)
+			{
+				this.enabled = false;
+				this.description = I18n.format("gui.description.missingdeps") + "\n" + this.missingDependencies.toString();
+			}
 		}
 		
 		if (modContainer instanceof TweakContainer)
 		{
-			this.providesTweak = ((TweakContainer<?>)modContainer).hasTweakClass();
-			this.providesTransformer = ((TweakContainer<?>)modContainer).hasClassTransformers();
+			TweakContainer<?> tweakContainer = (TweakContainer<?>)modContainer;
+			
+			this.providesTweak       = tweakContainer.hasTweakClass();
+			this.providesTransformer = tweakContainer.hasClassTransformers();
 		}
 	}
 	
@@ -179,12 +201,17 @@ public class GuiModListEntry extends Gui
 		int colour1 = selected ? (this.external ? 0xB047d1aa : 0xB04785D1) : 0xB0000000;
 		drawGradientRect(xPosition, yPosition, xPosition + width, yPosition + PANEL_HEIGHT, colour1, 0xB0333333);
 		
-		this.fontRenderer.drawString(this.name, xPosition + 5, yPosition + 2, this.enabled ? (this.external ? 0xFF47d1aa : 0xFFFFFFFF) : 0xFF999999);
+		this.fontRenderer.drawString(this.name, xPosition + 5, yPosition + 2, this.isMissingDependencies ? 0xFFFFAA00 : (this.enabled ? (this.external ? 0xFF47d1aa : 0xFFFFFFFF) : 0xFF999999));
 		this.fontRenderer.drawString(I18n.format("gui.about.versiontext", this.version), xPosition + 5, yPosition + 12, 0xFF999999);
 		
 		String status = this.external ? I18n.format("gui.status.loaded") : I18n.format("gui.status.active");
 		
-		if (this.canBeToggled)
+		if (this.isMissingDependencies)
+		{
+			status = "\247e" + I18n.format("gui.status.missingdeps");
+			if (this.canBeToggled && !this.willBeEnabled) status = "\247c" + I18n.format("gui.status.pending.disabled");
+		}
+		else if (this.canBeToggled)
 		{
 			if (!this.enabled && !this.willBeEnabled) status = "\2477" + I18n.format("gui.status.disabled");
 			if (!this.enabled &&  this.willBeEnabled) status = "\247a" + I18n.format("gui.status.pending.enabled"); 
