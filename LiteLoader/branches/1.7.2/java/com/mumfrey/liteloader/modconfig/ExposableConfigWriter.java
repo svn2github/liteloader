@@ -79,6 +79,11 @@ public final class ExposableConfigWriter implements InstanceCreator<Exposable>
 		gsonBuilder.excludeFieldsWithoutExposeAnnotation();
 		gsonBuilder.registerTypeAdapter(exposable.getClass(), this);
 		
+		if (this.exposable instanceof AdvancedExposable)
+		{
+			((AdvancedExposable)this.exposable).setupGsonSerialiser(gsonBuilder);
+		}
+		
 		this.gson = gsonBuilder.create();
 	}
 	
