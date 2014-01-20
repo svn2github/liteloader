@@ -571,10 +571,13 @@ public class Events
 	/**
 	 * Called immediately before the current GUI is rendered
 	 */
-	public void preRenderGUI()
+	public void preRenderGUI(int ref)
 	{
-		for (RenderListener renderListener : this.renderListeners)
-			renderListener.onRenderGui(this.minecraft.currentScreen);
+		if (!this.minecraft.skipRenderWorld && ref == (this.minecraft.theWorld == null ? 1 : 2))
+		{
+			for (RenderListener renderListener : this.renderListeners)
+				renderListener.onRenderGui(this.minecraft.currentScreen);
+		}
 	}
 	
 	/**

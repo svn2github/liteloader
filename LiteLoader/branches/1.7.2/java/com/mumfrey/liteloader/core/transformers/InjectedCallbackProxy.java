@@ -158,7 +158,7 @@ public class InjectedCallbackProxy
 	{
 		if (ref == 1)
 		{
-			InjectedCallbackProxy.events.preRenderGUI();
+			InjectedCallbackProxy.events.preRenderGUI(ref);
 		}
 	}
 	
@@ -200,7 +200,7 @@ public class InjectedCallbackProxy
 		if (ref == 2)
 		{
 			InjectedCallbackProxy.events.postRenderHUD();
-			InjectedCallbackProxy.events.preRenderGUI();
+			InjectedCallbackProxy.events.preRenderGUI(ref);
 		}
 	}
 	

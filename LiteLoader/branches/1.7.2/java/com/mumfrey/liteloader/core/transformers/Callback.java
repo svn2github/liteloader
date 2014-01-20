@@ -1,5 +1,8 @@
 package com.mumfrey.liteloader.core.transformers;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.mumfrey.liteloader.core.runtime.Obf;
 
 /**
@@ -33,6 +36,8 @@ public class Callback
 	public final boolean returnFrom;
 	public int refNumber;
 	
+	private List<Callback> chainedCallbacks = new ArrayList<Callback>();
+	
 	Callback(String callbackMethod)
 	{
 		this(callbackMethod, Obf.InjectedCallbackProxy.ref, false);
@@ -50,20 +55,45 @@ public class Callback
 		this.returnFrom = returnFrom;
 	}
 	
-	private Callback(String callbackMethod, String callbackClass, int refNumber)
+	private Callback(String callbackMethod, String callbackClass, int refNumber, List<Callback> chainedCallbacks)
 	{
 		this(callbackMethod, callbackClass, false);
 		this.refNumber = refNumber;
+		this.chainedCallbacks = chainedCallbacks;
 	}
 	
 	public Callback getNextCallback()
 	{
-		return new Callback(this.callbackMethod, this.callbackClass, this.refNumber++);
+		return new Callback(this.callbackMethod, this.callbackClass, this.refNumber++, this.chainedCallbacks);
 	}
+	
+	void addChainedCallback(Callback chained)
+	{
+		this.chainedCallbacks.add(chained);
+	}
+	
+	public List<Callback> getChainedCallbacks()
+	{
+		return this.chainedCallbacks;
+	}	
 	
 	@Override
 	public String toString()
 	{
 		return this.callbackMethod;
+	}
+	
+	@Override
+	public boolean equals(Object other)
+	{
+		if (other == null || !(other instanceof Callback)) return false;
+		Callback callback = (Callback)other;
+		return callback.callbackClass.equals(this.callbackClass) && callback.callbackMethod.equals(this.callbackMethod) && callback.returnFrom == this.returnFrom;
+	}
+
+	@Override
+	public int hashCode()
+	{
+		return super.hashCode();
 	}
 }

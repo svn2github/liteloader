@@ -69,7 +69,7 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 		
 		String invokeDesc = section == null || section.length() == 0 ? "()V" : "(Ljava/lang/String;)V";
 		String signature = CallbackInjectionTransformer.generateSignature(className, methodName, methodSignature, invokeMethod, invokeDesc, section);
-		this.profilerCallbackMappings.get(className).put(signature, callback);
+		this.addCallbackMapping(this.profilerCallbackMappings.get(className), signature, callback);
 	}
 	
 	/**
@@ -88,7 +88,34 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 		}
 		
 		String signature = CallbackInjectionTransformer.generateSignature(className, methodName, methodSignature, callbackType);
-		this.callbackMappings.get(className).put(signature, callback);
+		this.addCallbackMapping(this.callbackMappings.get(className), signature, callback);
+	}
+
+	/**
+	 * @param callbacks
+	 * @param signature
+	 * @param callback
+	 */
+	private void addCallbackMapping(Map<String, Callback> callbacks, String signature, Callback callback)
+	{
+		if (callbacks.containsKey(signature))
+		{
+			Callback existingCallback = callbacks.get(signature);
+			if (existingCallback.equals(callback)) return;
+			
+			if (callback.returnFrom || existingCallback.returnFrom)
+			{
+				String errorMessage = String.format("Callback for %s is already defined for %s, cannot add %s", signature, existingCallback, callback);
+				LiteLoaderLogger.severe(errorMessage);
+				throw new InjectedCallbackCollisionError(errorMessage);
+			}
+			
+			existingCallback.addChainedCallback(callback);
+		}
+		else
+		{
+			callbacks.put(signature, callback);
+		}
 	}
 
 	/* (non-Javadoc)
@@ -170,7 +197,7 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 					if (mappings.containsKey(returnSignature))
 					{
 						Callback callback = mappings.get(returnSignature);
-						InsnList callbackInsns = this.genCallbackInsns(classType, method, callback, returnNumber);
+						InsnList callbackInsns = this.genCallbackInsns(classType, method, callback, returnNumber++);
 						if (callbackInsns != null)
 						{
 							LiteLoaderLogger.info("Injecting method return callback for %s in class %s", callback, className);
@@ -189,13 +216,33 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 			for (Entry<MethodInsnNode, Callback> profilerCallbackNode : profilerCallbackInjectionNodes.entrySet())
 			{
 				Callback callback = profilerCallbackNode.getValue();
+				
 				LiteLoaderLogger.info("Injecting profiler invokation callback for %s in class %s", callback, className);
-				method.instructions.insert(profilerCallbackNode.getKey(), new MethodInsnNode(Opcodes.INVOKESTATIC, callback.callbackClass, callback.callbackMethod, "(I)V"));
-				method.instructions.insert(profilerCallbackNode.getKey(), new LdcInsnNode(callback.refNumber++));
+				InsnList injected = this.genProfilerCallbackInsns(new InsnList(), callback, callback.refNumber++);
+				method.instructions.insert(profilerCallbackNode.getKey(), injected);
 			}
 		}
 		
 		return this.writeClass(classNode);
+	}
+
+	/**
+	 * @param injected
+	 * @param callback
+	 * @param refNumber
+	 */
+	private InsnList genProfilerCallbackInsns(InsnList injected, Callback callback, int refNumber)
+	{
+		injected.add(new LdcInsnNode(refNumber));
+		injected.add(new MethodInsnNode(Opcodes.INVOKESTATIC, callback.callbackClass, callback.callbackMethod, "(I)V"));
+		
+		if (callback.getChainedCallbacks().size() > 0)
+		{
+			for (Callback chainedCallback : callback.getChainedCallbacks())
+				this.genProfilerCallbackInsns(injected, chainedCallback, refNumber);
+		}
+		
+		return injected;
 	}
 
 	/**
@@ -222,6 +269,19 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 	 */
 	private InsnList genCallbackInsns(String classType, MethodNode methodNode, Callback callback, int returnNumber)
 	{
+		return genCallbackInsns(new InsnList(), classType, methodNode, callback, returnNumber);
+	}
+
+	/**
+	 * @param injected
+	 * @param classType
+	 * @param methodNode
+	 * @param callback
+	 * @param returnNumber
+	 * @return
+	 */
+	private InsnList genCallbackInsns(InsnList injected, String classType, MethodNode methodNode, Callback callback, int returnNumber)
+	{
 		// First work out some flags which alter the behaviour of this injection
 		boolean methodReturnsVoid = Type.getReturnType(methodNode.desc).equals(Type.VOID_TYPE);
 		boolean methodIsStatic = (methodNode.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC;
@@ -236,11 +296,8 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 		String callbackReturnValueArg = methodReturnsVoid || !callbackReturnsValue ? "" : callbackReturnType.toString();
 		String classInstanceArg = methodIsStatic ? "" : classType;
 		
-		// Instruction list containing our injected insns
-		InsnList injected = new InsnList();
-		
 		// If this is a pre-return injection, push the invokation reference onto the call stack
-		if (callbackReturnsValue) injected.insert(new IntInsnNode(Opcodes.BIPUSH, returnNumber++));
+		if (callbackReturnsValue) injected.insert(new IntInsnNode(Opcodes.BIPUSH, returnNumber));
 		
 		// If the method is non-static, then we pass in the class instance as an argument
 		if (!methodIsStatic) injected.add(new VarInsnNode(Opcodes.ALOAD, 0));
@@ -259,7 +316,17 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 		injected.add(new MethodInsnNode(Opcodes.INVOKESTATIC, callback.callbackClass, callback.callbackMethod, callbackMethodDesc));
 		
 		// If the callback RETURNs a value then push the appropriate RETURN opcode into the insns list
-		if (callback.returnFrom) injected.add(new InsnNode(callbackReturnType.getOpcode(Opcodes.IRETURN)));
+		if (callback.returnFrom)
+		{
+			injected.add(new InsnNode(callbackReturnType.getOpcode(Opcodes.IRETURN)));
+		}
+		else if (callback.getChainedCallbacks().size() > 0)
+		{
+			for (Callback chainedCallback : callback.getChainedCallbacks())
+			{
+				this.genCallbackInsns(injected, classType, methodNode, chainedCallback, returnNumber);
+			}
+		}
 		
 		// return the generated code
 		return injected;
