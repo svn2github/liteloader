@@ -110,11 +110,7 @@ public class GuiScreenModInfo extends GuiScreen
 	/**
 	 * Text to display under the header
 	 */
-	private String activeModText, versionText, checkUpdatesText;
-	
-	private int versionTextWidth, checkUpdatesTextWidth;
-	
-	private boolean mouseOverUpdateText;
+	private String activeModText, versionText;
 	
 	/**
 	 * Height of all the items in the list
@@ -163,10 +159,6 @@ public class GuiScreenModInfo extends GuiScreen
 		this.hideTab = hideTab;
 		
 		this.versionText = I18n.format("gui.about.versiontext", LiteLoader.getVersion());
-		this.checkUpdatesText = I18n.format("gui.about.checkupdates");
-		
-		this.versionTextWidth = this.fontRendererObj.getStringWidth(this.versionText);
-		this.checkUpdatesTextWidth = this.fontRendererObj.getStringWidth(this.checkUpdatesText);
 
 		this.populateModList(loader, enabledModsList);
 	}
@@ -258,6 +250,8 @@ public class GuiScreenModInfo extends GuiScreen
 		{
 			this.buttonList.add(this.chkEnabled = new GuiCheckbox(2, LEFT_EDGE + MARGIN, this.height - PANEL_BOTTOM + 9, I18n.format("gui.about.showtabmessage")));
 		}
+		
+		this.buttonList.add(new GuiHoverLabel(3, LEFT_EDGE + MARGIN + 38 + this.fontRendererObj.getStringWidth(this.versionText) + 6, 50, this.fontRendererObj, I18n.format("gui.about.checkupdates")));
 		
 		this.selectMod(this.selectedMod);
 
@@ -387,18 +381,28 @@ public class GuiScreenModInfo extends GuiScreen
 			this.mc.getTextureManager().bindTexture(aboutTextureResource);
 		}
 
-		this.mouseOverUpdateText = false;
-		
 		// Only draw the panel contents if we are actually open
 		if (this.isTweeningOrOpen())
 		{
+			if (this.currentPanel != null && this.currentPanel.isCloseRequested())
+			{
+				this.closeCurrentPanel();
+			}
+
 			if (this.currentPanel != null)
 			{
 				this.drawCurrentPanel(mouseX, mouseY, partialTicks);
 			}
 			else
 			{
-				this.drawInfoPanel(mouseX, mouseY, partialTicks);
+				this.drawInfoPanel(mouseX, mouseY, partialTicks, LEFT_EDGE, PANEL_BOTTOM);
+				
+				int innerWidth = this.width - LEFT_EDGE - MARGIN - MARGIN - 4;
+				int panelWidth = innerWidth / 2;
+				int panelHeight = this.height - PANEL_BOTTOM - PANEL_TOP;
+				
+				this.drawModsList(mouseX, mouseY, partialTicks, panelWidth, panelHeight);
+				this.drawSelectedMod(mouseX, mouseY, partialTicks, panelWidth, panelHeight);
 				
 				// Draw other controls inside the transform so that they slide properly
 				super.drawScreen(mouseX, mouseY, partialTicks);
@@ -417,14 +421,8 @@ public class GuiScreenModInfo extends GuiScreen
 	 * @param mouseY
 	 * @param partialTicks
 	 */
-	public void drawCurrentPanel(int mouseX, int mouseY, float partialTicks)
+	private void drawCurrentPanel(int mouseX, int mouseY, float partialTicks)
 	{
-		if (this.currentPanel.isCloseRequested())
-		{
-			this.closeCurrentPanel();
-			return;
-		}
-		
 		glPushMatrix();
 		glTranslatef(LEFT_EDGE, 0, 0);
 		
@@ -438,30 +436,21 @@ public class GuiScreenModInfo extends GuiScreen
 	 * @param mouseY
 	 * @param partialTicks
 	 */
-	public void drawInfoPanel(int mouseX, int mouseY, float partialTicks)
+	protected void drawInfoPanel(int mouseX, int mouseY, float partialTicks, int left, int bottom)
 	{
-		int updateTextPos = LEFT_EDGE + MARGIN + 38 + this.versionTextWidth + 6;
-		this.mouseOverUpdateText = mouseX > updateTextPos && mouseX < updateTextPos + this.checkUpdatesTextWidth && mouseY > 50 && mouseY < 60;
+		int right = this.width - MARGIN - LEFT_EDGE + left;
 		
 		// Draw the header pieces
-		glDrawTexturedRect(LEFT_EDGE + MARGIN, 12, 128, 40, 0, 0, 256, 80, 1.0F); // liteloader logo
-		glDrawTexturedRect(this.width - 32 - MARGIN, 12, 32, 45, 0, 80, 64, 170, 1.0F); // chicken
+		glDrawTexturedRect(left + MARGIN, 12, 128, 40, 0, 0, 256, 80, 1.0F); // liteloader logo
+		glDrawTexturedRect(right - 32, 12, 32, 45, 0, 80, 64, 170, 1.0F); // chicken
 		
 		// Draw header text
-		this.fontRendererObj.drawString(this.versionText, LEFT_EDGE + MARGIN + 38, 50, 0xFFFFFFFF);
-		this.fontRendererObj.drawString(this.checkUpdatesText, updateTextPos, 50, this.mouseOverUpdateText ? 0xFFFFFFAA : 0xFF4785D1);
-		this.fontRendererObj.drawString(this.activeModText, LEFT_EDGE + MARGIN + 38, 60, 0xFFAAAAAA);
+		this.fontRendererObj.drawString(this.versionText, left + MARGIN + 38, 50, 0xFFFFFFFF);
+		this.fontRendererObj.drawString(this.activeModText, left + MARGIN + 38, 60, 0xFFAAAAAA);
 		
 		// Draw top and bottom horizontal rules
-		drawRect(LEFT_EDGE + MARGIN, 80, this.width - MARGIN, 81, 0xFF999999);
-		drawRect(LEFT_EDGE + MARGIN, this.height - PANEL_BOTTOM + 2, this.width - MARGIN, this.height - PANEL_BOTTOM + 3, 0xFF999999);
-		
-		int innerWidth = this.width - LEFT_EDGE - MARGIN - MARGIN - 4;
-		int panelWidth = innerWidth / 2;
-		int panelHeight = this.height - PANEL_BOTTOM - PANEL_TOP;
-		
-		this.drawModsList(mouseX, mouseY, partialTicks, panelWidth, panelHeight);
-		this.drawSelectedMod(mouseX, mouseY, partialTicks, panelWidth, panelHeight);
+		drawRect(left + MARGIN, 80, right, 81, 0xFF999999);
+		drawRect(left + MARGIN, this.height - bottom + 2, right, this.height - bottom + 3, 0xFF999999);
 	}
 
 	/**
@@ -471,7 +460,7 @@ public class GuiScreenModInfo extends GuiScreen
 	 * @param width
 	 * @param height
 	 */
-	public void drawModsList(int mouseX, int mouseY, float partialTicks, int width, int height)
+	private void drawModsList(int mouseX, int mouseY, float partialTicks, int width, int height)
 	{
 		this.scrollBar.drawScrollBar(mouseX, mouseY, partialTicks, LEFT_EDGE + MARGIN + width - SCROLLBAR_WIDTH, PANEL_TOP, SCROLLBAR_WIDTH, height, this.listHeight);
 
@@ -511,7 +500,7 @@ public class GuiScreenModInfo extends GuiScreen
 	 * @param width
 	 * @param height
 	 */
-	public void drawSelectedMod(int mouseX, int mouseY, float partialTicks, int width, int height)
+	private void drawSelectedMod(int mouseX, int mouseY, float partialTicks, int width, int height)
 	{
 		if (this.selectedMod != null)
 		{
@@ -529,7 +518,7 @@ public class GuiScreenModInfo extends GuiScreen
 	 * @param mod
 	 * @return
 	 */
-	public void selectMod(GuiModListEntry mod)
+	private void selectMod(GuiModListEntry mod)
 	{
 		if (this.selectedMod != null)
 		{
@@ -552,7 +541,7 @@ public class GuiScreenModInfo extends GuiScreen
 	/**
 	 * Toggle the selected mod's enabled status
 	 */
-	public void toggleSelectedMod()
+	private void toggleSelectedMod()
 	{
 		if (this.selectedMod != null)
 		{
@@ -586,6 +575,11 @@ public class GuiScreenModInfo extends GuiScreen
 			{
 				this.chkEnabled.displayString = I18n.format("gui.about.showtabmessage") + I18n.format("gui.about.keystrokehint");
 			}
+		}
+		
+		if (button.id == 3)
+		{
+			this.setCurrentPanel(new GuiCheckUpdatePanel(this.mc, LiteLoaderVersion.getUpdateSite(), "LiteLoader"));
 		}
 	}
 	
@@ -625,6 +619,10 @@ public class GuiScreenModInfo extends GuiScreen
 		else if (keyCode == Keyboard.KEY_F3)
 		{
 			this.setCurrentPanel(new GuiLiteLoaderLog(this.mc));
+		}
+		else if (keyCode == Keyboard.KEY_F1)
+		{
+			this.setCurrentPanel(new GuiAboutPanel(this.mc, this));
 		}
 	}
 	
@@ -673,11 +671,6 @@ public class GuiScreenModInfo extends GuiScreen
 			if (this.scrollBar.wasMouseOver())
 			{
 				this.scrollBar.setDragging(true);
-			}
-			
-			if (this.mouseOverUpdateText)
-			{
-				this.setCurrentPanel(new GuiCheckUpdatePanel(this.mc, LiteLoaderVersion.getUpdateSite(), "LiteLoader"));
 			}
 			
 			if (mouseY > PANEL_TOP && mouseY < this.height - PANEL_BOTTOM)
@@ -898,7 +891,7 @@ public class GuiScreenModInfo extends GuiScreen
 	 * @param v2
 	 * @param alpha
 	 */
-	private static void glDrawTexturedRect(int x, int y, int width, int height, int u, int v, int u2, int v2, float alpha)
+	static void glDrawTexturedRect(int x, int y, int width, int height, int u, int v, int u2, int v2, float alpha)
 	{
 		glDisable(GL_LIGHTING);
 		glEnable(GL_BLEND);
