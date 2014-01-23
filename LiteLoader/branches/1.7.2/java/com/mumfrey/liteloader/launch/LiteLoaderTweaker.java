@@ -454,7 +454,7 @@ public class LiteLoaderTweaker implements ITweaker
 	{
 		if (this.sortedCascadingTweaks.size() > 0)
 		{
-			if (StartupState.getCurrent() != StartupState.PREINIT || StartupState.PREINIT.isInState())
+			if (StartupState.getCurrent() != StartupState.PREINIT || !StartupState.PREINIT.isInState())
 			{
 				LiteLoaderLogger.warning("Failed to inject cascaded tweak classes because preInit is already complete");
 				return;
