@@ -1,6 +1,7 @@
 package com.mumfrey.liteloader.core.transformers;
 
 import com.mumfrey.liteloader.core.runtime.Obf;
+import com.mumfrey.liteloader.transformers.PacketTransformer;
 
 /**
  * Transformer for S01PacketJoinGame

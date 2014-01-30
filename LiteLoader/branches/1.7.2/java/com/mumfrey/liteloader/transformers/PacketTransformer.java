@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core.transformers;
+package com.mumfrey.liteloader.transformers;
 
 import java.util.HashSet;
 import java.util.List;

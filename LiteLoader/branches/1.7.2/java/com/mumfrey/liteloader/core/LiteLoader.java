@@ -24,6 +24,7 @@ import org.apache.logging.log4j.Logger;
 import org.lwjgl.input.Keyboard;
 
 import com.mumfrey.liteloader.LiteMod;
+import com.mumfrey.liteloader.core.overlays.IMinecraft;
 import com.mumfrey.liteloader.crashreport.CallableLaunchWrapper;
 import com.mumfrey.liteloader.crashreport.CallableLiteLoaderBrand;
 import com.mumfrey.liteloader.crashreport.CallableLiteLoaderMods;
@@ -32,7 +33,6 @@ import com.mumfrey.liteloader.modconfig.ConfigManager;
 import com.mumfrey.liteloader.modconfig.Exposable;
 import com.mumfrey.liteloader.permissions.PermissionsManagerClient;
 import com.mumfrey.liteloader.resources.InternalResourcePack;
-import com.mumfrey.liteloader.util.PrivateFields;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
@@ -324,7 +324,7 @@ public final class LiteLoader
 		{
 			this.pendingResourceReload = true;
 
-			List<IResourcePack> defaultResourcePacks = PrivateFields.defaultResourcePacks.get(this.minecraft);
+			List<IResourcePack> defaultResourcePacks = ((IMinecraft)this.minecraft).getDefaultResourcePacks();
 			if (!defaultResourcePacks.contains(resourcePack))
 			{
 				defaultResourcePacks.add(resourcePack);
@@ -345,7 +345,7 @@ public final class LiteLoader
 		{
 			this.pendingResourceReload = true;
 
-			List<IResourcePack> defaultResourcePacks = PrivateFields.defaultResourcePacks.get(this.minecraft);
+			List<IResourcePack> defaultResourcePacks = ((IMinecraft)this.minecraft).getDefaultResourcePacks();
 			this.registeredResourcePacks.remove(resourcePack.getPackName());
 			defaultResourcePacks.remove(resourcePack);
 			return true;
@@ -1103,7 +1103,7 @@ public final class LiteLoader
 			this.modInfoScreen.updateScreen();
 		}
 		
-		if (!PrivateFields.gameIsRunning.get(this.minecraft))
+		if (!((IMinecraft)this.minecraft).isRunning())
 		{
 			this.onShutDown();
 		}

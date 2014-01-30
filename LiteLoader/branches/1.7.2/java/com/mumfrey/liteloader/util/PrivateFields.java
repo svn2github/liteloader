@@ -11,13 +11,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.network.NetHandlerLoginClient;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.resources.IResourceManagerReloadListener;
-import net.minecraft.client.resources.IResourcePack;
 import net.minecraft.client.resources.SimpleReloadableResourceManager;
 import net.minecraft.network.NetworkManager;
-import net.minecraft.profiler.IPlayerUsage;
-import net.minecraft.profiler.PlayerUsageSnooper;
 import net.minecraft.profiler.Profiler;
-import net.minecraft.util.Timer;
 
 /**
  * Wrapper for obf/mcp reflection-accessed private fields, mainly added to centralise the locations I have to update the obfuscated field names
@@ -137,12 +133,8 @@ public class PrivateFields<P, T>
 		return value;
 	}
 
-	public static final PrivateFields<Minecraft, Timer>                       minecraftTimer = new PrivateFields<Minecraft, Timer>                     (Minecraft.class,             Obf.minecraftTimer);
 	public static final PrivateFields<Minecraft, Profiler>                 minecraftProfiler = new PrivateFields<Minecraft, Profiler>                  (Minecraft.class,             Obf.minecraftProfiler);
-	public static final PrivateFields<Minecraft, List<IResourcePack>>   defaultResourcePacks = new PrivateFields<Minecraft, List<IResourcePack>>       (Minecraft.class,             Obf.defaultResourcePacks);
-	public static final PrivateFields<Minecraft, Boolean>                      gameIsRunning = new PrivateFields<Minecraft, Boolean>                   (Minecraft.class,             Obf.gameIsRunning);
 	public static final PrivateFields<RenderManager, Map>                    entityRenderMap = new PrivateFields<RenderManager, Map>                   (RenderManager.class,         Obf.entityRenderMap);
-	public static final PrivateFields<PlayerUsageSnooper, IPlayerUsage> playerStatsCollector = new PrivateFields<PlayerUsageSnooper, IPlayerUsage>     (PlayerUsageSnooper.class,    Obf.playerStatsCollector);
 	public static final PrivateFields<NetHandlerLoginClient, NetworkManager>      netManager = new PrivateFields<NetHandlerLoginClient, NetworkManager>(NetHandlerLoginClient.class, Obf.netManager);
 	
 	public static final PrivateFields<SimpleReloadableResourceManager, List<IResourceManagerReloadListener>> reloadListeners =

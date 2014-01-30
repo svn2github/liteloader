@@ -29,6 +29,7 @@ import org.lwjgl.input.Mouse;
 import com.mojang.authlib.GameProfile;
 import com.mumfrey.liteloader.*;
 import com.mumfrey.liteloader.core.gen.GenProfiler;
+import com.mumfrey.liteloader.core.overlays.IMinecraft;
 import com.mumfrey.liteloader.util.PrivateFields;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
@@ -658,7 +659,7 @@ public class Events
 		// partialTicks
 		if (clock || this.minecraftTimer == null)
 		{
-			this.minecraftTimer = PrivateFields.minecraftTimer.get(this.minecraft);
+			this.minecraftTimer = ((IMinecraft)this.minecraft).getTimer();
 		}
 		
 		// Hooray, we got the timer reference

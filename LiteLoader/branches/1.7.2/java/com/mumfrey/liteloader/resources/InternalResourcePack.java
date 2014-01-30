@@ -82,7 +82,7 @@ public class InternalResourcePack implements IResourcePack
     @Override
 	public Set<String> getResourceDomains()
     {
-        return resourceDomains;
+        return this.resourceDomains;
     }
 
     /* (non-Javadoc)

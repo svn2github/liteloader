@@ -204,7 +204,10 @@ public class LiteLoaderTweaker implements ITweaker
 		"com.mumfrey.liteloader.core.transformers.CrashReportTransformer"
 	};
 	
-	private static final String injectionTransformerClassName = "com.mumfrey.liteloader.core.transformers.LiteLoaderCallbackInjectionTransformer";
+	private static final String[] requiredDownstreamTransformers = {
+		"com.mumfrey.liteloader.core.transformers.LiteLoaderCallbackInjectionTransformer",
+		"com.mumfrey.liteloader.core.transformers.MinecraftOverlayTransformer"
+	};
 	
 	private static final String genTransformerClassName = "com.mumfrey.liteloader.core.gen.GenProfilerTransformer";
 
@@ -399,8 +402,11 @@ public class LiteLoaderTweaker implements ITweaker
 			LiteLoaderTweaker.instance.transformerManager.injectTransformer(LiteLoaderTweaker.genTransformerClassName);
 		}
 		
-		LiteLoaderLogger.info("Injecting required class transformer '%s'", LiteLoaderTweaker.injectionTransformerClassName);
-		LiteLoaderTweaker.instance.transformerManager.injectTransformer(LiteLoaderTweaker.injectionTransformerClassName);
+		for (String transformerClassName : LiteLoaderTweaker.requiredDownstreamTransformers)
+		{
+			LiteLoaderLogger.info("Queuing required class transformer '%s'", transformerClassName);
+			LiteLoaderTweaker.instance.transformerManager.injectTransformer(transformerClassName);
+		}
 	}
 	
 	@Override

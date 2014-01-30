@@ -1,6 +1,6 @@
 package com.mumfrey.liteloader.update;
 
-import java.text.SimpleDateFormat;
+import java.text.DateFormat;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Map;
@@ -365,7 +365,7 @@ public class UpdateSite implements Comparator<Long>
 			}
 			
 			this.availableVersion = artefact.get("version");
-			this.availableVersionDate = SimpleDateFormat.getDateTimeInstance().format(new Date(remoteTimeStamp * 1000L));
+			this.availableVersionDate = DateFormat.getDateTimeInstance().format(new Date(remoteTimeStamp * 1000L));
 			this.availableVersionURL = this.createArtefactURL(artefact.get("file"));
 			this.updateAvailable = this.compareTimeStamps(bestTimeStamp, remoteTimeStamp);
 			

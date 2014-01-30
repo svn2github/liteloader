@@ -38,12 +38,8 @@ public enum Obf
 
 	// Fields
 	// -----------------------------------------------------------------------------------------
-	              minecraftTimer("timer",                                   "field_71428_T",   "Q"   ), // Minecraft/timer
 	           minecraftProfiler("mcProfiler",                              "field_71424_I",   "A"   ), // Minecraft/mcProfiler
-	        defaultResourcePacks("defaultResourcePacks",                    "field_110449_ao", "ap"  ), // Minecraft/defaultResourcePacks
-	               gameIsRunning("running",                                 "field_71425_J",   "B"   ), // Minecraft/running
 	             entityRenderMap("entityRenderMap",                         "field_78729_o",   "q"   ), // RenderManager/entityRenderMap
-	        playerStatsCollector("playerStatsCollector",                    "field_76478_d",   "d"   ), // PlayerUsageSnooper/playerStatsCollector
 	             reloadListeners("reloadListeners",                         "field_110546_b",  "d"   ), // SimpleReloadableResourceManager/reloadListeners
 	                  netManager("field_147393_d",                                             "d"   ), // NetHandlerLoginClient/field_147393_d
 

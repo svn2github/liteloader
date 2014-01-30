@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core.transformers;
+package com.mumfrey.liteloader.transformers;
 
 import net.minecraft.network.Packet;
 

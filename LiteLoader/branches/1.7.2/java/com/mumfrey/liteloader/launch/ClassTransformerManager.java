@@ -13,7 +13,7 @@ import java.util.Map.Entry;
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
-import com.mumfrey.liteloader.core.transformers.PacketTransformer;
+import com.mumfrey.liteloader.transformers.PacketTransformer;
 import com.mumfrey.liteloader.util.SortableValue;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 

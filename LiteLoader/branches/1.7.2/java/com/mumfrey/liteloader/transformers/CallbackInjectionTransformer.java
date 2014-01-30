@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core.transformers;
+package com.mumfrey.liteloader.transformers;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -20,7 +20,7 @@ import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
 import com.mumfrey.liteloader.core.runtime.Obf;
-import com.mumfrey.liteloader.core.transformers.Callback.CallBackType;
+import com.mumfrey.liteloader.transformers.Callback.CallbackType;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 import net.minecraft.launchwrapper.IClassTransformer;
@@ -44,53 +44,44 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 	
 	public CallbackInjectionTransformer()
 	{
-		this.addMappings();
+		this.addCallbacks();
 	}
 
 	/**
 	 * Subclasses must override this method and add their mappings
 	 */
-	protected abstract void addMappings();
+	protected abstract void addCallbacks();
 	
 	/**
 	 * @param className
 	 * @param methodName
 	 * @param methodSignature
-	 * @param invokeMethod
-	 * @param section
 	 * @param callback
 	 */
-	protected final void addProfilerCallbackMapping(String className, String methodName, String methodSignature, String invokeMethod, String section, Callback callback)
+	protected final void addCallback(String className, String methodName, String methodSignature, Callback callback)
 	{
-		if (!this.profilerCallbackMappings.containsKey(className))
+		if (callback.isProfilerCallback())
 		{
-			this.profilerCallbackMappings.put(className, new HashMap<String, Callback>());
+			if (!this.profilerCallbackMappings.containsKey(className))
+			{
+				this.profilerCallbackMappings.put(className, new HashMap<String, Callback>());
+			}
+			
+			String signature = CallbackInjectionTransformer.generateSignature(className, methodName, methodSignature, callback.getProfilerMethod(), callback.getProfilerMethodSignature(), callback.getSectionName());
+			this.addCallbackMapping(this.profilerCallbackMappings.get(className), signature, callback);
 		}
-		
-		String invokeDesc = section == null || section.length() == 0 ? "()V" : "(Ljava/lang/String;)V";
-		String signature = CallbackInjectionTransformer.generateSignature(className, methodName, methodSignature, invokeMethod, invokeDesc, section);
-		this.addCallbackMapping(this.profilerCallbackMappings.get(className), signature, callback);
+		else
+		{
+			if (!this.callbackMappings.containsKey(className))
+			{
+				this.callbackMappings.put(className, new HashMap<String, Callback>());
+			}
+			
+			String signature = CallbackInjectionTransformer.generateSignature(className, methodName, methodSignature, callback.getType());
+			this.addCallbackMapping(this.callbackMappings.get(className), signature, callback);
+		}
 	}
 	
-	/**
-	 * @param className
-	 * @param methodName
-	 * @param methodSignature
-	 * @param invokeMethod
-	 * @param section
-	 * @param callback
-	 */
-	protected final void addCallbackMapping(String className, String methodName, String methodSignature, Callback.CallBackType callbackType, Callback callback)
-	{
-		if (!this.callbackMappings.containsKey(className))
-		{
-			this.callbackMappings.put(className, new HashMap<String, Callback>());
-		}
-		
-		String signature = CallbackInjectionTransformer.generateSignature(className, methodName, methodSignature, callbackType);
-		this.addCallbackMapping(this.callbackMappings.get(className), signature, callback);
-	}
-
 	/**
 	 * @param callbacks
 	 * @param signature
@@ -103,7 +94,7 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 			Callback existingCallback = callbacks.get(signature);
 			if (existingCallback.equals(callback)) return;
 			
-			if (callback.returnFrom || existingCallback.returnFrom)
+			if (callback.injectReturn() || existingCallback.injectReturn())
 			{
 				String errorMessage = String.format("Callback for %s is already defined for %s, cannot add %s", signature, existingCallback, callback);
 				LiteLoaderLogger.severe(errorMessage);
@@ -151,16 +142,16 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 			
 			if (mappings != null)
 			{
-				String headSignature = CallbackInjectionTransformer.generateSignature(classNode.name, method.name, method.desc, CallBackType.REDIRECT);
+				String headSignature = CallbackInjectionTransformer.generateSignature(classNode.name, method.name, method.desc, CallbackType.REDIRECT);
 				if (mappings.containsKey(headSignature))
 				{
 					Callback callback = mappings.get(headSignature);
 					InsnList callbackInsns = this.genCallbackInsns(classType, method, callback);
 					if (callbackInsns != null)
 					{
-						LiteLoaderLogger.info("Injecting %s callback for %s in class %s", callback.returnFrom ? "redirect" : "event", callback, className);
+						LiteLoaderLogger.info("Injecting %s callback for %s in class %s", callback.getType().name().toLowerCase(), callback, className);
 						method.instructions.insert(callbackInsns);
-						if (callback.returnFrom) continue;
+						if (callback.injectReturn()) continue;
 					}
 				}
 			}
@@ -193,7 +184,7 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 				}
 				else if (mappings != null && insn.getOpcode() == methodReturnOpcode)
 				{
-					String returnSignature = CallbackInjectionTransformer.generateSignature(classNode.name, method.name, method.desc, CallBackType.RETURN);
+					String returnSignature = CallbackInjectionTransformer.generateSignature(classNode.name, method.name, method.desc, CallbackType.RETURN);
 					if (mappings.containsKey(returnSignature))
 					{
 						Callback callback = mappings.get(returnSignature);
@@ -234,7 +225,7 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 	private InsnList genProfilerCallbackInsns(InsnList injected, Callback callback, int refNumber)
 	{
 		injected.add(new LdcInsnNode(refNumber));
-		injected.add(new MethodInsnNode(Opcodes.INVOKESTATIC, callback.callbackClass, callback.callbackMethod, "(I)V"));
+		injected.add(new MethodInsnNode(Opcodes.INVOKESTATIC, callback.getCallbackClass(), callback.getCallbackMethod(), "(I)V"));
 		
 		if (callback.getChainedCallbacks().size() > 0)
 		{
@@ -285,19 +276,15 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 		// First work out some flags which alter the behaviour of this injection
 		boolean methodReturnsVoid = Type.getReturnType(methodNode.desc).equals(Type.VOID_TYPE);
 		boolean methodIsStatic = (methodNode.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC;
-		boolean callbackReturnsValue = returnNumber > -1;
-		
-		// If the callback returns a value but the method doesn't, we can't support that behaviour!
-		if (callbackReturnsValue && callback.returnFrom == methodReturnsVoid)
-			return null;
+		boolean hasReturnRef = returnNumber > -1;
 		
 		// Generate the parts of the callback signature that we need
-		Type callbackReturnType = callback.returnFrom ? Type.getReturnType(methodNode.desc) : Type.VOID_TYPE;
-		String callbackReturnValueArg = methodReturnsVoid || !callbackReturnsValue ? "" : callbackReturnType.toString();
+		Type callbackReturnType = Type.getReturnType(methodNode.desc);
+		String callbackReturnValueArg = methodReturnsVoid ? "" : callbackReturnType.toString();
 		String classInstanceArg = methodIsStatic ? "" : classType;
 		
 		// If this is a pre-return injection, push the invokation reference onto the call stack
-		if (callbackReturnsValue) injected.insert(new IntInsnNode(Opcodes.BIPUSH, returnNumber));
+		if (hasReturnRef) injected.insert(new IntInsnNode(Opcodes.BIPUSH, returnNumber));
 		
 		// If the method is non-static, then we pass in the class instance as an argument
 		if (!methodIsStatic) injected.add(new VarInsnNode(Opcodes.ALOAD, 0));
@@ -310,13 +297,13 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 		}
 		
 		// Generate the callback method descriptor
-		String callbackMethodDesc = String.format("(%s%s%s%s)%s", callbackReturnValueArg, callbackReturnsValue ? "I" : "", classInstanceArg, CallbackInjectionTransformer.getMethodArgs(methodNode), callbackReturnType);
+		String callbackMethodDesc = String.format("(%s%s%s%s)%s", callbackReturnValueArg, hasReturnRef ? "I" : "", classInstanceArg, CallbackInjectionTransformer.getMethodArgs(methodNode), callbackReturnType);
 		
 		// Add the callback method insn to the injected instructions list
-		injected.add(new MethodInsnNode(Opcodes.INVOKESTATIC, callback.callbackClass, callback.callbackMethod, callbackMethodDesc));
+		injected.add(new MethodInsnNode(Opcodes.INVOKESTATIC, callback.getCallbackClass(), callback.getCallbackMethod(), callbackMethodDesc));
 		
 		// If the callback RETURNs a value then push the appropriate RETURN opcode into the insns list
-		if (callback.returnFrom)
+		if (callback.injectReturn())
 		{
 			injected.add(new InsnNode(callbackReturnType.getOpcode(Opcodes.IRETURN)));
 		}
@@ -364,7 +351,7 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 	 * @param section
 	 * @return
 	 */
-	private static String generateSignature(String className, String methodName, String methodSignature, Callback.CallBackType callbackType)
+	private static String generateSignature(String className, String methodName, String methodSignature, Callback.CallbackType callbackType)
 	{
 		return String.format("%s::%s%s@%s", className.replace('.', '/'), methodName, methodSignature, callbackType.toString().toLowerCase());
 	}

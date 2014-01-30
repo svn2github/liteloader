@@ -428,7 +428,7 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 				if (LiteLoaderTweaker.getTransformerManager().injectTransformer(classTransformerClass))
 				{
 					LiteLoaderLogger.info("classTransformer '%s' was successfully added", classTransformerClass);
-					container.injectIntoClassPath(classLoader, true);
+					container.injectIntoClassPath(this.classLoader, true);
 				}
 			}
 		}
@@ -538,12 +538,15 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 		}
 		catch (Throwable th)
 		{
-			String missingClassName = th.getCause().getMessage();
-			if (th.getCause() instanceof NoClassDefFoundError && missingClassName != null)
+			if (th.getCause() != null)
 			{
-				if (missingClassName.startsWith("com/mumfrey/liteloader/"))
+				String missingClassName = th.getCause().getMessage();
+				if (th.getCause() instanceof NoClassDefFoundError && missingClassName != null)
 				{
-					throw new OutdatedLoaderException(missingClassName.substring(missingClassName.lastIndexOf('/') + 1));
+					if (missingClassName.startsWith("com/mumfrey/liteloader/"))
+					{
+						throw new OutdatedLoaderException(missingClassName.substring(missingClassName.lastIndexOf('/') + 1));
+					}
 				}
 			}
 			

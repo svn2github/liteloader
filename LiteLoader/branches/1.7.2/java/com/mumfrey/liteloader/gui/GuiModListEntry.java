@@ -156,7 +156,7 @@ public class GuiModListEntry extends Gui
 		this.author          = modContainer.getAuthor();
 		this.enabled         = modContainer.isEnabled(enabledMods, LiteLoader.getProfile());
 		this.canBeToggled    = modContainer.isToggleable() && enabledMods.saveAllowed();
-		this.willBeEnabled   = enabledMods.isEnabled(loader.getProfile(), this.identifier);
+		this.willBeEnabled   = enabledMods.isEnabled(LiteLoader.getProfile(), this.identifier);
 		this.external        = modContainer.isExternalJar();
 		
 		if (modContainer instanceof LoadableMod<?>)
