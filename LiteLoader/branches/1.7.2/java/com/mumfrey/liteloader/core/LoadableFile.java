@@ -286,6 +286,12 @@ public class LoadableFile extends File implements TweakContainer<File>
 	}
 	
 	@Override
+	public String getDescription(String key)
+	{
+		return "";
+	}
+	
+	@Override
 	public boolean isExternalJar()
 	{
 		return true;

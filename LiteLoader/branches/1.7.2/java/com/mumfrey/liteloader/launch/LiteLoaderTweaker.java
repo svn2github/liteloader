@@ -96,7 +96,7 @@ public class LiteLoaderTweaker implements ITweaker
 					if (otherState.canGotoState(this))
 						otherState.leaveState();
 					else
-						throw new IllegalStateException("Cannot go to state " + this.name() + " as " + otherState + " and expects " + otherState.getNextState().name());
+						throw new IllegalStateException(String.format("Cannot go to state \"%s\" as %s %s", this.name(), otherState, otherState.getNextState() == this ? "" : "and expects \""  + otherState.getNextState().name() + "\" instead"));
 				}
 			}
 			
@@ -114,7 +114,7 @@ public class LiteLoaderTweaker implements ITweaker
 		@Override
 		public String toString()
 		{
-			return String.format("%s is %s and %s", this.name(), this.inState ? "active" : "not active", this.completed ? "completed" : "not completed");
+			return String.format("\"%s\" is %s %s", this.name(), this.inState ? "[ACTIVE]" : "not [ACTIVE]", this.completed ? "and [COMPLETED]" : "but not [COMPLETED]");
 		}
 		
 		/**
@@ -569,7 +569,7 @@ public class LiteLoaderTweaker implements ITweaker
 		}
 		catch (Throwable th)
 		{
-			LiteLoaderLogger.severe(th, "Error during LiteLoader PREINIT: %s", th.getMessage());
+			LiteLoaderLogger.severe(th, "Error during LiteLoader PREINIT: %s %s", th.getClass().getName(), th.getMessage());
 		}
 	}
 	
@@ -583,7 +583,7 @@ public class LiteLoaderTweaker implements ITweaker
 		}
 		catch (Throwable th)
 		{
-			LiteLoaderLogger.severe("Error during LiteLoader BEGINGAME: %s", th.getMessage());
+			LiteLoaderLogger.severe(th, "Error during LiteLoader BEGINGAME: %s %s", th.getClass().getName(), th.getMessage());
 		}
 	}
 
@@ -601,7 +601,7 @@ public class LiteLoaderTweaker implements ITweaker
 		}
 		catch (Throwable th)
 		{
-			LiteLoaderLogger.severe("Error during LiteLoader INIT: %s", th.getMessage());
+			LiteLoaderLogger.severe(th, "Error during LiteLoader INIT: %s %s", th.getClass().getName(), th.getMessage());
 		}
 	}
 	
@@ -621,7 +621,7 @@ public class LiteLoaderTweaker implements ITweaker
 		}
 		catch (Throwable th)
 		{
-			LiteLoaderLogger.severe("Error during LiteLoader POSTINIT: %s", th.getMessage());
+			LiteLoaderLogger.severe(th, "Error during LiteLoader POSTINIT: %s %s", th.getClass().getName(), th.getMessage());
 		}
 	}
 	

@@ -13,6 +13,7 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiIngameMenu;
 import net.minecraft.client.gui.GuiMainMenu;
+import net.minecraft.client.gui.GuiOptions;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.resources.I18n;
@@ -854,7 +855,8 @@ public class GuiScreenModInfo extends GuiScreen
 	{
 		return (
 			guiScreen instanceof GuiMainMenu ||
-			guiScreen instanceof GuiIngameMenu
+			guiScreen instanceof GuiIngameMenu ||
+			guiScreen instanceof GuiOptions
 		);
 	}
 	

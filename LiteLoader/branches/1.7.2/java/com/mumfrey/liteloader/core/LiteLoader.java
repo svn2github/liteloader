@@ -1,9 +1,6 @@
 package com.mumfrey.liteloader.core;
 
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.util.*;
 
@@ -32,6 +29,7 @@ import com.mumfrey.liteloader.gui.GuiScreenModInfo;
 import com.mumfrey.liteloader.modconfig.ConfigManager;
 import com.mumfrey.liteloader.modconfig.Exposable;
 import com.mumfrey.liteloader.permissions.PermissionsManagerClient;
+import com.mumfrey.liteloader.util.Input;
 import com.mumfrey.liteloader.resources.InternalResourcePack;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
@@ -173,28 +171,12 @@ public final class LiteLoader
 	 * If inhibit is enabled, this object is used to reflectively inhibit the sound manager's reload process during startup by removing it from the reloadables list
 	 */
 	private SoundHandlerReloadInhibitor soundHandlerReloadInhibitor;
+	
+	/**
+	 * 
+	 */
+	private Input input;
 
-	/**
-	 * File in which we will store mod key mappings
-	 */
-	private File keyMapSettingsFile = null;
-	
-	/**
-	 * Properties object which stores mod key mappings
-	 */
-	private Properties keyMapSettings = new Properties();
-	
-	/**
-	 * List of all registered mod keys
-	 */
-	private List<KeyBinding> modKeyBindings = new ArrayList<KeyBinding>();
-	
-	/**
-	 * Map of mod key bindings to their key codes, stored so that we don't need to cast from
-	 * string in the properties file every tick
-	 */
-	private Map<KeyBinding, Integer> storedModKeyBindings = new HashMap<KeyBinding, Integer>();
-	
 	/**
 	 * Setting which determines whether we show the "mod info" screen tab in the main menu
 	 */
@@ -226,6 +208,7 @@ public final class LiteLoader
 		this.setupPaths(bootstrap);
 		
 		this.configManager = new ConfigManager();
+		this.input = new Input(new File(this.commonConfigFolder, "liteloader.keys.properties"));
 	}
 	
 	/**
@@ -243,8 +226,6 @@ public final class LiteLoader
 		if (!this.configBaseFolder.exists()) this.configBaseFolder.mkdirs();
 		if (!this.commonConfigFolder.exists()) this.commonConfigFolder.mkdirs();
 		if (!this.versionConfigFolder.exists()) this.versionConfigFolder.mkdirs();
-		
-		this.keyMapSettingsFile = new File(this.configBaseFolder, "liteloader.keys.properties");
 	}
 	
 	/**
@@ -268,14 +249,7 @@ public final class LiteLoader
 	{
 		try
 		{
-			if (this.keyMapSettingsFile.exists())
-			{
-				try
-				{
-					this.keyMapSettings.load(new FileReader(this.keyMapSettingsFile));
-				}
-				catch (Exception ex) {}
-			}
+			this.input.init();
 			
 			this.inhibitSoundManagerReload = this.bootstrap.getAndStoreBooleanProperty(OPTION_SOUND_MANAGER_FIX, true);
 			this.displayModInfoScreenTab = this.bootstrap.getAndStoreBooleanProperty(OPTION_MOD_INFO_SCREEN, true);
@@ -478,6 +452,14 @@ public final class LiteLoader
 	public static ServerPluginChannels getServerPluginChannels()
 	{
 		return LiteLoader.getInstance().serverPluginChannels;
+	}
+	
+	/**
+	 * Get the input manager
+	 */
+	public static Input getInput()
+	{
+		return LiteLoader.getInstance().input;
 	}
 	
 	/**
@@ -1084,36 +1066,39 @@ public final class LiteLoader
 	 * @param partialTicks
 	 * @param inGame
 	 */
-	void onTick(float partialTicks, boolean inGame)
+	void onTick(boolean clock, float partialTicks, boolean inGame)
 	{
-		// Tick the permissions manager
-		this.minecraft.mcProfiler.startSection("permissionsmanager");
-		this.permissionsManager.onTick(this.minecraft, partialTicks, inGame);
-		
-		// Tick the config manager
-		this.minecraft.mcProfiler.endStartSection("configmanager");
-		this.configManager.onTick();
-		
-		this.minecraft.mcProfiler.endStartSection("keybindings");
-		this.checkAndStoreKeyBindings();
-		this.minecraft.mcProfiler.endSection();
+		if (clock)
+		{
+			// Tick the permissions manager
+			this.minecraft.mcProfiler.startSection("permissionsmanager");
+			this.permissionsManager.onTick(this.minecraft, partialTicks, inGame);
+			
+			// Tick the config manager
+			this.minecraft.mcProfiler.endStartSection("configmanager");
+			this.configManager.onTick();
+			
+			if (this.modInfoScreen != null && this.minecraft.currentScreen != this.modInfoScreen)
+			{
+				this.modInfoScreen.updateScreen();
+			}
+			
+			if (!((IMinecraft)this.minecraft).isRunning())
+			{
+				this.onShutDown();
+			}
+		}
 
-		if (this.modInfoScreen != null && this.minecraft.currentScreen != this.modInfoScreen)
-		{
-			this.modInfoScreen.updateScreen();
-		}
-		
-		if (!((IMinecraft)this.minecraft).isRunning())
-		{
-			this.onShutDown();
-		}
+		this.minecraft.mcProfiler.endStartSection("keybindings");
+		this.input.onTick(clock);
+		this.minecraft.mcProfiler.endSection();
 	}
 
 	private void onShutDown()
 	{
 		LiteLoaderLogger.info("LiteLoader is shutting down, syncing configuration");
 		
-		this.storeBindings();
+		this.input.storeBindings();
 		this.configManager.syncConfig();
 	}
 
@@ -1121,73 +1106,12 @@ public final class LiteLoader
 	 * Register a key for a mod
 	 * 
 	 * @param binding
+	 * @deprecated Deprecated : use LiteLoader.getInput().registerKeyBinding() instead
 	 */
+	@Deprecated
 	public void registerModKey(KeyBinding binding)
 	{
-		LinkedList<KeyBinding> keyBindings = new LinkedList<KeyBinding>();
-		keyBindings.addAll(Arrays.asList(this.minecraft.gameSettings.keyBindings));
-		
-		if (!keyBindings.contains(binding))
-		{
-			if (this.keyMapSettings.containsKey(binding.getKeyDescription()))
-			{
-				try
-				{
-					binding.setKeyCode(Integer.parseInt(this.keyMapSettings.getProperty(binding.getKeyDescription(), String.valueOf(binding.getKeyCode()))));
-				}
-				catch (NumberFormatException ex) {}
-			}
-
-			keyBindings.add(binding);
-			this.minecraft.gameSettings.keyBindings = keyBindings.toArray(new KeyBinding[0]);
-			this.modKeyBindings.add(binding);
-			
-			this.updateBinding(binding);
-			this.storeBindings();
-			
-			KeyBinding.resetKeyBindingArrayAndHash();
-		}
-	}
-	
-	/**
-	 * Checks for changed mod keybindings and stores any that have changed 
-	 */
-	private void checkAndStoreKeyBindings()
-	{
-		boolean updated = false;
-		
-		for (KeyBinding binding : this.modKeyBindings)
-		{
-			if (binding.getKeyCode() != this.storedModKeyBindings.get(binding))
-			{
-				this.updateBinding(binding);
-				updated = true;
-			}
-		}
-		
-		if (updated)
-			this.storeBindings();
-	}
-	
-	/**
-	 * @param binding
-	 */
-	private void updateBinding(KeyBinding binding)
-	{
-		this.keyMapSettings.setProperty(binding.getKeyDescription(), String.valueOf(binding.getKeyCode()));
-		this.storedModKeyBindings.put(binding, Integer.valueOf(binding.getKeyCode()));
-	}
-
-	/**
-	 * Writes mod bindings to disk
-	 */
-	private void storeBindings()
-	{
-		try
-		{
-			this.keyMapSettings.store(new FileWriter(this.keyMapSettingsFile), "Mod key mappings for LiteLoader mods, stored here to avoid losing settings stored in options.txt");
-		}
-		catch (IOException ex) {}
+		this.input.registerKeyBinding(binding);
 	}
 	
 	/**

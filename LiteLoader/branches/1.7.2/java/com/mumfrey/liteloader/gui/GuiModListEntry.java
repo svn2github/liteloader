@@ -130,7 +130,7 @@ public class GuiModListEntry extends Gui
 		
 		this.author          = modContainer.getAuthor();
 		this.url             = modContainer.getMetaValue("url", null);
-		this.description     = modContainer.getMetaValue("description", "");
+		this.description     = modContainer.getDescription(modInstance.getClass().getSimpleName().substring(7));
 		
 		if (modContainer instanceof TweakContainer)
 		{
@@ -158,13 +158,13 @@ public class GuiModListEntry extends Gui
 		this.canBeToggled    = modContainer.isToggleable() && enabledMods.saveAllowed();
 		this.willBeEnabled   = enabledMods.isEnabled(LiteLoader.getProfile(), this.identifier);
 		this.external        = modContainer.isExternalJar();
+		this.description     = modContainer.getDescription(null);
 		
 		if (modContainer instanceof LoadableMod<?>)
 		{
 			LoadableMod<?> loadableMod = (LoadableMod<?>)modContainer;
 			
 			this.url                   = loadableMod.getMetaValue("url", null);
-			this.description           = loadableMod.getMetaValue("description", "");
 			this.missingDependencies   = loadableMod.getMissingDependencies();
 			this.isMissingDependencies = this.missingDependencies.size() > 0;
 			

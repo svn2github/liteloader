@@ -50,3 +50,8 @@ gui.downloadupdate=Download now
 
 gui.log.title=LiteLoader Log Viewer
 gui.log.scalecheckbox=Use native resolution
+gui.log.postlog=Upload Log
+gui.log.uploading=Uploading log to pastebin...
+gui.log.uploadfailed=Upload failed
+gui.log.uploadsuccess=Upload succeeded, log available at
+gui.log.closedialog=Close

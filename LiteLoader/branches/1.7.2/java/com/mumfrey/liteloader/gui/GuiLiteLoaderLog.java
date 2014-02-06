@@ -3,7 +3,10 @@ package com.mumfrey.liteloader.gui;
 import static com.mumfrey.liteloader.gui.GuiScreenModInfo.*;
 import static org.lwjgl.opengl.GL11.*;
 
+import java.net.URI;
+import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.lwjgl.input.Keyboard;
@@ -15,6 +18,7 @@ import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.resources.I18n;
 
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
+import com.mumfrey.liteloader.util.net.PastebinUpload;
 
 /**
  *
@@ -41,6 +45,16 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 	private GuiCheckbox chkScale;
 	
 	private float guiScale;
+	
+	private GuiButton btnUpload;
+	
+	private PastebinUpload logUpload;
+	
+	private String pasteBinURL;
+	
+	private int throb;
+
+	private boolean closeDialog;
 	
 	/**
 	 * @param parent
@@ -73,8 +87,9 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 	{
 		super.setSize(width, height);
 		
-		this.controls.add(new GuiButton(0, this.width - 99 - MARGIN, this.height - BOTTOM + 9, 100, 20, I18n.format("gui.done")));
-		this.controls.add(this.chkScale = new GuiCheckbox(1, MARGIN, this.height - BOTTOM + 15, I18n.format("gui.log.scalecheckbox")));
+		this.controls.add(new GuiButton(0, this.width - 59 - MARGIN, this.height - BOTTOM + 9, 60, 20, I18n.format("gui.done")));
+		this.controls.add(this.btnUpload = new GuiButton(1, this.width - 145 - MARGIN, this.height - BOTTOM + 9, 80, 20, I18n.format("gui.log.postlog")));
+		this.controls.add(this.chkScale = new GuiCheckbox(2, MARGIN, this.height - BOTTOM + 15, I18n.format("gui.log.scalecheckbox")));
 		
 		this.chkScale.checked = GuiLiteLoaderLog.useNativeRes;
 		
@@ -106,9 +121,38 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 	@Override
 	void onTick()
 	{
+		this.throb++;
+		
 		if (LiteLoaderLogger.getLogIndex() > this.logIndex)
 		{
 			this.updateLog();
+		}
+		
+		if (this.logUpload != null && this.logUpload.isCompleted())
+		{
+			this.pasteBinURL = this.logUpload.getPasteUrl().trim();
+			this.logUpload = null;
+
+			int xMid = this.width / 2;
+			if (this.pasteBinURL.startsWith("http:"))
+			{
+				LiteLoaderLogger.info("Log file upload succeeded, url is %s", this.pasteBinURL);
+				int urlWidth = this.mc.fontRenderer.getStringWidth(this.pasteBinURL);
+				this.controls.add(new GuiHoverLabel(3, xMid - (urlWidth / 2), this.height / 2, this.mc.fontRenderer, "\247n" + this.pasteBinURL));
+			}
+			else
+			{
+				LiteLoaderLogger.info("Log file upload failed, reason is %s", this.pasteBinURL);
+			}
+			
+			this.controls.add(new GuiButton(4, xMid - 40, this.height - BOTTOM - MARGIN - 24, 80, 20, I18n.format("gui.log.closedialog")));
+		}
+		
+		if (this.closeDialog)
+		{
+			this.closeDialog = false;
+			this.pasteBinURL = null;
+			this.setSize(this.width, this.height);
 		}
 	}
 	
@@ -146,6 +190,31 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 		
 		// Restore transform
 		glPopMatrix();
+		
+		int xMid = this.width / 2;
+		int yMid = this.height / 2;
+		
+		if (this.logUpload != null || this.pasteBinURL != null)
+		{
+			drawRect(MARGIN + MARGIN, TOP + MARGIN, this.width - MARGIN - MARGIN, this.height - BOTTOM - MARGIN, 0xC0000000);
+
+			if (this.logUpload != null)
+			{
+				this.drawCenteredString(this.mc.fontRenderer, I18n.format("gui.log.uploading"), xMid, yMid - 10, 0xFFFFFFFF);
+				this.drawThrobber(xMid - 90, yMid - 14, this.throb);
+			}
+			else
+			{
+				if (this.pasteBinURL.startsWith("http:"))
+				{
+					this.drawCenteredString(this.mc.fontRenderer, I18n.format("gui.log.uploadsuccess"), xMid, yMid - 14, 0xFF55FF55);
+				}
+				else
+				{
+					this.drawCenteredString(this.mc.fontRenderer, I18n.format("gui.log.uploadfailed"), xMid, yMid - 10, 0xFFFF5555);
+				}
+			}
+		}
 		
 		// Update and draw scroll bar
 		this.scrollBar.setMaxValue(this.totalHeight - this.innerHeight);
@@ -212,12 +281,23 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 	void actionPerformed(GuiButton control)
 	{
 		if (control.id == 0) this.close();
+		if (control.id == 1) this.postLog();
 		
-		if (control.id == 1 && this.chkScale != null)
+		if (control.id == 2 && this.chkScale != null)
 		{
 			this.chkScale.checked = !this.chkScale.checked;
 			GuiLiteLoaderLog.useNativeRes = this.chkScale.checked;
 			this.updateLog();
+		}
+		
+		if (control.id == 3 && this.pasteBinURL != null)
+		{
+			this.openURI(URI.create(this.pasteBinURL));
+		}
+		
+		if (control.id == 4)
+		{
+			this.closeDialog = true;
 		}
 	}
 
@@ -288,4 +368,32 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 		if (keyCode == Keyboard.KEY_HOME) this.scrollBar.setValue(0);
 		if (keyCode == Keyboard.KEY_END) this.scrollBar.setValue(this.totalHeight);
 	}
+
+	private void postLog()
+	{
+		this.btnUpload.enabled = false;
+		
+		StringBuilder completeLog = new StringBuilder();
+		
+		for (String logLine : this.logEntries)
+		{
+			completeLog.append(logLine).append("\r\n");
+		}
+		
+		String pasteName = "LiteLoaderLog-" + DateFormat.getDateTimeInstance().format(new Date());
+		LiteLoaderLogger.info("Uploading log file %s to pastebin...", pasteName);
+		this.logUpload = new PastebinUpload("LiteLoader", pasteName, completeLog.toString(), PastebinUpload.UNLISTED);
+		this.logUpload.start();
+	}
+
+    private void openURI(URI uri)
+    {
+        try
+        {
+            Class<?> desktop = Class.forName("java.awt.Desktop");
+            Object instance = desktop.getMethod("getDesktop").invoke(null);
+            desktop.getMethod("browse", URI.class).invoke(instance, uri);
+        }
+        catch (Throwable th) {}
+    }
 }

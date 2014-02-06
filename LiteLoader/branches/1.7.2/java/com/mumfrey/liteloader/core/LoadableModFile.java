@@ -26,7 +26,7 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * Wrapper for file which represents a mod file to load with associated version information and
- * metadata. Retrieve this from litemod.xml at enumeration time. We also override comparable to 
+ * metadata. Retrieve this from litemod.json at enumeration time. We also override comparable to 
  * provide our own custom sorting logic based on version info.
  *
  * @author Adam Mummery-Smith
@@ -193,6 +193,16 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 	public String getDisplayName()
 	{
 		return this.getName();
+	}
+	
+	@Override
+	public String getDescription(String key)
+	{
+		String descriptionKey = "description";
+		if (key != null && key.length() > 0)
+			descriptionKey += "." + key.toLowerCase();
+		
+		return this.getMetaValue(descriptionKey, "");
 	}
 	
 	@Override

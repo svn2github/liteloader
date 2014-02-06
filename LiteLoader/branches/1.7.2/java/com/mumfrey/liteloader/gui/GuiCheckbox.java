@@ -15,7 +15,7 @@ public class GuiCheckbox extends GuiButton
 	
 	public GuiCheckbox(int controlId, int xPosition, int yPosition, String displayString)
 	{
-		super(controlId, xPosition, yPosition, 200, 12, displayString);
+		super(controlId, xPosition, yPosition, Minecraft.getMinecraft().fontRenderer.getStringWidth(displayString) + 16, 12, displayString);
 	}
 	
 	@Override

@@ -47,7 +47,7 @@ public class InjectedCallbackProxy
 	public static void handleLoginSuccessPacket(INetHandler netHandler, S02PacketLoginSuccess packet)
 	{
 		((INetHandlerLoginClient)netHandler).handleLoginSuccess(packet);
-		LiteLoader.getEvents().onPostLogin((INetHandlerLoginClient)netHandler, packet);
+		InjectedCallbackProxy.events.onPostLogin((INetHandlerLoginClient)netHandler, packet);
 	}
 	
 	/**
@@ -58,8 +58,8 @@ public class InjectedCallbackProxy
 	 */
 	public static void handleChatPacket(INetHandler netHandler, S02PacketChat packet)
 	{
-		Events events = LiteLoader.getEvents();
-		if (events.onChat(packet))
+//		Events events = LiteLoader.getEvents();
+		if (InjectedCallbackProxy.events.onChat(packet))
 		{
 			((INetHandlerPlayClient)netHandler).handleChat(packet);
 		}
@@ -73,8 +73,8 @@ public class InjectedCallbackProxy
 	 */
 	public static void handleServerChatPacket(INetHandler netHandler, C01PacketChatMessage packet)
 	{
-		Events events = LiteLoader.getEvents();
-		if (events.onServerChat((INetHandlerPlayServer)netHandler, packet))
+//		Events events = LiteLoader.getEvents();
+		if (InjectedCallbackProxy.events.onServerChat((INetHandlerPlayServer)netHandler, packet))
 		{
 			((INetHandlerPlayServer)netHandler).processChatMessage(packet);
 		}
@@ -88,11 +88,11 @@ public class InjectedCallbackProxy
 	 */
 	public static void handleJoinGamePacket(INetHandler netHandler, S01PacketJoinGame packet)
 	{
-		Events events = LiteLoader.getEvents();
-		if (events.onPreJoinGame(netHandler, packet))
+//		Events events = LiteLoader.getEvents();
+		if (InjectedCallbackProxy.events.onPreJoinGame(netHandler, packet))
 		{
 			((INetHandlerPlayClient)netHandler).handleJoinGame(packet);
-			events.onJoinGame(netHandler, packet);
+			InjectedCallbackProxy.events.onJoinGame(netHandler, packet);
 		}
 	}
 	
@@ -254,5 +254,13 @@ public class InjectedCallbackProxy
 		}
 
 		return returnValue;
+	}
+	
+	public static void onOutboundChat(int ref, C01PacketChatMessage packet, String message)
+	{
+		if (ref == 0)
+		{
+			InjectedCallbackProxy.events.onSendChatMessage(packet, message);
+		}
 	}
 }

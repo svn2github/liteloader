@@ -29,7 +29,7 @@ public interface LoadableMod<L> extends Loadable<L>, Injectable
 	 * Get the name of the mod
 	 */
 	public abstract String getModName();
-
+	
 	/**
 	 * Get the target loader version for this mod
 	 */
@@ -159,6 +159,12 @@ public interface LoadableMod<L> extends Loadable<L>, Injectable
 		public String getAuthor()
 		{
 			return "Unknown";
+		}
+		
+		@Override
+		public String getDescription(String key)
+		{
+			return "";
 		}
 
 		@Override

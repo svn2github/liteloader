@@ -1,7 +1,5 @@
 package com.mumfrey.liteloader.core;
 
-import io.netty.util.concurrent.GenericFutureListener;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.network.NetHandlerLoginClient;
 import net.minecraft.network.INetHandler;
@@ -164,7 +162,7 @@ public class ClientPluginChannels extends PluginChannels<PluginChannelListener>
 		if (netHandler instanceof INetHandlerLoginClient)
 		{
 			NetworkManager networkManager = PrivateFields.netManager.get(((NetHandlerLoginClient)netHandler));
-			networkManager.scheduleOutboundPacket(new C17PacketCustomPayload(CHANNEL_REGISTER, registrationData), new GenericFutureListener[0]);
+			networkManager.scheduleOutboundPacket(new C17PacketCustomPayload(CHANNEL_REGISTER, registrationData));
 		}
 		else if (netHandler instanceof INetHandlerPlayClient)
 		{

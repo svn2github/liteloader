@@ -1,7 +1,5 @@
 package com.mumfrey.liteloader.util;
 
-import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.Map;
 
 import net.minecraft.client.ClientBrandRetriever;
@@ -16,6 +14,7 @@ import net.minecraft.launchwrapper.Launch;
 
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.core.runtime.Obf;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * A small collection of useful functions for mods
@@ -72,8 +71,15 @@ public abstract class ModUtilities
 	public static void addRenderer(Class<? extends Entity> entityClass, Render renderer)
 	{
 		Map<Class<? extends Entity>, Render> entityRenderMap = PrivateFields.entityRenderMap.get(RenderManager.instance);
-		entityRenderMap.put(entityClass, renderer);
-		renderer.setRenderManager(RenderManager.instance);
+		if (entityRenderMap != null)
+		{
+			entityRenderMap.put(entityClass, renderer);
+			renderer.setRenderManager(RenderManager.instance);
+		}
+		else
+		{
+			LiteLoaderLogger.warning("Attempted to set renderer %s for entity class %s but the operation failed", renderer.getClass().getSimpleName(), entityClass.getSimpleName());
+		}
 	}
 	
 	/**
@@ -104,30 +110,23 @@ public abstract class ModUtilities
 	 * Registers a keybind with the game settings class so that it is configurable in the "controls" screen
 	 * 
 	 * @param newBinding key binding to add
+	 * @deprecated Deprecated : use LiteLoader.getInput().registerKeyBinding() instead
 	 */
+	@Deprecated
 	public static void registerKey(KeyBinding newBinding)
 	{
-		LiteLoader.getInstance().registerModKey(newBinding);
+		LiteLoader.getInput().registerKeyBinding(newBinding);
 	}
 	
 	/**
 	 * Unregisters a registered keybind with the game settings class, thus removing it from the "controls" screen
 	 * 
 	 * @param removeBinding
+	 * @deprecated Deprecated : use LiteLoader.getInput().unRegisterKeyBinding() instead
 	 */
+	@Deprecated
 	public static void unRegisterKey(KeyBinding removeBinding)
 	{
-		Minecraft mc = Minecraft.getMinecraft();
-		
-		if (mc == null || mc.gameSettings == null) return;
-		
-		LinkedList<KeyBinding> keyBindings = new LinkedList<KeyBinding>();
-		keyBindings.addAll(Arrays.asList(mc.gameSettings.keyBindings));
-		
-		if (keyBindings.contains(removeBinding))
-		{
-			keyBindings.remove(removeBinding);
-			mc.gameSettings.keyBindings = keyBindings.toArray(new KeyBinding[0]);
-		}
+		LiteLoader.getInput().unRegisterKeyBinding(removeBinding);
 	}
 }

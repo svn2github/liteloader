@@ -47,6 +47,11 @@ public interface Loadable<L> extends Comparable<L>
 	public abstract String getAuthor();
 	
 	/**
+	 * Get the description
+	 */
+	public abstract String getDescription(String key);
+	
+	/**
 	 * Returns true if this is an external jar containing a tweak rather than a mod
 	 */
 	public abstract boolean isExternalJar();

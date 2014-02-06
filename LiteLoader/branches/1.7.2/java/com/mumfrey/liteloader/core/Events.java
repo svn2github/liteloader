@@ -175,6 +175,11 @@ public class Events
 	private LinkedList<ServerPlayerListener> serverPlayerListeners = new LinkedList<ServerPlayerListener>();
 	
 	/**
+	 * List of mods which monitor outbound chat
+	 */
+	private LinkedList<OutboundChatListener> outboundChatListeners = new LinkedList<OutboundChatListener>();
+	
+	/**
 	 * Hash code of the current world. We don't store the world reference here because we don't want
 	 * to mess with world GC by mistake
 	 */
@@ -288,6 +293,11 @@ public class Events
 		if (listener instanceof ServerPlayerListener)
 		{
 			this.addServerPlayerListener((ServerPlayerListener)listener);
+		}
+		
+		if (listener instanceof OutboundChatListener)
+		{
+			this.addOutboundChatListener((OutboundChatListener)listener);
 		}
 		
 		this.clientPluginChannels.addListener(listener);
@@ -507,6 +517,17 @@ public class Events
 	}
 
 	/**
+	 * @param outboundChatListener
+	 */
+	private void addOutboundChatListener(OutboundChatListener outboundChatListener)
+	{
+		if (!this.outboundChatListeners.contains(outboundChatListener))
+		{
+			this.outboundChatListeners.add(outboundChatListener);
+		}
+	}
+
+	/**
 	 * Late initialisation callback
 	 */
 	public void preBeginGame()
@@ -673,10 +694,7 @@ public class Events
 		boolean inGame = this.minecraft.renderViewEntity != null && this.minecraft.renderViewEntity.worldObj != null;
 		
 		this.minecraft.mcProfiler.startSection("loader");
-		if (clock)
-		{
-			this.loader.onTick(partialTicks, inGame);
-		}
+		this.loader.onTick(clock, partialTicks, inGame);
 
 		int mouseX = Mouse.getX() * this.screenWidth / this.minecraft.displayWidth;
 		int mouseY = this.screenHeight - Mouse.getY() * this.screenHeight / this.minecraft.displayHeight - 1;
@@ -745,7 +763,19 @@ public class Events
 		
 		return true;
 	}
-	
+
+	/**
+	 * @param packet
+	 * @param message
+	 */
+	public void onSendChatMessage(C01PacketChatMessage packet, String message)
+	{
+		for (OutboundChatListener outboundChatListener : this.outboundChatListeners)
+		{
+			outboundChatListener.onSendChatMessage(packet, message);
+		}
+	}
+
 	/**
 	 * @param netHandler
 	 * @param loginPacket
