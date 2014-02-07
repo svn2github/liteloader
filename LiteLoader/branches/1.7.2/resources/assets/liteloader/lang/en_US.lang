@@ -7,7 +7,7 @@ gui.about.versiontext=Version %s
 
 gui.about.checkupdates=§nCheck for updates
 
-gui.about.showtabmessage=Show "about LiteLoader" tab
+gui.about.showtabmessage=Show LiteLoader tab
 gui.about.keystrokehint= §e(use §9CTRL§e+§9SHIFT§e+§9TAB§e)
 
 gui.about.authors=Authors

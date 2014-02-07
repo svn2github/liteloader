@@ -202,7 +202,7 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 		if (key != null && key.length() > 0)
 			descriptionKey += "." + key.toLowerCase();
 		
-		return this.getMetaValue(descriptionKey, "");
+		return this.getMetaValue(descriptionKey, this.getMetaValue("description", ""));
 	}
 	
 	@Override

@@ -42,6 +42,8 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
  */
 public final class LiteLoader
 {
+	public static final String MOD_SYSTEM = "liteloader";
+	
 	private static final String OPTION_MOD_INFO_SCREEN   = "modInfoScreen";
 	private static final String OPTION_SOUND_MANAGER_FIX = "soundManagerFix";
 	private static final String OPTION_GENERATE_MAPPINGS = "genMappings";
@@ -280,6 +282,8 @@ public final class LiteLoader
 		// Initialises enumerated mods
 		this.initMods();
 		
+		this.updateSharedModList();
+		
 		// Initialises the required hooks for loaded mods
 		this.events.initHooks();
 		this.startupComplete = true;
@@ -288,7 +292,7 @@ public final class LiteLoader
 		this.enabledModsList.save();
 		this.bootstrap.writeProperties();
 	}
-	
+
 	/* (non-Javadoc)
 	 * @see com.mumfrey.liteloader.core.ICustomResourcePackManager#registerModResourcePack(net.minecraft.client.resources.ResourcePack)
 	 */
@@ -690,6 +694,17 @@ public final class LiteLoader
 	}
 	
 	/**
+	 * Get the mod identifier, this is used for versioning, exclusivity, and enablement checks
+	 * 
+	 * @param modClass
+	 * @return
+	 */
+	public String getModIdentifier(LiteMod mod)
+	{
+		return mod == null ? null : this.enumerator.getModIdentifier(mod.getClass());
+	}
+	
+	/**
 	 * Get the container (mod file, classpath jar or folder) for the specified mod
 	 * 
 	 * @param modClass
@@ -698,6 +713,17 @@ public final class LiteLoader
 	public LoadableMod<?> getModContainer(Class<? extends LiteMod> modClass)
 	{
 		return this.enumerator.getModContainer(modClass);
+	}
+	
+	/**
+	 * Get the container (mod file, classpath jar or folder) for the specified mod
+	 * 
+	 * @param modClass
+	 * @return
+	 */
+	public LoadableMod<?> getModContainer(LiteMod mod)
+	{
+		return mod == null ? null : this.enumerator.getModContainer(mod.getClass());
 	}
 	
 	/**
@@ -1177,5 +1203,33 @@ public final class LiteLoader
 			LiteLoader.instance = new LiteLoader(bootstrap, enumerator, enabledModsList);
 			LiteLoader.instance.init();
 		}
+	}
+	
+	private void updateSharedModList()
+	{
+		Map<String, Map<String, String>> modList = this.enumerator.getSharedModList();
+		if (modList == null) return;
+		
+		for (LiteMod mod : this.mods)
+		{
+			String modKey = String.format("%s:%s", LiteLoader.MOD_SYSTEM, this.getModIdentifier(mod));
+			modList.put(modKey, this.packModInfoToMap(mod));
+		}
+	}
+
+	private Map<String, String> packModInfoToMap(LiteMod mod)
+	{
+		Map<String, String> modInfo = new HashMap<String, String>();
+		LoadableMod<?> container = this.getModContainer(mod);
+		
+		modInfo.put("modsystem",   LiteLoader.MOD_SYSTEM);
+		modInfo.put("id",          this.getModIdentifier(mod));
+		modInfo.put("version",     mod.getVersion());
+		modInfo.put("name",        mod.getName());
+		modInfo.put("url",         container.getMetaValue("url", ""));
+		modInfo.put("authors",     container.getAuthor());
+		modInfo.put("description", container.getDescription(LiteLoaderEnumerator.getModClassName(mod)));
+		
+		return modInfo;
 	}
 }

@@ -12,6 +12,7 @@ import net.minecraft.client.resources.I18n;
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.core.EnabledModsList;
 import com.mumfrey.liteloader.core.LiteLoader;
+import com.mumfrey.liteloader.core.LiteLoaderEnumerator;
 import com.mumfrey.liteloader.core.Loadable;
 import com.mumfrey.liteloader.core.LoadableMod;
 import com.mumfrey.liteloader.core.TweakContainer;
@@ -130,7 +131,7 @@ public class GuiModListEntry extends Gui
 		
 		this.author          = modContainer.getAuthor();
 		this.url             = modContainer.getMetaValue("url", null);
-		this.description     = modContainer.getDescription(modInstance.getClass().getSimpleName().substring(7));
+		this.description     = modContainer.getDescription(LiteLoaderEnumerator.getModClassName(modInstance));
 		
 		if (modContainer instanceof TweakContainer)
 		{

@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import com.mumfrey.liteloader.LiteMod;
@@ -25,7 +26,7 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
  *
  * @author Adam Mummery-Smith
  */
-class LiteLoaderEnumerator implements PluggableEnumerator
+public class LiteLoaderEnumerator implements PluggableEnumerator
 {
 	private static final String OPTION_SEARCH_MODS      = "search.mods";
 	private static final String OPTION_SEARCH_JAR       = "search.jar";
@@ -99,8 +100,11 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 		this.enabledModsList = enabledModsList;
 		
 		this.initModules(loadTweaks);
+		
+		// Initialise the shared mod list if we haven't already
+        this.getSharedModList();
 	}
-	
+
 	/**
 	 * Initialise the discovery modules
 	 * 
@@ -135,6 +139,32 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 		this.writeSettings();
 	}
 
+	/**
+	 * Initialise the "shared" mod list if it's not already been created
+	 * @return 
+	 */
+	public Map<String, Map<String, String>> getSharedModList()
+	{
+		try
+		{
+			@SuppressWarnings("unchecked")
+			Map<String, Map<String,String>> sharedModList = (Map<String, Map<String, String>>) Launch.blackboard.get("modList");
+			
+			if (sharedModList == null)
+			{
+			    sharedModList = new HashMap<String, Map<String,String>>();
+			    Launch.blackboard.put("modList", sharedModList);
+			}
+			
+			return sharedModList;
+		}
+		catch (Exception ex)
+		{
+			LiteLoaderLogger.warning("Shared mod list was invalid or not accessible, this isn't especially bad but something isn't quite right");
+			return null;
+		}
+	}
+	
 	/**
 	 * Get the discovery settings from the properties file
 	 */
@@ -278,7 +308,7 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 	public String getModIdentifier(Class<? extends LiteMod> modClass)
 	{
 		String modClassName = modClass.getSimpleName();
-		if (!this.modContainers.containsKey(modClassName)) return null;
+		if (!this.modContainers.containsKey(modClassName)) return LiteLoaderEnumerator.getModClassName(modClass);
 		return this.modContainers.get(modClassName).getIdentifier();
 	}
 
@@ -470,7 +500,7 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 		if (container != null)
 		{
 			this.modContainers.put(mod.getSimpleName(), container);
-			container.addContainedMod(mod.getSimpleName().substring(7));
+			container.addContainedMod(LiteLoaderEnumerator.getModClassName(mod));
 		}
 	}
 
@@ -617,5 +647,15 @@ class LiteLoaderEnumerator implements PluggableEnumerator
 		}
 		
 		return result;
+	}
+
+	public static String getModClassName(LiteMod mod)
+	{
+		return LiteLoaderEnumerator.getModClassName(mod.getClass());
+	}
+
+	public static String getModClassName(Class<? extends LiteMod> mod)
+	{
+		return mod.getSimpleName().substring(7);
 	}
 }
