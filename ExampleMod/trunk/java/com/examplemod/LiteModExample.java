@@ -2,10 +2,10 @@ package com.examplemod;
 
 import java.io.File;
 
-import org.lwjgl.input.Keyboard;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.settings.KeyBinding;
 
-import net.minecraft.src.KeyBinding;
-import net.minecraft.src.Minecraft;
+import org.lwjgl.input.Keyboard;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
@@ -13,7 +13,6 @@ import com.mumfrey.liteloader.Tickable;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.modconfig.ConfigStrategy;
 import com.mumfrey.liteloader.modconfig.ExposableOptions;
-import com.mumfrey.liteloader.util.ModUtilities;
 
 /**
  * This is a very simple example LiteMod, it draws an analogue clock on the minecraft HUD using
@@ -31,8 +30,10 @@ public class LiteModExample implements Tickable
 	
 	/**
 	 * This is a keybinding that we will register with the game and use to toggle the clock
+	 * 
+	 * Notice that we specify the key name as an *unlocalised* string. The localisation is provided from the included resource file
 	 */
-	private static KeyBinding clockKeyBinding = new KeyBinding("Toggle Clock", Keyboard.KEY_F12);
+	private static KeyBinding clockKeyBinding = new KeyBinding("key.clock.toggle", Keyboard.KEY_F12, "key.categories.litemods");
 	
 	@Expose
 	@SerializedName("clock_size")
@@ -85,7 +86,7 @@ public class LiteModExample implements Tickable
 	{
 		// The key binding declared above won't do anything unless we register it, ModUtilties provides 
 		// a convenience method for this
-		ModUtilities.registerKey(clockKeyBinding);
+		LiteLoader.getInput().registerKeyBinding(clockKeyBinding);
 		
 		this.clock.setSize(this.clockSize);
 		this.clock.setVisible(this.clockVisible);
@@ -122,9 +123,12 @@ public class LiteModExample implements Tickable
 					this.clockVisible = this.clock.isVisible();
 				}
 				
+				// Our @Expose annotations control what properties get saved, this tells liteloader to
+				// actually write the properties to disk
 				LiteLoader.getInstance().writeConfig(this);
 			}
 			
+			// Render the clock
 			this.clock.render(minecraft);
 		}
 	}

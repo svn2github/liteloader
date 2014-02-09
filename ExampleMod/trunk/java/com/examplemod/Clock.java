@@ -4,12 +4,11 @@ import static org.lwjgl.opengl.GL11.*;
 
 import java.util.Calendar;
 
-import org.lwjgl.util.Color;
-import org.lwjgl.util.ReadableColor;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.util.ResourceLocation;
 
-import net.minecraft.src.Minecraft;
-import net.minecraft.src.ResourceLocation;
-import net.minecraft.src.Tessellator;
+import org.lwjgl.util.ReadableColor;
 
 /**
  * Simple implementation of an analogue clock to demonstrate how to LiteLoader all the things 
@@ -74,9 +73,9 @@ public class Clock
 		this.setPosition(xPos, yPos);
 		this.setSize(64);
 		
-		this.largeHandColour  = Color.WHITE;   
-		this.smallHandColour  = Color.GREY;
-		this.secondHandColour = Color.ORANGE;
+		this.largeHandColour  = ReadableColor.WHITE;   
+		this.smallHandColour  = ReadableColor.GREY;
+		this.secondHandColour = ReadableColor.ORANGE;
 	}
 
 	/**
