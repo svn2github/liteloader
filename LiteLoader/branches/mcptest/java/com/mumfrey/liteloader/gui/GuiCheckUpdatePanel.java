@@ -64,7 +64,7 @@ public class GuiCheckUpdatePanel extends ModInfoScreenPanel
 	@Override
 	void draw(int mouseX, int mouseY, float partialTicks)
 	{
-		FontRenderer fontRenderer = this.mc.fontRenderer;
+		FontRenderer fontRenderer = this.mc.fontRendererObj;
 		
 		// Draw panel title
 		fontRenderer.drawString(this.panelTitle, MARGIN, TOP - 14, 0xFFFFFFFF);
@@ -74,7 +74,7 @@ public class GuiCheckUpdatePanel extends ModInfoScreenPanel
 		drawRect(MARGIN, this.height - BOTTOM + 2, this.width - MARGIN, this.height - BOTTOM + 3, 0xFF999999);
 		
 		this.btnCheck.enabled = !this.updateSite.isCheckInProgress();
-		this.btnDownload.field_146125_m = false;
+		this.btnDownload.visible = false;
 
 		if (this.updateSite.isCheckInProgress())
 		{
@@ -92,7 +92,7 @@ public class GuiCheckUpdatePanel extends ModInfoScreenPanel
 				fontRenderer.drawString(I18n.format("gui.updates.available.title"), MARGIN + 18, TOP + 70, 0xFFFFFFFF);
 				if (this.updateSite.isUpdateAvailable())
 				{
-					this.btnDownload.field_146125_m = true;
+					this.btnDownload.visible = true;
 					fontRenderer.drawString(I18n.format("gui.updates.available.newversion"), MARGIN + 18, TOP + 84, 0xFFFFFFFF);
 					fontRenderer.drawString(I18n.format("gui.updates.available.version", this.updateSite.getAvailableVersion()), MARGIN + 18, TOP + 94, 0xFFFFFFFF);
 					fontRenderer.drawString(I18n.format("gui.updates.available.date", this.updateSite.getAvailableVersionDate()), MARGIN + 18, TOP + 104, 0xFFFFFFFF);

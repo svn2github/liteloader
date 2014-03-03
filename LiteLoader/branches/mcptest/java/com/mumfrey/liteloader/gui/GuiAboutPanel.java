@@ -39,14 +39,14 @@ public class GuiAboutPanel extends ModInfoScreenPanel
 		super.setSize(width, height);
 		
 		this.controls.add(new GuiButton(0, this.width - 99 - MARGIN, this.height - BOTTOM + 9, 100, 20, I18n.format("gui.done")));
-		this.controls.add(new GuiHoverLabel(1, 50, 112, this.mc.fontRenderer, "\247n" + LITELOADER_URI.toString()));
-		this.controls.add(new GuiHoverLabel(2, 50, 154, this.mc.fontRenderer, "\247n" + MCP_URI.toString()));
+		this.controls.add(new GuiHoverLabel(1, 50, 112, this.mc.fontRendererObj, "\247n" + LITELOADER_URI.toString()));
+		this.controls.add(new GuiHoverLabel(2, 50, 154, this.mc.fontRendererObj, "\247n" + MCP_URI.toString()));
 	}
 	
 	@Override
 	void draw(int mouseX, int mouseY, float partialTicks)
 	{
-		FontRenderer fontRenderer = this.mc.fontRenderer;
+		FontRenderer fontRenderer = this.mc.fontRendererObj;
 		int textColour = 0xFFAAAAAA;
 
 		this.mc.getTextureManager().bindTexture(GuiScreenModInfo.aboutTextureResource);

@@ -15,26 +15,26 @@ public class GuiCheckbox extends GuiButton
 	
 	public GuiCheckbox(int controlId, int xPosition, int yPosition, String displayString)
 	{
-		super(controlId, xPosition, yPosition, Minecraft.getMinecraft().fontRenderer.getStringWidth(displayString) + 16, 12, displayString);
+		super(controlId, xPosition, yPosition, Minecraft.getMinecraft().fontRendererObj.getStringWidth(displayString) + 16, 12, displayString);
 	}
 	
 	@Override
 	public void drawButton(Minecraft minecraft, int mouseX, int mouseY)
 	{
-		if (this.field_146125_m) // drawButton
+		if (this.visible) // drawButton
 		{
 			minecraft.getTextureManager().bindTexture(GuiScreenModInfo.aboutTextureResource);
 			glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
-			this.field_146123_n = mouseX >= this.field_146128_h && mouseY >= this.field_146129_i && mouseX < this.field_146128_h + this.field_146120_f && mouseY < this.field_146129_i + this.field_146121_g;
+			this.hovered = mouseX >= this.xPosition && mouseY >= this.yPosition && mouseX < this.xPosition + this.width && mouseY < this.yPosition + this.height;
 			
-			this.drawTexturedModalRect(this.field_146128_h, this.field_146129_i, this.checked ? 134 : 122, 80, 12, 12);
+			this.drawTexturedModalRect(this.xPosition, this.yPosition, this.checked ? 134 : 122, 80, 12, 12);
 			this.mouseDragged(minecraft, mouseX, mouseY);
 			
 			int colour = 0xE0E0E0;
 			if (!this.enabled) colour = 0xA0A0A0;
-			else if (this.field_146123_n) colour = 0xFFFFA0;
+			else if (this.hovered) colour = 0xFFFFA0;
 			
-			this.drawString(minecraft.fontRenderer, this.displayString, this.field_146128_h + 16, this.field_146129_i + 2, colour);
+			this.drawString(minecraft.fontRendererObj, this.displayString, this.xPosition + 16, this.yPosition + 2, colour);
 		}
 	}
 }

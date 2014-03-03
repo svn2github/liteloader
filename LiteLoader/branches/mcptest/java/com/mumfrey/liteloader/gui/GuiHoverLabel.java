@@ -27,14 +27,14 @@ public class GuiHoverLabel extends GuiButton
 	@Override
 	public void drawButton(Minecraft minecraft, int mouseX, int mouseY)
 	{
-		if (this.field_146125_m)
+		if (this.visible)
 		{
-			this.field_146123_n = mouseX >= this.field_146128_h && mouseY >= this.field_146129_i && mouseX < this.field_146128_h + this.field_146120_f && mouseY < this.field_146129_i + this.field_146121_g;
-			this.fontRenderer.drawString(this.displayString, this.field_146128_h, this.field_146129_i, this.field_146123_n ? this.hoverColour : this.colour);
+			this.hovered = mouseX >= this.xPosition && mouseY >= this.yPosition && mouseX < this.xPosition + this.width && mouseY < this.yPosition + this.height;
+			this.fontRenderer.drawString(this.displayString, this.xPosition, this.yPosition, this.hovered ? this.hoverColour : this.colour);
 		}
 		else
 		{
-			this.field_146123_n = false;
+			this.hovered = false;
 		}
 	}
 	

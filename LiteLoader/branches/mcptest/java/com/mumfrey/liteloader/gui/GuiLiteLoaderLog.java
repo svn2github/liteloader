@@ -137,8 +137,8 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 			if (this.pasteBinURL.startsWith("http:"))
 			{
 				LiteLoaderLogger.info("Log file upload succeeded, url is %s", this.pasteBinURL);
-				int urlWidth = this.mc.fontRenderer.getStringWidth(this.pasteBinURL);
-				this.controls.add(new GuiHoverLabel(3, xMid - (urlWidth / 2), this.height / 2, this.mc.fontRenderer, "\247n" + this.pasteBinURL));
+				int urlWidth = this.mc.fontRendererObj.getStringWidth(this.pasteBinURL);
+				this.controls.add(new GuiHoverLabel(3, xMid - (urlWidth / 2), this.height / 2, this.mc.fontRendererObj, "\247n" + this.pasteBinURL));
 			}
 			else
 			{
@@ -170,7 +170,7 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 		this.innerTop = TOP - this.scrollBar.getValue();
 	
 		// Draw panel title
-		this.mc.fontRenderer.drawString(I18n.format("gui.log.title"), MARGIN, TOP - 14, 0xFFFFFFFF);
+		this.mc.fontRendererObj.drawString(I18n.format("gui.log.title"), MARGIN, TOP - 14, 0xFFFFFFFF);
 		
 		// Draw top and bottom horizontal bars
 		drawRect(MARGIN, TOP - 4, this.width - MARGIN, TOP - 3, 0xFF999999);
@@ -200,18 +200,18 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 
 			if (this.logUpload != null)
 			{
-				this.drawCenteredString(this.mc.fontRenderer, I18n.format("gui.log.uploading"), xMid, yMid - 10, 0xFFFFFFFF);
+				this.drawCenteredString(this.mc.fontRendererObj, I18n.format("gui.log.uploading"), xMid, yMid - 10, 0xFFFFFFFF);
 				this.drawThrobber(xMid - 90, yMid - 14, this.throb);
 			}
 			else
 			{
 				if (this.pasteBinURL.startsWith("http:"))
 				{
-					this.drawCenteredString(this.mc.fontRenderer, I18n.format("gui.log.uploadsuccess"), xMid, yMid - 14, 0xFF55FF55);
+					this.drawCenteredString(this.mc.fontRendererObj, I18n.format("gui.log.uploadsuccess"), xMid, yMid - 14, 0xFF55FF55);
 				}
 				else
 				{
-					this.drawCenteredString(this.mc.fontRenderer, I18n.format("gui.log.uploadfailed"), xMid, yMid - 10, 0xFFFF5555);
+					this.drawCenteredString(this.mc.fontRendererObj, I18n.format("gui.log.uploadfailed"), xMid, yMid - 10, 0xFFFF5555);
 				}
 			}
 		}
@@ -242,7 +242,7 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 		{
 			if (yPos > offset - 10 && yPos <= offset + height)
 			{
-				this.mc.fontRenderer.drawString(logLine, 0, yPos, this.getMessageColour(logLine.toLowerCase()));
+				this.mc.fontRendererObj.drawString(logLine, 0, yPos, this.getMessageColour(logLine.toLowerCase()));
 			}
 			yPos += 10;
 		}

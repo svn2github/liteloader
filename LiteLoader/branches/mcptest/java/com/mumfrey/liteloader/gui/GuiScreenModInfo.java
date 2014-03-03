@@ -154,7 +154,7 @@ public class GuiScreenModInfo extends GuiScreen
 	public GuiScreenModInfo(Minecraft minecraft, GuiScreen mainMenu, LiteLoader loader, EnabledModsList enabledModsList, ConfigManager configManager, boolean hideTab)
 	{
 		this.mc = minecraft;
-		this.fontRendererObj = minecraft.fontRenderer;
+		this.fontRendererObj = minecraft.fontRendererObj;
 		this.mainMenu = mainMenu;
 		this.configManager = configManager;
 		this.hideTab = hideTab;
@@ -180,21 +180,21 @@ public class GuiScreenModInfo extends GuiScreen
 		// Active mods
 		for (LiteMod mod : loader.getLoadedMods())
 		{
-			GuiModListEntry modListEntry = new GuiModListEntry(loader, enabledModsList, this.mc.fontRenderer, mod);
+			GuiModListEntry modListEntry = new GuiModListEntry(loader, enabledModsList, this.mc.fontRendererObj, mod);
 			sortedMods.put(modListEntry.getKey(), modListEntry);
 		}
 		
 		// Disabled mods
 		for (Loadable<?> disabledMod : loader.getDisabledMods())
 		{
-			GuiModListEntry modListEntry = new GuiModListEntry(loader, enabledModsList, this.mc.fontRenderer, disabledMod);
+			GuiModListEntry modListEntry = new GuiModListEntry(loader, enabledModsList, this.mc.fontRendererObj, disabledMod);
 			sortedMods.put(modListEntry.getKey(), modListEntry);
 		}
 
 		// Injected tweaks
 		for (Loadable<?> injectedTweak : loader.getInjectedTweaks())
 		{
-			GuiModListEntry modListEntry = new GuiModListEntry(loader, enabledModsList, this.mc.fontRenderer, injectedTweak);
+			GuiModListEntry modListEntry = new GuiModListEntry(loader, enabledModsList, this.mc.fontRendererObj, injectedTweak);
 			sortedMods.put(modListEntry.getKey(), modListEntry);
 		}
 		
@@ -508,7 +508,7 @@ public class GuiScreenModInfo extends GuiScreen
 			int left = LEFT_EDGE + MARGIN + width;
 			int right = this.width - MARGIN;
 			
-			int spaceForButtons = this.btnConfig.field_146125_m || this.btnToggle.field_146125_m ? 28 : 0;
+			int spaceForButtons = this.btnConfig.visible || this.btnToggle.visible ? 28 : 0;
 			glEnableClipping(left, right, PANEL_TOP, this.height - PANEL_BOTTOM - spaceForButtons);
 			this.selectedMod.drawInfo(mouseX, mouseY, partialTicks, left, PANEL_TOP, right - left, height - spaceForButtons);
 			glDisableClipping();
@@ -527,15 +527,15 @@ public class GuiScreenModInfo extends GuiScreen
 		}
 		
 		this.selectedMod = mod;
-		this.btnToggle.field_146125_m = false;
-		this.btnConfig.field_146125_m = false;
+		this.btnToggle.visible = false;
+		this.btnConfig.visible = false;
 		
 		if (this.selectedMod != null && this.selectedMod.canBeToggled())
 		{
-			this.btnToggle.field_146125_m = true;
+			this.btnToggle.visible = true;
 			this.btnToggle.displayString = this.selectedMod.willBeEnabled() ? I18n.format("gui.disablemod") : I18n.format("gui.enablemod");
 			
-			this.btnConfig.field_146125_m = this.configManager.hasPanel(this.selectedMod.getModClass());
+			this.btnConfig.visible = this.configManager.hasPanel(this.selectedMod.getModClass());
 		}
 	}
 
@@ -685,7 +685,7 @@ public class GuiScreenModInfo extends GuiScreen
 						this.selectMod(mod);
 						
 						// handle double-click
-						if (mod == lastSelectedMod && this.doubleClickTime > 0 && this.btnConfig.field_146125_m)
+						if (mod == lastSelectedMod && this.doubleClickTime > 0 && this.btnConfig.visible)
 						{
 							this.actionPerformed(this.btnConfig);
 						}
