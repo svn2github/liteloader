@@ -45,7 +45,7 @@ public enum Obf
 	           minecraftProfiler("field_71424_I",                                              "A"   ), // Minecraft/mcProfiler
 	             entityRenderMap("field_78729_o",                                              "q"   ), // RenderManager/entityRenderMap
 	             reloadListeners("field_110546_b",                                             "d"   ), // SimpleReloadableResourceManager/reloadListeners
-	                  netManager(                                                              "d"   ), // NetHandlerLoginClient/field_147393_d
+	                  netManager("field_147393_d",                                             "d"   ), // NetHandlerLoginClient/field_147393_d
 
 	// Methods
 	// -----------------------------------------------------------------------------------------
