@@ -1,5 +1,9 @@
 package com.mumfrey.liteloader.core.runtime;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
 /**
  * Centralised obfuscation table for LiteLoader
  *
@@ -38,31 +42,33 @@ public enum Obf
 
 	// Fields
 	// -----------------------------------------------------------------------------------------
-	           minecraftProfiler("mcProfiler",                              "field_71424_I",   "A"   ), // Minecraft/mcProfiler
-	             entityRenderMap("entityRenderMap",                         "field_78729_o",   "q"   ), // RenderManager/entityRenderMap
-	             reloadListeners("reloadListeners",                         "field_110546_b",  "d"   ), // SimpleReloadableResourceManager/reloadListeners
-	                  netManager("field_147393_d",                                             "d"   ), // NetHandlerLoginClient/field_147393_d
+	           minecraftProfiler("field_71424_I",                                              "A"   ), // Minecraft/mcProfiler
+	             entityRenderMap("field_78729_o",                                              "q"   ), // RenderManager/entityRenderMap
+	             reloadListeners("field_110546_b",                                             "d"   ), // SimpleReloadableResourceManager/reloadListeners
+	                  netManager(                                                              "d"   ), // NetHandlerLoginClient/field_147393_d
 
 	// Methods
 	// -----------------------------------------------------------------------------------------
-	               processPacket("processPacket",                           "func_148833_a",   "a"   ),
-	                 runGameLoop("runGameLoop",                             "func_71411_J",    "ad"  ),
-	                     runTick("runTick",                                 "func_71407_l",    "o"   ), 
-	       updateCameraAndRender("updateCameraAndRender",                   "func_78480_b",    "b"   ), 
-	                 renderWorld("renderWorld",                             "func_78471_a",    "a"   ), 
-	           renderGameOverlay("renderGameOverlay",                       "func_73830_a",    "a"   ), 
-	                startSection("startSection",                            "func_76320_a",    "a"   ), 
-	                  endSection("endSection",                              "func_76319_b",    "b"   ), 
-	             endStartSection("endStartSection",                         "func_76318_c",    "c"   ),  
-	                 spawnPlayer("func_148545_a",                           "func_148545_a",   "a"   ),
-	               respawnPlayer("respawnPlayer",                           "func_72368_a",    "a"   ),
-	initializeConnectionToPlayer("initializeConnectionToPlayer",            "func_72355_a",    "a"   ),
-	              playerLoggedIn("playerLoggedIn",                          "func_72377_c",    "c"   ),
-	             playerLoggedOut("playerLoggedOut",                         "func_72367_e",    "e"   );
+	               processPacket("func_148833_a",                                              "a"   ),
+	                 runGameLoop("func_71411_J",                                               "ad"  ),
+	                     runTick("func_71407_l",                                               "o"   ), 
+	       updateCameraAndRender("func_78480_b",                                               "b"   ), 
+	                 renderWorld("func_78471_a",                                               "a"   ), 
+	           renderGameOverlay("func_73830_a",                                               "a"   ), 
+	                startSection("func_76320_a",                                               "a"   ), 
+	                  endSection("func_76319_b",                                               "b"   ), 
+	             endStartSection("func_76318_c",                                               "c"   ),  
+	                 spawnPlayer("func_148545_a",                                              "a"   ),
+	               respawnPlayer("func_72368_a",                                               "a"   ),
+	initializeConnectionToPlayer("func_72355_a",                                               "a"   ),
+	              playerLoggedIn("func_72377_c",                                               "c"   ),
+	             playerLoggedOut("func_72367_e",                                               "e"   );
 
 	public static final int MCP = 0;
 	public static final int SRG = 1;
 	public static final int OBF = 2;
+	
+	private static Properties mcpNames;
 
 	/**
 	 * Array of names, indexed by MCP, SRG, OBF constants
@@ -94,31 +100,22 @@ public enum Obf
 	 * @param seargeName
 	 * @param obfName
 	 */
-	private Obf(String mcpName, String seargeName, String obfName)
+	private Obf(String seargeName, String obfName)
 	{
-		this.name = mcpName;
-		this.ref = mcpName.replace('.', '/');
+		this.name = Obf.getDeobfName(seargeName);
+		this.ref = this.name.replace('.', '/');
 		this.srg = seargeName;
 		this.obf = obfName;
 		
 		this.names = new String[] { this.name, this.srg, this.obf };
 	}
-	
-	/**
-	 * @param mcpName
-	 * @param obfName
-	 */
-	private Obf(String mcpName, String obfName)
-	{
-		this(mcpName, mcpName, obfName);
-	}
-	
+
 	/**
 	 * @param mcpName
 	 */
 	private Obf(String mcpName)
 	{
-		this(mcpName, mcpName, mcpName);
+		this(mcpName, mcpName);
 	}
 	
 	/**
@@ -128,5 +125,34 @@ public enum Obf
 	public String getDescriptor(int type)
 	{
 		return String.format("L%s;", this.names[type].replace('.', '/'));
+	}
+	
+	/**
+	 * @param seargeName
+	 * @return
+	 */
+	private static String getDeobfName(String seargeName)
+	{
+		if (Obf.mcpNames == null)
+		{
+			Obf.mcpNames = new Properties();
+			InputStream is = Obf.class.getResourceAsStream("/obfuscation.properties");
+			if (is != null)
+			{
+				try
+				{
+					Obf.mcpNames.load(is);
+				}
+				catch (IOException ex) {}
+				
+				try
+				{
+					is.close();
+				}
+				catch (IOException ex) {}
+			}
+		}
+		
+		return Obf.mcpNames.getProperty(seargeName, seargeName);
 	}
 }
