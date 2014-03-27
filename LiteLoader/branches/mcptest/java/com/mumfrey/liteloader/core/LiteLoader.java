@@ -118,7 +118,12 @@ public final class LiteLoader
 	/**
 	 * Global list of mods which we can load
 	 */
-	private final LinkedList<LiteMod> mods = new LinkedList<LiteMod>();
+	private final LinkedList<LiteMod> allMods = new LinkedList<LiteMod>();
+	
+	/**
+	 * Global list of mods which are still waiting for initialisiation
+	 */
+	private final LinkedList<LiteMod> initMods = new LinkedList<LiteMod>();
 	
 	/**
 	 * Global list of mods which we have loaded
@@ -586,7 +591,7 @@ public final class LiteLoader
 			throw new IllegalArgumentException("Attempted to get a reference to a mod without specifying a mod name");
 		}
 		
-		for (LiteMod mod : this.mods)
+		for (LiteMod mod : this.allMods)
 		{
 			Class<? extends LiteMod> modClass = mod.getClass();
 			String modId = this.getModIdentifier(modClass);
@@ -613,7 +618,7 @@ public final class LiteLoader
 			throw new RuntimeException("Attempted to get a reference to a mod before loader startup is complete");
 		}
 		
-		for (LiteMod mod : this.mods)
+		for (LiteMod mod : this.allMods)
 		{
 			if (mod.getClass().equals(modClass))
 				return (T)mod;
@@ -632,7 +637,7 @@ public final class LiteLoader
 	{
 		if (!this.startupComplete || modName == null) return false;
 		
-		for (LiteMod mod : this.mods)
+		for (LiteMod mod : this.allMods)
 		{
 			if (modName.equalsIgnoreCase(mod.getName()) || modName.equalsIgnoreCase(mod.getClass().getSimpleName())) return true;
 		}
@@ -737,7 +742,7 @@ public final class LiteLoader
 	{
 		if (identifier == null) return null;
 		
-		for (LiteMod mod : this.mods)
+		for (LiteMod mod : this.allMods)
 		{
 			if (identifier.equalsIgnoreCase(this.enumerator.getModIdentifier(mod.getClass())))
 			{
@@ -888,7 +893,7 @@ public final class LiteLoader
 		
 		LiteMod newMod = mod.newInstance();
 		
-		this.mods.add(newMod);
+		this.onModLoaded(newMod);
 		String modName = newMod.getName();
 		if (modName == null && identifier != null) modName = identifier;
 		LiteLoaderLogger.info("Successfully added mod %s version %s", modName, newMod.getVersion());
@@ -910,6 +915,15 @@ public final class LiteLoader
 	}
 
 	/**
+	 * @param mod
+	 */
+	protected void onModLoaded(LiteMod mod)
+	{
+		this.allMods.add(mod);
+		this.initMods.add(mod);
+	}
+
+	/**
 	 * Initialise the mods which were loaded
 	 */
 	private void initMods()
@@ -917,9 +931,9 @@ public final class LiteLoader
 		this.loadedModsList = "";
 		int loadedModsCount = 0;
 		
-		for (Iterator<LiteMod> iter = this.mods.iterator(); iter.hasNext();)
+		while (this.initMods.size() > 0)
 		{
-			LiteMod mod = iter.next();
+			LiteMod mod = this.initMods.removeFirst();
 			
 			try
 			{
@@ -929,7 +943,7 @@ public final class LiteLoader
 			catch (Throwable th)
 			{
 				LiteLoaderLogger.warning(th, "Error initialising mod '%s'", mod.getName());
-				iter.remove();
+				this.allMods.remove(mod);
 			}
 		}
 		
@@ -1216,7 +1230,7 @@ public final class LiteLoader
 		Map<String, Map<String, String>> modList = this.enumerator.getSharedModList();
 		if (modList == null) return;
 		
-		for (LiteMod mod : this.mods)
+		for (LiteMod mod : this.allMods)
 		{
 			String modKey = String.format("%s:%s", LiteLoader.MOD_SYSTEM, this.getModIdentifier(mod));
 			modList.put(modKey, this.packModInfoToMap(mod));
