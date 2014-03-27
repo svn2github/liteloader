@@ -21,7 +21,6 @@ public enum Obf
 
 	// Classes
 	// -----------------------------------------------------------------------------------------
-	         RenderLightningBolt("net.minecraft.client.renderer.entity.RenderLightningBolt",   "bny" ),
 	                   Minecraft("net.minecraft.client.Minecraft",                             "azd" ),
 	              EntityRenderer("net.minecraft.client.renderer.EntityRenderer",               "bll" ),
 	                   GuiIngame("net.minecraft.client.gui.GuiIngame",                         "bah" ),
@@ -62,7 +61,8 @@ public enum Obf
 	               respawnPlayer("func_72368_a",                                               "a"   ),
 	initializeConnectionToPlayer("func_72355_a",                                               "a"   ),
 	              playerLoggedIn("func_72377_c",                                               "c"   ),
-	             playerLoggedOut("func_72367_e",                                               "e"   );
+	             playerLoggedOut("func_72367_e",                                               "e"   ),
+	                   startGame("func_71384_a",                                               "Z"   );
 
 	public static final int MCP = 0;
 	public static final int SRG = 1;

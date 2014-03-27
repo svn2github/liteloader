@@ -447,6 +447,12 @@ public class LiteLoaderTweaker implements ITweaker
 	{
 		if (tweakClass != null && !this.allCascadingTweaks.contains(tweakClass))
 		{
+			if (this.getClass().getName().equals(tweakClass))
+				return false;
+			
+			if (LiteLoaderTweaker.isTweakAlreadyEnqueued(tweakClass))
+				return false;
+			
 			this.allCascadingTweaks.add(tweakClass);
 			this.sortedCascadingTweaks.add(new SortableValue<String>(priority, this.tweakOrder++, tweakClass));
 			return true;
@@ -454,7 +460,7 @@ public class LiteLoaderTweaker implements ITweaker
 		
 		return false;
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	private void injectDiscoveredTweakClasses()
 	{
@@ -638,5 +644,30 @@ public class LiteLoaderTweaker implements ITweaker
 	public static ClassTransformerManager getTransformerManager()
 	{
 		return LiteLoaderTweaker.instance.transformerManager;
+	}
+	
+	@SuppressWarnings("unchecked")
+	private static boolean isTweakAlreadyEnqueued(String clazz)
+	{
+		List<String> tweakClasses = (List<String>)Launch.blackboard.get("TweakClasses");
+		List<ITweaker> tweakers = (List<ITweaker>)Launch.blackboard.get("Tweaks");
+		
+		if (tweakClasses != null)
+		{
+			for (String tweakClass : tweakClasses)
+			{
+				if (tweakClass.equals(clazz)) return true;
+			}
+		}		
+		
+		if (tweakers != null)
+		{
+			for (ITweaker tweaker : tweakers)
+			{
+				if (tweaker.getClass().getName().equals(clazz)) return true;
+			}
+		}
+		
+		return false;
 	}
 }

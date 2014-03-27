@@ -194,6 +194,8 @@ public abstract class ClassOverlayTransformer implements IClassTransformer
 	 * @param transformedName
 	 * @param classBytes
 	 * @return
+	 * 
+	 * TODO Make this protected
 	 */
 	private byte[] applyOverlay(String transformedName, byte[] classBytes)
 	{
@@ -224,6 +226,8 @@ public abstract class ClassOverlayTransformer implements IClassTransformer
 	 * 
 	 * @param targetClass
 	 * @param overlayClass
+	 * 
+	 * TODO Make this protected
 	 */
 	private void verifyClasses(ClassNode targetClass, ClassNode overlayClass)
 	{
