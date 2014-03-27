@@ -218,7 +218,14 @@ public abstract class ClassOverlayTransformer implements IClassTransformer
 			throw new InvalidOverlayException("Unexpecteded error whilst applying the overlay class", ex);
 		}
 		
+		this.postOverlayTransform(transformedName, targetClass, overlayClass);
+		
 		return this.writeClass(targetClass);
+	}
+
+	protected void postOverlayTransform(String transformedName, ClassNode targetClass, ClassNode overlayClass)
+	{
+		// Stub
 	}
 
 	/**
