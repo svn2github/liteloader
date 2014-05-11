@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="liteloader" basedir="." default="development">
+
+	<taskdef resource="net/sf/antcontrib/antcontrib.properties" classpath="tasks/ant-contrib.jar" />
+
+	<!-- Versions !!IMPORTANT -->
+	<property name="version" value="1.7.2_05" />
+	<property name="mcversion" value="1.7.2" />
+	<property name="author" value="Mumfrey" />
+
+	<!-- Project definitions and dependencies -->
+	<property name="upstream" value="" />
+	<property name="project" value="LiteLoader" />
+	<property name="md5set" value="mcp" />
+	<property name="outmd5set" value="liteloader" />
+	<property name="tweakclass" value="com.mumfrey.liteloader.launch.LiteLoaderTweaker" />
+
+	<property name="mcp.dir" location="../../.." />
+	<property name="build" location="${mcp.dir}/build" />
+	<property name="eclipse" location="${mcp.dir}/eclipse" />
+	<property name="temp" location="${mcp.dir}/temp" />
+	<property name="md5.dir" location="${mcp.dir}/md5" />
+	<property name="libs" location="${mcp.dir}/lib" />
+
+	<property name="dist.dir" location="${build}/dist" />
+	<property name="stage.dir" location="${build}/stage/${ant.project.name}/${version}" />
+	<property name="filetype" value="jar" />
+
+	<property name="python_windows" location="${mcp.dir}/runtime/bin/python/python_mcp.exe" />
+	<property name="python_linux" location="/usr/bin/python" />
+	
+	<target name="findmcp">
+		<echo level="info" message="Searching for clean MCP source..." />
+		<condition property="mcpsrc.exists">
+			<available file="${mcp.dir}/src/mcp" type="dir"/>
+		</condition>
+	</target>
+	
+	<target name="setup_development">
+	    <property name="skipremoval" value="DEV" />
+		<property name="md5.outfile" value="${md5.dir}/client_${outmd5set}.md5" />
+	</target>
+	
+	<target name="setup_production">
+	    <property name="skipremoval" value="" />
+		<property name="md5.outfile" value="${md5.dir}/client_${outmd5set}_production.md5" />
+	</target>
+	
+	<!-- Main target -->
+	<target name="development" depends="setup_development, findmcp, setdirsold, setdirsnew, build" description="Entry point for MCP and upstream builds" />
+	
+	<target name="production" depends="setup_production, findmcp, setdirsold, setdirsnew, build" description="Entry point for production builds" />
+
+	<target name="setdirsnew" description="Set the MCP source directories for the new layout" unless="mcpsrc.exists">
+		<echo level="info" message="Setting MCP source directories for NEW configuration" />
+		<property name="src" location="${build}/src"/>
+		<property name="mc.src" location="${mcp.dir}/src/minecraft" />
+		<echo append="false" file="${temp}/build.cfg" message="[OUTPUT]&#x0A;SrcClient  = build/src" />
+	</target>
+
+	<target name="setdirsold" description="Set the MCP source directories for the old layout" if="mcpsrc.exists">
+		<echo level="warning" message="--------------------------------------------------------------------------------" />
+		<echo level="warning" message=" "                                                                                />
+		<echo level="warning" message=" Setting MCP source directories for OLD configuration!"                           />
+		<echo level="warning" message=" "                                                                                />
+		<echo level="warning" message=" Renaming the MCP 'src' directory is no longer required and support for this"     />
+		<echo level="warning" message=" be removed in a future version."                                                 />
+		<echo level="warning" message=" "                                                                                />
+		<echo level="warning" message="--------------------------------------------------------------------------------" />
+		<property name="src" location="${mcp.dir}/src/minecraft"/>
+		<property name="mc.src" location="${mcp.dir}/src/mcp" />
+	</target>
+
+	<target name="build" description="Perform all tasks for a build" depends="init, recompile, reobfuscate, savemd5, stage, zip" >
+	</target>
+
+	<target name="clean">
+		<echo level="info" message="Cleaning output directories" />
+		
+		<delete dir="${src}" />
+		<delete dir="${mcp.dir}/reobf" />
+	</target>
+
+	<target name="contributesource" description="Contribute an upstream project source code to the source path">
+		<echo level="info" message="Contributing project ${lib}" />
+		<copy todir="${src}" verbose="false" overwrite="true" failonerror="false">
+			<fileset dir="${eclipse}/${lib}/java">
+				<exclude name="**/debug" />
+				<exclude name="**/debug/*.java" />
+			</fileset>
+			<fileset dir="${eclipse}/${lib}/src" />
+			<filterchain>
+				<linecontains negate="true">
+					<contains value="@MCPONLY${skipremoval}" />
+				</linecontains>
+			</filterchain>
+		</copy>
+	</target>
+
+	<target name="contributeresources" description="Contribute resources to the staging path">
+		<echo level="info" message="Contributing project resources for ${lib}" />
+		<copy todir="${stage.dir}" verbose="false" failonerror="false">
+			<fileset dir="${eclipse}/${lib}/resources" excludes=".svn/**">
+				<exclude name="**/Thumbs.db" />
+				<exclude name="**/minecraft.key" />
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="findmd5dir">
+		<echo level="info" message="Searching for existing MD5 directory..." />
+		<condition property="md5dir.exists">
+			<available file="${md5.dir}" type="dir"/>
+		</condition>
+	</target>
+
+	<target name="findmd5" depends="findmd5dir">
+		<echo level="info" message="Searching for existing MD5 sets..." />
+		<condition property="md5set.exists">
+			<available file="${md5.dir}/client_${md5set}.md5" type="file"/>
+		</condition>
+	</target>
+
+	<target name="seedmd5" depends="findmd5" unless="md5set.exists">
+		<echo level="info" message="MD5 sets not found, seeding..." />
+		<ant target="genmd5" antfile="seed_md5.xml" inheritall="true" />
+	</target>
+
+	<target name="notifymd5ok" depends="findmd5" if="md5set.exists">
+		<echo level="info" message="MD5 sets already exist, skipping MD5 set seeding" />
+	</target>
+
+	<target name="preparemd5" description="Copy patched MD5 to the temp directory" depends="seedmd5, notifymd5ok, clean">
+		<echo level="info" message="Prepare exclusion MD5s, using exclusion set &quot;${md5set}&quot;" />
+
+		<copy tofile="${temp}/client.md5" file="${md5.dir}/client_${md5set}.md5" failonerror="true" verbose="true" overwrite="true" />
+	</target>
+
+	<target name="prepare" description="Prepare source for MCP" depends="preparemd5">
+		<echo level="info" message="Prepare sources for compile" />
+
+		<echo level="info" message="Contributing libs" />
+		<copy todir="${libs}" verbose="true" overwrite="true">
+			<fileset dir="${eclipse}/LiteLoader/lib">
+				<exclude name="**/authlib*.jar" />
+				<exclude name="**/log4j*.jar" />
+			</fileset>
+		</copy>
+
+		<echo level="info" message="Contributing MC source" />
+		<copy todir="${src}" verbose="false" overwrite="true">
+			<fileset dir="${mc.src}" />
+		</copy>
+
+		<echo level="info" message="Contributing upstream projects" />
+		<foreach list="${upstream}" param="lib" target="contributesource" />
+
+		<antcall target="contributesource">
+			<param name="lib" value="${project}" />
+		</antcall>
+	</target>
+
+	<target name="init" description="Initialize build environment" depends="prepare">
+		<echo level="info" message="Cleaning old stage and dist, MCP reobf directories" />
+
+		<delete dir="${stage.dir}" />
+
+		<echo level="info" message="Creating stage and dist dirs" />
+		<mkdir dir="${stage.dir}" />
+		<mkdir dir="${dist.dir}" />
+		<mkdir dir="${md5.dir}" />
+	</target>
+
+	<target name="recompile" description="MCP recompile">
+		<echo level="info" message="Compiling projects" />
+
+		<exec executable="${python_windows}" dir="${mcp.dir}" osfamily="windows">
+			<arg value="runtime/recompile.py" />
+			<arg value="--client" />
+			<arg value="--config" />
+			<arg value="${temp}/build.cfg" />
+			<arg value="%*" />
+		</exec>
+
+		<exec executable="${python_linux}" dir="${mcp.dir}" osfamily="unix">
+			<arg value="runtime/recompile.py" />
+			<arg value="--client" />
+			<arg value="--config" />
+			<arg value="${temp}/build.cfg" />
+			<arg value="%*" />
+		</exec>
+	</target>
+
+	<target name="reobfuscate" description="MCP reobfuscate">
+		<echo level="info" message="Obfuscating classes" />
+
+		<exec executable="${python_windows}" dir="${mcp.dir}" osfamily="windows">
+			<arg value="runtime/reobfuscate.py" />
+			<arg value="--client" />
+			<arg value="%*" />
+		</exec>
+
+		<exec executable="${python_linux}" dir="${mcp.dir}" osfamily="unix">
+			<arg value="runtime/reobfuscate.py" />
+			<arg value="--client" />
+			<arg value="%*" />
+		</exec>				
+			
+		
+	</target>
+
+	<target name="savemd5" description="Put post-obfuscation MD5 to stored md5 set" if="outmd5set">
+		<echo level="info" message="Storing obfuscated MD5s" />
+
+		<copy file="${temp}/client_reobf.md5" tofile="${md5.outfile}" overwrite="true" verbose="true" />
+	</target>
+
+	<target name="stage" description="Stage resources into staging directory">
+		<echo level="info" message="Staging resources" />
+
+		<copy todir="${stage.dir}" overwrite="true">
+			<fileset dir="${mcp.dir}/reobf/minecraft" excludes=".svn/**, *.txt">
+				<exclude name="?.class" />
+				<exclude name="??.class" />
+				<exclude name="???.class" />
+				<exclude name="/com/mumfrey/liteloader/core/gen/**" />
+			</fileset>
+		</copy>
+
+		<foreach list="${upstream}" param="lib" target="contributeresources" />
+
+		<antcall target="contributeresources">
+			<param name="lib" value="${project}" />
+		</antcall>
+
+	</target>
+
+	<target name="zip" description="Build the output zip file">
+		<echo level="info" message="Building final output" />
+
+		<mkdir dir="${dist.dir}" />
+		
+		<jar destfile="${dist.dir}/${ant.project.name}-${mcversion}.${filetype}" duplicate="preserve" index="true" manifestencoding="UTF-8">
+			<manifest>
+				<attribute name="Built-By" value="MCP (http://mcp.ocean-labs.de)" />
+				<attribute name="Implementation-Vendor" value="${author}" />
+				<attribute name="Implementation-Title" value="${ant.project.name}" />
+				<attribute name="Implementation-Version" value="${version}" />
+				<attribute name="TweakClass" value="${tweakclass}" />
+				<attribute name="TweakName" value="LiteLoader" />
+				<attribute name="TweakVersion" value="${version}" />
+				<attribute name="TweakAuthor" value="${author}" />
+			</manifest>
+			<fileset dir="${stage.dir}" />
+		</jar>
+	</target>
+	
+	<property environment="env" />
+	
+	<target name="deploy" depends="production" description="Deploy artifact to local minecraft installation in APPDATA">
+		<mkdir dir="${env.APPDATA}/.minecraft/libraries/com/mumfrey/liteloader/1.7.2"/>
+		<copy todir="${env.APPDATA}/.minecraft/libraries/com/mumfrey/liteloader/1.7.2" file="${dist.dir}/${ant.project.name}-${mcversion}.${filetype}" failonerror="false" overwrite="true" />
+		<copy todir="${eclipse}/Installer/src/main/resources" file="${dist.dir}/${ant.project.name}-${mcversion}.${filetype}" failonerror="false" overwrite="true" />
+	</target>
+</project>
