@@ -5,6 +5,8 @@ import static org.lwjgl.opengl.GL11.*;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.mumfrey.liteloader.core.api.LiteLoaderBrandingProvider;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
@@ -195,7 +197,7 @@ public abstract class ModInfoScreenPanel extends Gui
 	{
 		glEnable(GL_BLEND);
 		glAlphaFunc(GL_GREATER, 0.0F); 
-		this.mc.getTextureManager().bindTexture(GuiScreenModInfo.aboutTextureResource);
+		this.mc.getTextureManager().bindTexture(LiteLoaderBrandingProvider.ABOUT_TEXTURE);
 		drawTexturedModalRect(x, y, (frame % 4) * 16, 171 + (((frame / 4) % 3) * 16), 16, 16);
 		glAlphaFunc(GL_GREATER, 0.1F); 
 		glDisable(GL_BLEND);

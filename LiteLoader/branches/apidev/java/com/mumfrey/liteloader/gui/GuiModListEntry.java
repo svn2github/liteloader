@@ -2,6 +2,8 @@ package com.mumfrey.liteloader.gui;
 
 import static org.lwjgl.opengl.GL11.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import net.minecraft.client.Minecraft;
@@ -9,13 +11,16 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.resources.I18n;
 
+import com.google.common.collect.ImmutableSet;
 import com.mumfrey.liteloader.LiteMod;
-import com.mumfrey.liteloader.core.EnabledModsList;
-import com.mumfrey.liteloader.core.LiteLoader;
+import com.mumfrey.liteloader.core.LiteLoaderMods;
 import com.mumfrey.liteloader.core.LiteLoaderEnumerator;
-import com.mumfrey.liteloader.core.Loadable;
-import com.mumfrey.liteloader.core.LoadableMod;
-import com.mumfrey.liteloader.core.TweakContainer;
+import com.mumfrey.liteloader.core.api.LiteLoaderBrandingProvider;
+import com.mumfrey.liteloader.interfaces.Loadable;
+import com.mumfrey.liteloader.interfaces.LoadableMod;
+import com.mumfrey.liteloader.interfaces.TweakContainer;
+import com.mumfrey.liteloader.launch.LoaderEnvironment;
+import com.mumfrey.liteloader.util.render.IconAbsolute;
 
 /**
  * Represents a mod in the mod info screen, keeps track of mod information and provides methods
@@ -25,14 +30,41 @@ import com.mumfrey.liteloader.core.TweakContainer;
  */
 public class GuiModListEntry extends Gui
 {
-	private static final int PANEL_HEIGHT = 32;
-	private static final int PANEL_SPACING = 4;
+	private static final int BLACK                     = 0xFF000000;
+	private static final int DARK_GREY                 = 0xB0333333;
+	private static final int GREY                      = 0xFF999999;
+	private static final int WHITE                     = 0xFFFFFFFF;
+	
+	private static final int BLEND_2THRDS              = 0xB0FFFFFF;
+	private static final int BLEND_HALF                = 0x80FFFFFF;
+	
+	private static final int API_COLOUR                = 0xFFAA00AA;
+	private static final int EXTERNAL_ENTRY_COLOUR     = 0xFF47D1AA;
+	private static final int MISSING_DEPENDENCY_COLOUR = 0xFFFFAA00;
+	
+	private static final int TITLE_COLOUR              = GuiModListEntry.WHITE;
+	private static final int VERSION_TEXT_COLOUR       = GuiModListEntry.GREY;
+	private static final int GRADIENT_COLOUR2          = GuiModListEntry.BLEND_2THRDS & GuiModListEntry.DARK_GREY;
+	private static final int HANGER_COLOUR             = GuiModListEntry.GREY;
+	private static final int HANGER_COLOUR_MOUSEOVER   = GuiModListEntry.WHITE;
+	private static final int AUTHORS_COLOUR            = GuiModListEntry.WHITE;
+	private static final int DIVIDER_COLOUR            = GuiModListEntry.GREY;
+	private static final int DESCRIPTION_COLOUR        = GuiModListEntry.WHITE;
+
+	private static final int PANEL_HEIGHT              = 32;
+	private static final int PANEL_SPACING             = 4;
+	
+	private static final Set<String> BUILT_IN_APIS = ImmutableSet.of("liteloader");
 	
 	/**
 	 * For text display
 	 */
 	private FontRenderer fontRenderer;
 	
+	private final int brandColour;
+	
+	private final LiteLoaderMods mods;
+
 	private LiteMod modInstance;
 	
 	private Class<? extends LiteMod> modClass;
@@ -74,10 +106,17 @@ public class GuiModListEntry extends Gui
 	
 	private boolean isMissingDependencies;
 	
+	private boolean isMissingAPIs;
+	
 	/**
 	 * True if the mod is missing a dependency which has caused it not to load
 	 */
 	private Set<String> missingDependencies;
+	
+	/**
+	 * True if the mod is missing an API which has caused it not to load
+	 */
+	private Set<String> missingAPIs;
 	
 	/**
 	 * Whether the mod can be toggled, not all mods support this, eg. internal mods
@@ -100,66 +139,78 @@ public class GuiModListEntry extends Gui
 	 */
 	private boolean external;
 	
-	private boolean providesTweak, providesTransformer;
+	private List<IconAbsolute> modIcons = new ArrayList<IconAbsolute>();
 
 	/**
 	 * Scroll bar control for the mod info
 	 */
 	private GuiSimpleScrollBar scrollBar = new GuiSimpleScrollBar();
-
+	
 	/**
 	 * Mod list entry for an ACTIVE mod
-	 * 
-	 * @param loader
-	 * @param enabledMods
 	 * @param fontRenderer
 	 * @param modInstance
+	 * @param enabledMods
 	 */
-	GuiModListEntry(LiteLoader loader, EnabledModsList enabledMods, FontRenderer fontRenderer, LiteMod modInstance)
+	GuiModListEntry(LiteLoaderMods mods, LoaderEnvironment environment, FontRenderer fontRenderer, int brandColour, LiteMod modInstance)
 	{
+		this.mods            = mods;
 		this.fontRenderer    = fontRenderer;
+		this.brandColour     = brandColour;
+
 		this.modInstance     = modInstance;
 		this.modClass        = modInstance.getClass();
-		this.identifier      = loader.getModIdentifier(this.modClass);
+		this.identifier      = mods.getModIdentifier(this.modClass);
 		this.name            = modInstance.getName();
 		this.version         = modInstance.getVersion();
 		this.enabled         = true;
-		this.canBeToggled    = this.identifier != null && enabledMods.saveAllowed();
-		this.willBeEnabled   = true;
+		this.canBeToggled    = this.identifier != null && mods.getEnabledModsList().saveAllowed();
+		this.willBeEnabled   = this.identifier == null || mods.isModEnabled(this.identifier);;
 		
-		LoadableMod<?> modContainer = loader.getModContainer(this.modClass);
+		LoadableMod<?> modContainer = mods.getModContainer(this.modClass);
 		
 		this.author          = modContainer.getAuthor();
 		this.url             = modContainer.getMetaValue("url", null);
 		this.description     = modContainer.getDescription(LiteLoaderEnumerator.getModClassName(modInstance));
 		
+		boolean providesTweak       = false;
+		boolean providesTransformer = false;
+		boolean usingAPI            = this.checkUsingAPI(modContainer);
+
 		if (modContainer instanceof TweakContainer)
 		{
-			this.providesTweak = ((TweakContainer<?>)modContainer).hasTweakClass();
-			this.providesTransformer = ((TweakContainer<?>)modContainer).hasClassTransformers();
+			providesTweak       = ((TweakContainer<?>)modContainer).hasTweakClass();
+			providesTransformer = ((TweakContainer<?>)modContainer).hasClassTransformers();
 		}
+ 			
+		this.initIcons(providesTweak, providesTransformer, usingAPI);
 	}
 	
 	/**
 	 * Mod list entry for a currently disabled mod
-	 * 
-	 * @param loader
-	 * @param enabledMods
+	 * @param mods
 	 * @param fontRenderer
 	 * @param modContainer
 	 */
-	GuiModListEntry(LiteLoader loader, EnabledModsList enabledMods, FontRenderer fontRenderer, Loadable<?> modContainer)
+	GuiModListEntry(LiteLoaderMods mods, LoaderEnvironment environment, FontRenderer fontRenderer, int brandColour, Loadable<?> modContainer)
 	{
+		this.mods            = mods;
 		this.fontRenderer    = fontRenderer;
+		this.brandColour     = brandColour;
+		
 		this.identifier      = modContainer.getIdentifier().toLowerCase();
 		this.name            = modContainer.getDisplayName();
 		this.version         = modContainer.getVersion();
 		this.author          = modContainer.getAuthor();
-		this.enabled         = modContainer.isEnabled(enabledMods, LiteLoader.getProfile());
-		this.canBeToggled    = modContainer.isToggleable() && enabledMods.saveAllowed();
-		this.willBeEnabled   = enabledMods.isEnabled(LiteLoader.getProfile(), this.identifier);
+		this.enabled         = modContainer.isEnabled(environment);
+		this.canBeToggled    = modContainer.isToggleable() && mods.getEnabledModsList().saveAllowed();
+		this.willBeEnabled   = mods.isModEnabled(this.identifier);
 		this.external        = modContainer.isExternalJar();
 		this.description     = modContainer.getDescription(null);
+
+		boolean providesTweak       = false;
+		boolean providesTransformer = false;
+		boolean usingAPI            = false;
 		
 		if (modContainer instanceof LoadableMod<?>)
 		{
@@ -167,24 +218,58 @@ public class GuiModListEntry extends Gui
 			
 			this.url                   = loadableMod.getMetaValue("url", null);
 			this.missingDependencies   = loadableMod.getMissingDependencies();
+			this.missingAPIs           = loadableMod.getMissingAPIs();
 			this.isMissingDependencies = this.missingDependencies.size() > 0;
+			this.isMissingAPIs         = this.missingAPIs.size() > 0;
 			
-			if (this.isMissingDependencies)
-			{
-				this.enabled = false;
-				this.description = I18n.format("gui.description.missingdeps") + "\n" + this.missingDependencies.toString();
-			}
+			usingAPI = this.checkUsingAPI(loadableMod);
 		}
 		
 		if (modContainer instanceof TweakContainer)
 		{
 			TweakContainer<?> tweakContainer = (TweakContainer<?>)modContainer;
 			
-			this.providesTweak       = tweakContainer.hasTweakClass();
-			this.providesTransformer = tweakContainer.hasClassTransformers();
+			providesTweak       = tweakContainer.hasTweakClass();
+			providesTransformer = tweakContainer.hasClassTransformers();
+		}
+		
+		this.initIcons(providesTweak, providesTransformer, usingAPI);
+	}
+
+	/**
+	 * @param providesTweak
+	 * @param providesTransformer
+	 * @param usingAPI TODO
+	 */
+	protected void initIcons(boolean providesTweak, boolean providesTransformer, boolean usingAPI)
+	{
+		if (providesTweak)
+		{
+			this.modIcons.add(new IconAbsolute(LiteLoaderBrandingProvider.ABOUT_TEXTURE, I18n.format("gui.mod.providestweak"), 12, 12, 158, 80, 158 + 12, 80 + 12));
+		}
+		
+		if (providesTransformer)
+		{
+			this.modIcons.add(new IconAbsolute(LiteLoaderBrandingProvider.ABOUT_TEXTURE, I18n.format("gui.mod.providestransformer"), 12, 12, 170, 80, 170 + 12, 80 + 12));
+		}
+		
+		if (usingAPI)
+		{
+			this.modIcons.add(new IconAbsolute(LiteLoaderBrandingProvider.ABOUT_TEXTURE, I18n.format("gui.mod.usingapi"), 12, 12, 122, 92, 122 + 12, 92 + 12));
 		}
 	}
-	
+
+	private boolean checkUsingAPI(LoadableMod<?> loadableMod)
+	{
+		for (String requiredAPI : loadableMod.getRequiredAPIs())
+		{
+			if (!GuiModListEntry.BUILT_IN_APIS.contains(requiredAPI))
+				return true;
+		}
+		
+		return false;
+	}
+
 	/**
 	 * Draw this list entry as a list item
 	 * 
@@ -199,72 +284,52 @@ public class GuiModListEntry extends Gui
 	 */
 	public int drawListEntry(int mouseX, int mouseY, float partialTicks, int xPosition, int yPosition, int width, boolean selected)
 	{
-		int colour1 = selected ? (this.external ? 0xB047d1aa : 0xB04785D1) : 0xB0000000;
-		drawGradientRect(xPosition, yPosition, xPosition + width, yPosition + PANEL_HEIGHT, colour1, 0xB0333333);
+		int gradientColour = this.getGradientColour(selected);
+		int titleColour    = this.getTitleColour(selected);
+		int statusColour   = this.getStatusColour(selected);
 		
-		this.fontRenderer.drawString(this.name, xPosition + 5, yPosition + 2, this.isMissingDependencies ? 0xFFFFAA00 : (this.enabled ? (this.external ? 0xFF47d1aa : 0xFFFFFFFF) : 0xFF999999));
-		this.fontRenderer.drawString(I18n.format("gui.about.versiontext", this.version), xPosition + 5, yPosition + 12, 0xFF999999);
+		this.drawGradientRect(xPosition, yPosition, xPosition + width, yPosition + GuiModListEntry.PANEL_HEIGHT, gradientColour, GuiModListEntry.GRADIENT_COLOUR2);
 		
-		String status = this.external ? I18n.format("gui.status.loaded") : I18n.format("gui.status.active");
-		
-		if (this.isMissingDependencies)
-		{
-			status = "\247e" + I18n.format("gui.status.missingdeps");
-			if (this.canBeToggled && !this.willBeEnabled) status = "\247c" + I18n.format("gui.status.pending.disabled");
-		}
-		else if (this.canBeToggled)
-		{
-			if (!this.enabled && !this.willBeEnabled) status = "\2477" + I18n.format("gui.status.disabled");
-			if (!this.enabled &&  this.willBeEnabled) status = "\247a" + I18n.format("gui.status.pending.enabled"); 
-			if ( this.enabled && !this.willBeEnabled) status = "\247c" + I18n.format("gui.status.pending.disabled");
-		}
-		
-		this.fontRenderer.drawString(status, xPosition + 5, yPosition + 22, this.external ? 0xB047d1aa : 0xFF4785D1);
+		this.fontRenderer.drawString(this.getTitleText(),   xPosition + 5, yPosition + 2,  titleColour);
+		this.fontRenderer.drawString(this.getVersionText(), xPosition + 5, yPosition + 12, GuiModListEntry.VERSION_TEXT_COLOUR);
+		this.fontRenderer.drawString(this.getStatusText(),  xPosition + 5, yPosition + 22, statusColour);
 		
 		this.mouseOverListEntry = this.isMouseOver(mouseX, mouseY, xPosition, yPosition, width, PANEL_HEIGHT); 
-		drawRect(xPosition, yPosition, xPosition + 1, yPosition + PANEL_HEIGHT, this.mouseOverListEntry ? 0xFFFFFFFF : 0xFF999999);
+		drawRect(xPosition, yPosition, xPosition + 1, yPosition + PANEL_HEIGHT, this.mouseOverListEntry ? GuiModListEntry.HANGER_COLOUR_MOUSEOVER : GuiModListEntry.HANGER_COLOUR);
 		
-		return PANEL_HEIGHT + PANEL_SPACING;
+		return GuiModListEntry.PANEL_HEIGHT + GuiModListEntry.PANEL_SPACING;
 	}
 
 	public int postRenderListEntry(int mouseX, int mouseY, float partialTicks, int xPosition, int yPosition, int width, boolean selected)
 	{
-		int iconX = xPosition + width - 14;
-		if (this.providesTweak)       iconX = this.drawPropertyIcon(iconX, yPosition + PANEL_HEIGHT - 14, mouseX, mouseY, 158, 80, I18n.format("gui.mod.providestweak"));
-		if (this.providesTransformer) iconX = this.drawPropertyIcon(iconX, yPosition + PANEL_HEIGHT - 14, mouseX, mouseY, 170, 80, I18n.format("gui.mod.providestransformer"));
+		xPosition += (width - 14);
+		yPosition += (GuiModListEntry.PANEL_HEIGHT - 14);
 		
-		return PANEL_HEIGHT + PANEL_SPACING;
-	}
-
-	/**
-	 * @param iconX
-	 * @param yPosition
-	 * @param mouseX
-	 * @param mouseY
-	 * @param u
-	 * @param v
-	 * @param tooltip
-	 * @return
-	 */
-	protected int drawPropertyIcon(int iconX, int yPosition, int mouseX, int mouseY, int u, int v, String tooltipText)
-	{
-		glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
-		Minecraft.getMinecraft().getTextureManager().bindTexture(GuiScreenModInfo.aboutTextureResource);
-		this.drawTexturedModalRect(iconX, yPosition, u, v, 12, 12);
-
-		if (mouseX >= iconX && mouseX <= iconX + 12 && mouseY >= yPosition && mouseY <= yPosition + 12)
+		for (IconAbsolute icon : this.modIcons)
 		{
-			GuiScreenModInfo.drawTooltip(this.fontRenderer, tooltipText, mouseX, mouseY, 4096, 4096, 0xFFFFFFFF, 0x80000000);
+			xPosition = this.drawPropertyIcon(xPosition, yPosition, icon, mouseX, mouseY);
 		}
 		
-		return iconX - 14;
+		return GuiModListEntry.PANEL_HEIGHT + GuiModListEntry.PANEL_SPACING;
 	}
-	
-	public int getHeight()
+
+	protected int drawPropertyIcon(int xPosition, int yPosition, IconAbsolute icon, int mouseX, int mouseY)
 	{
-		return PANEL_HEIGHT + PANEL_SPACING;
+		glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+		Minecraft.getMinecraft().getTextureManager().bindTexture(icon.getTextureResource());
+		
+		glEnable(GL_BLEND);
+		this.drawTexturedModalRect(xPosition, yPosition, icon.getUPos(), icon.getVPos(), icon.getIconWidth(), icon.getIconHeight());
+		glDisable(GL_BLEND);
+
+		if (mouseX >= xPosition && mouseX <= xPosition + 12 && mouseY >= yPosition && mouseY <= yPosition + 12)
+		{
+			GuiScreenModInfo.drawTooltip(this.fontRenderer, icon.getIconName(), mouseX, mouseY, 4096, 4096, GuiModListEntry.WHITE, GuiModListEntry.BLEND_HALF & GuiModListEntry.BLACK);
+		}
+		
+		return xPosition - 14;
 	}
-	
+
 	/**
 	 * Draw this entry as the info page
 	 * 
@@ -275,37 +340,120 @@ public class GuiModListEntry extends Gui
 	 * @param yPosition
 	 * @param width
 	 */
-	public void drawInfo(int mouseX, int mouseY, float partialTicks, int xPosition, int yPosition, int width, int height)
+	public void drawInfo(final int mouseX, final int mouseY, final float partialTicks, final int xPosition, final int yPosition, final int width, final int height)
 	{
 		int bottom = height + yPosition;
-		yPosition += 2;
+		int yPos = yPosition + 2;
 		
-		this.mouseOverInfo = this.isMouseOver(mouseX, mouseY, xPosition, yPosition, width, height);
+		this.mouseOverInfo = this.isMouseOver(mouseX, mouseY, xPosition, yPos, width, height);
 
-		this.fontRenderer.drawString(this.name, xPosition + 5, yPosition, 0xFFFFFFFF); yPosition += 10;
-		this.fontRenderer.drawString(I18n.format("gui.about.versiontext", this.version), xPosition + 5, yPosition, 0xFF999999); yPosition += 10;
+		this.fontRenderer.drawString(this.getTitleText(),   xPosition + 5, yPos, GuiModListEntry.TITLE_COLOUR); yPos += 10;
+		this.fontRenderer.drawString(this.getVersionText(), xPosition + 5, yPos, GuiModListEntry.VERSION_TEXT_COLOUR); yPos += 10;
 
-		drawRect(xPosition + 5, yPosition, xPosition + width, yPosition + 1, 0xFF999999); yPosition += 4;
+		drawRect(xPosition + 5, yPos, xPosition + width, yPos + 1, GuiModListEntry.DIVIDER_COLOUR); yPos += 4; // divider
 
-		this.fontRenderer.drawString(I18n.format("gui.about.authors") + ": \2477" + this.author, xPosition + 5, yPosition, 0xFFFFFFFF); yPosition += 10;
+		this.fontRenderer.drawString(I18n.format("gui.about.authors") + ": \2477" + this.author, xPosition + 5, yPos, GuiModListEntry.AUTHORS_COLOUR); yPos += 10;
 		if (this.url != null)
 		{
-			this.fontRenderer.drawString(this.url, xPosition + 5, yPosition, 0xB04785D1); yPosition += 10;
+			this.fontRenderer.drawString(this.url, xPosition + 5, yPos, GuiModListEntry.BLEND_2THRDS & this.brandColour); yPos += 10;
 		}
 
-		drawRect(xPosition + 5, yPosition, xPosition + width, yPosition + 1, 0xFF999999); yPosition += 4;
-		drawRect(xPosition + 5, bottom - 1, xPosition + width, bottom, 0xFF999999);
+		drawRect(xPosition + 5, yPos, xPosition + width, yPos + 1, GuiModListEntry.DIVIDER_COLOUR); yPos += 4; // divider
+		drawRect(xPosition + 5, bottom - 1, xPosition + width, bottom, GuiModListEntry.DIVIDER_COLOUR); // divider
 		
-		int scrollHeight = bottom - yPosition - 3;
+		int scrollHeight = bottom - yPos - 3;
 		int totalHeight = this.fontRenderer.splitStringWidth(this.description, width - 11);
 		
 		this.scrollBar.setMaxValue(totalHeight - scrollHeight);
-		this.scrollBar.drawScrollBar(mouseX, mouseY, partialTicks, xPosition + width - 5, yPosition, 5, scrollHeight, totalHeight);
+		this.scrollBar.drawScrollBar(mouseX, mouseY, partialTicks, xPosition + width - 5, yPos, 5, scrollHeight, totalHeight);
 		
-		this.mouseOverScrollBar = this.isMouseOver(mouseX, mouseY, xPosition + width - 5, yPosition, 5, scrollHeight);
+		this.mouseOverScrollBar = this.isMouseOver(mouseX, mouseY, xPosition + width - 5, yPos, 5, scrollHeight);
 
-		GuiScreenModInfo.glEnableClipping(-1, -1, yPosition, bottom - 3);
-		this.fontRenderer.drawSplitString(this.description, xPosition + 5, yPosition - this.scrollBar.getValue(), width - 11, 0xFFFFFFFF);
+		GuiScreenModInfo.glEnableClipping(-1, -1, yPos, bottom - 3);
+		this.fontRenderer.drawSplitString(this.description, xPosition + 5, yPos - this.scrollBar.getValue(), width - 11, GuiModListEntry.DESCRIPTION_COLOUR);
+	}
+
+	/**
+	 * @return
+	 */
+	protected String getTitleText()
+	{
+		return this.name;
+	}
+
+	/**
+	 * @return
+	 */
+	protected String getVersionText()
+	{
+		return I18n.format("gui.about.versiontext", this.version);
+	}
+
+	/**
+	 * @return
+	 */
+	protected String getStatusText()
+	{
+		String statusText = this.external ? I18n.format("gui.status.loaded") : I18n.format("gui.status.active");
+		
+		if (this.isMissingAPIs)
+		{
+			statusText = "\2475" + I18n.format("gui.status.missingapis");
+			if (this.canBeToggled && !this.willBeEnabled) statusText = "\247c" + I18n.format("gui.status.pending.disabled");
+		}
+		else if (this.isMissingDependencies)
+		{
+			statusText = "\247e" + I18n.format("gui.status.missingdeps");
+			if (this.canBeToggled && !this.willBeEnabled) statusText = "\247c" + I18n.format("gui.status.pending.disabled");
+		}
+		else if (this.canBeToggled)
+		{
+			if (!this.enabled && !this.willBeEnabled) statusText = "\2477" + I18n.format("gui.status.disabled");
+			if (!this.enabled &&  this.willBeEnabled) statusText = "\247a" + I18n.format("gui.status.pending.enabled"); 
+			if ( this.enabled && !this.willBeEnabled) statusText = "\247c" + I18n.format("gui.status.pending.disabled");
+		}
+		
+		return statusText;
+	}
+
+	/**
+	 * @param external
+	 * @param selected
+	 * @return
+	 */
+	protected int getGradientColour(boolean selected)
+	{
+		return GuiModListEntry.BLEND_2THRDS & (selected ? (this.external ? GuiModListEntry.EXTERNAL_ENTRY_COLOUR : this.brandColour) : GuiModListEntry.BLACK);
+	}
+
+	/**
+	 * @param missingDependencies
+	 * @param enabled
+	 * @param external
+	 * @param selected TODO
+	 * @return
+	 */
+	protected int getTitleColour(boolean selected)
+	{
+		if (this.isMissingDependencies) return GuiModListEntry.MISSING_DEPENDENCY_COLOUR;
+		if (this.isMissingAPIs) return GuiModListEntry.API_COLOUR;
+		if (!this.enabled) return GuiModListEntry.GREY;
+		return this.external ? GuiModListEntry.EXTERNAL_ENTRY_COLOUR : GuiModListEntry.WHITE;
+	}
+
+	/**
+	 * @param external
+	 * @param selected TODO
+	 * @return
+	 */
+	protected int getStatusColour(boolean selected)
+	{
+		return this.external ? GuiModListEntry.EXTERNAL_ENTRY_COLOUR : this.brandColour;
+	}
+
+	public int getHeight()
+	{
+		return GuiModListEntry.PANEL_HEIGHT + GuiModListEntry.PANEL_SPACING;
 	}
 
 	/**
@@ -343,7 +491,7 @@ public class GuiModListEntry extends Gui
 		if (this.canBeToggled)
 		{
 			this.willBeEnabled = !this.willBeEnabled;
-			LiteLoader.getInstance().setModEnabled(this.identifier, this.willBeEnabled);
+			this.mods.setModEnabled(this.identifier, this.willBeEnabled);
 		}
 	}
 	
@@ -364,7 +512,7 @@ public class GuiModListEntry extends Gui
 	
 	public String getName()
 	{
-		return this.name;
+		return getTitleText();
 	}
 
 	public String getVersion()
@@ -397,7 +545,7 @@ public class GuiModListEntry extends Gui
 		return this.willBeEnabled;
 	}
 	
-	public boolean mouseWasOverListEntry()
+	public boolean isMouseOver()
 	{
 		return this.mouseOverListEntry;
 	}

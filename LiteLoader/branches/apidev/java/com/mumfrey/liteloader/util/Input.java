@@ -14,7 +14,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import com.mumfrey.liteloader.api.CoreProvider;
 import com.mumfrey.liteloader.core.LiteLoader;
+import com.mumfrey.liteloader.core.LiteLoaderMods;
 import com.mumfrey.liteloader.util.jinput.ComponentRegistry;
 
 import net.java.games.input.Component;
@@ -23,14 +25,22 @@ import net.java.games.input.Event;
 import net.java.games.input.EventQueue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.network.INetHandler;
+import net.minecraft.network.play.server.S01PacketJoinGame;
+import net.minecraft.world.World;
 
 /**
  * Mod input class, aggregates functionality from LiteLoader's mod key registration functions and JInputLib
  *
  * @author Adam Mummery-Smith
  */
-public final class Input
+public final class Input implements CoreProvider
 {
+	/**
+	 * 
+	 */
+	private Minecraft minecraft;
+
 	/**
 	 * File in which we will store mod key mappings
 	 */
@@ -81,11 +91,9 @@ public final class Input
 		this.jInputComponentRegistry = new ComponentRegistry();
 		this.jInputComponentRegistry.enumerate();
 	}
-
-	/**
-	 * 
-	 */
-	public void init()
+	
+	@Override
+	public void onInit()
 	{
 		if (this.keyMapSettingsFile.exists())
 		{
@@ -96,7 +104,38 @@ public final class Input
 			catch (Exception ex) {}
 		}
 	}
+	
+	@Override
+	public void onPostInit(Minecraft minecraft)
+	{
+		this.minecraft = minecraft;
+	}
 
+	@Override
+	public void onPostInitComplete(LiteLoaderMods mods)
+	{
+	}
+	
+	@Override
+	public void onStartupComplete()
+	{
+	}
+	
+	@Override
+	public void onJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
+	{
+	}
+	
+	@Override
+	public void onWorldChanged(World world)
+	{
+	}
+	
+	@Override
+	public void onPostRender(int mouseX, int mouseY, float partialTicks)
+	{
+	}
+	
 	/**
 	 * Register a key for a mod
 	 * 
@@ -156,8 +195,10 @@ public final class Input
 	/**
 	 * Checks for changed mod keybindings and stores any that have changed 
 	 */
-	public void onTick(boolean clock)
+	@Override
+	public void onTick(boolean clock, float partialTicks, boolean inGame)
 	{
+		this.minecraft.mcProfiler.startSection("keybindings");
 		if (clock)
 		{
 			boolean updated = false;
@@ -175,6 +216,7 @@ public final class Input
 		}
 		
 		this.pollControllers();
+		this.minecraft.mcProfiler.endSection();
 	}
 	
 	/**
@@ -184,6 +226,12 @@ public final class Input
 	{
 		this.keyMapSettings.setProperty(binding.getKeyDescription(), String.valueOf(binding.getKeyCode()));
 		this.storedModKeyBindings.put(binding, Integer.valueOf(binding.getKeyCode()));
+	}
+	
+	@Override
+	public void onShutDown()
+	{
+		this.storeBindings();
 	}
 
 	/**

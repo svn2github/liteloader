@@ -10,59 +10,60 @@ import java.util.Properties;
  * @author Adam Mummery-Smith
  * TODO Obfuscation 1.7.2
  */
-public enum Obf
+public class Obf
 {
 	// Non-obfuscated references, here for convenience
 	// -----------------------------------------------------------------------------------------
-	       InjectedCallbackProxy("com.mumfrey.liteloader.core.transformers.InjectedCallbackProxy"    ),
-	                 GameProfile("com.mojang.authlib.GameProfile"                                    ),
-	               MinecraftMain("net.minecraft.client.main.Main"                                    ),
-	                 constructor("<init>"                                                            ),
+	public static final Obf        InjectedCallbackProxy = new Obf("com.mumfrey.liteloader.core.transformers.InjectedCallbackProxy"    );
+	public static final Obf                   LoadingBar = new Obf("com.mumfrey.liteloader.gui.startup.LoadingBar"                     );
+	public static final Obf                  GameProfile = new Obf("com.mojang.authlib.GameProfile"                                    );
+	public static final Obf                MinecraftMain = new Obf("net.minecraft.client.main.Main"                                    );
+	public static final Obf                  constructor = new Obf("<init>"                                                            );
 
 	// Classes
 	// -----------------------------------------------------------------------------------------
-	                   Minecraft("net.minecraft.client.Minecraft",                             "azd" ),
-	              EntityRenderer("net.minecraft.client.renderer.EntityRenderer",               "bll" ),
-	                   GuiIngame("net.minecraft.client.gui.GuiIngame",                         "bah" ),
-	                    Profiler("net.minecraft.profiler.Profiler",                            "ov"  ),
-	               CrashReport$6("net.minecraft.crash.CrashReport$6",                          "i"   ),
-	           S01PacketJoinGame("net.minecraft.network.play.server.S01PacketJoinGame",        "gu"  ),
-	       S02PacketLoginSuccess("net.minecraft.network.login.server.S02PacketLoginSuccess",   "jg"  ),
-	               S02PacketChat("net.minecraft.network.play.server.S02PacketChat",            "ga"  ),
-	      S3FPacketCustomPayload("net.minecraft.network.play.server.S3FPacketCustomPayload",   "gi"  ),
-	                 INetHandler("net.minecraft.network.INetHandler",                          "es"  ),
-	        C01PacketChatMessage("net.minecraft.network.play.client.C01PacketChatMessage",     "ie"  ),
-	      C17PacketCustomPayload("net.minecraft.network.play.client.C17PacketCustomPayload",   "in"  ),
-	            IntegratedServer("net.minecraft.server.integrated.IntegratedServer",           "bsk" ),
-	               WorldSettings("net.minecraft.world.WorldSettings",                          "afv" ),
-	  ServerConfigurationManager("net.minecraft.server.management.ServerConfigurationManager", "ld"  ),
-	              EntityPlayerMP("net.minecraft.entity.player.EntityPlayerMP",                 "mm"  ),
-	              NetworkManager("net.minecraft.network.NetworkManager",                       "ef"  ),
+	public static final Obf                    Minecraft = new Obf("net.minecraft.client.Minecraft",                             "azd" );
+	public static final Obf               EntityRenderer = new Obf("net.minecraft.client.renderer.EntityRenderer",               "bll" );
+	public static final Obf                    GuiIngame = new Obf("net.minecraft.client.gui.GuiIngame",                         "bah" );
+	public static final Obf                     Profiler = new Obf("net.minecraft.profiler.Profiler",                            "ov"  );
+	public static final Obf                CrashReport$6 = new Obf("net.minecraft.crash.CrashReport$6",                          "i"   );
+	public static final Obf            S01PacketJoinGame = new Obf("net.minecraft.network.play.server.S01PacketJoinGame",        "gu"  );
+	public static final Obf        S02PacketLoginSuccess = new Obf("net.minecraft.network.login.server.S02PacketLoginSuccess",   "jg"  );
+	public static final Obf                S02PacketChat = new Obf("net.minecraft.network.play.server.S02PacketChat",            "ga"  );
+	public static final Obf       S3FPacketCustomPayload = new Obf("net.minecraft.network.play.server.S3FPacketCustomPayload",   "gi"  );
+	public static final Obf                  INetHandler = new Obf("net.minecraft.network.INetHandler",                          "es"  );
+	public static final Obf         C01PacketChatMessage = new Obf("net.minecraft.network.play.client.C01PacketChatMessage",     "ie"  );
+	public static final Obf       C17PacketCustomPayload = new Obf("net.minecraft.network.play.client.C17PacketCustomPayload",   "in"  );
+	public static final Obf             IntegratedServer = new Obf("net.minecraft.server.integrated.IntegratedServer",           "bsk" );
+	public static final Obf                WorldSettings = new Obf("net.minecraft.world.WorldSettings",                          "afv" );
+	public static final Obf   ServerConfigurationManager = new Obf("net.minecraft.server.management.ServerConfigurationManager", "ld"  );
+	public static final Obf               EntityPlayerMP = new Obf("net.minecraft.entity.player.EntityPlayerMP",                 "mm"  );
+	public static final Obf               NetworkManager = new Obf("net.minecraft.network.NetworkManager",                       "ef"  );
 
 	// Fields
 	// -----------------------------------------------------------------------------------------
-	           minecraftProfiler("field_71424_I",                                              "A"   ), // Minecraft/mcProfiler
-	             entityRenderMap("field_78729_o",                                              "q"   ), // RenderManager/entityRenderMap
-	             reloadListeners("field_110546_b",                                             "d"   ), // SimpleReloadableResourceManager/reloadListeners
-	                  netManager("field_147393_d",                                             "d"   ), // NetHandlerLoginClient/field_147393_d
+	public static final Obf            minecraftProfiler = new Obf("field_71424_I",                                              "A"   ); // Minecraft/mcProfiler
+	public static final Obf              entityRenderMap = new Obf("field_78729_o",                                              "q"   ); // RenderManager/entityRenderMap
+	public static final Obf              reloadListeners = new Obf("field_110546_b",                                             "d"   ); // SimpleReloadableResourceManager/reloadListeners
+	public static final Obf                   netManager = new Obf("field_147393_d",                                             "d"   ); // NetHandlerLoginClient/field_147393_d
 
 	// Methods
 	// -----------------------------------------------------------------------------------------
-	               processPacket("func_148833_a",                                              "a"   ),
-	                 runGameLoop("func_71411_J",                                               "ad"  ),
-	                     runTick("func_71407_l",                                               "o"   ), 
-	       updateCameraAndRender("func_78480_b",                                               "b"   ), 
-	                 renderWorld("func_78471_a",                                               "a"   ), 
-	           renderGameOverlay("func_73830_a",                                               "a"   ), 
-	                startSection("func_76320_a",                                               "a"   ), 
-	                  endSection("func_76319_b",                                               "b"   ), 
-	             endStartSection("func_76318_c",                                               "c"   ),  
-	                 spawnPlayer("func_148545_a",                                              "a"   ),
-	               respawnPlayer("func_72368_a",                                               "a"   ),
-	initializeConnectionToPlayer("func_72355_a",                                               "a"   ),
-	              playerLoggedIn("func_72377_c",                                               "c"   ),
-	             playerLoggedOut("func_72367_e",                                               "e"   ),
-	                   startGame("func_71384_a",                                               "Z"   );
+	public static final Obf                processPacket = new Obf("func_148833_a",                                              "a"   );
+	public static final Obf                  runGameLoop = new Obf("func_71411_J",                                               "ad"  );
+	public static final Obf                      runTick = new Obf("func_71407_l",                                               "o"   ); 
+	public static final Obf        updateCameraAndRender = new Obf("func_78480_b",                                               "b"   ); 
+	public static final Obf                  renderWorld = new Obf("func_78471_a",                                               "a"   ); 
+	public static final Obf            renderGameOverlay = new Obf("func_73830_a",                                               "a"   ); 
+	public static final Obf                 startSection = new Obf("func_76320_a",                                               "a"   ); 
+	public static final Obf                   endSection = new Obf("func_76319_b",                                               "b"   ); 
+	public static final Obf              endStartSection = new Obf("func_76318_c",                                               "c"   );  
+	public static final Obf                  spawnPlayer = new Obf("func_148545_a",                                              "a"   );
+	public static final Obf                respawnPlayer = new Obf("func_72368_a",                                               "a"   );
+	public static final Obf initializeConnectionToPlayer = new Obf("func_72355_a",                                               "a"   );
+	public static final Obf               playerLoggedIn = new Obf("func_72377_c",                                               "c"   );
+	public static final Obf              playerLoggedOut = new Obf("func_72367_e",                                               "e"   );
+	public static final Obf                    startGame = new Obf("func_71384_a",                                               "Z"   );
 
 	public static final int MCP = 0;
 	public static final int SRG = 1;
@@ -100,7 +101,7 @@ public enum Obf
 	 * @param seargeName
 	 * @param obfName
 	 */
-	private Obf(String seargeName, String obfName)
+	protected Obf(String seargeName, String obfName)
 	{
 		this.name = Obf.getDeobfName(seargeName);
 		this.ref = this.name.replace('.', '/');
@@ -113,7 +114,7 @@ public enum Obf
 	/**
 	 * @param mcpName
 	 */
-	private Obf(String mcpName)
+	protected Obf(String mcpName)
 	{
 		this(mcpName, mcpName);
 	}

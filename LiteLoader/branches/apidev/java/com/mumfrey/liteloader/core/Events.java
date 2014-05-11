@@ -5,6 +5,8 @@ import java.util.LinkedList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiNewChat;
 import net.minecraft.client.gui.ScaledResolution;
+import net.minecraft.client.resources.IResourceManager;
+import net.minecraft.client.resources.IResourceManagerReloadListener;
 import net.minecraft.command.ICommandManager;
 import net.minecraft.command.ServerCommandManager;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -28,8 +30,12 @@ import org.lwjgl.input.Mouse;
 
 import com.mojang.authlib.GameProfile;
 import com.mumfrey.liteloader.*;
+import com.mumfrey.liteloader.api.Listener;
+import com.mumfrey.liteloader.api.InterfaceProvider;
 import com.mumfrey.liteloader.core.gen.GenProfiler;
 import com.mumfrey.liteloader.core.overlays.IMinecraft;
+import com.mumfrey.liteloader.gui.startup.LoadingBar;
+import com.mumfrey.liteloader.launch.LoaderProperties;
 import com.mumfrey.liteloader.util.PrivateFields;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
@@ -37,8 +43,10 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
  *
  * @author Adam Mummery-Smith
  */
-public class Events
+public class Events implements InterfaceProvider, IResourceManagerReloadListener
 {
+	private static final String OPTION_GENERATE_MAPPINGS = "genMappings";
+
 	/**
 	 * Reference to the loader instance
 	 */
@@ -50,16 +58,6 @@ public class Events
 	private final Minecraft minecraft;
 	
 	/**
-	 * Client plugin channel manager
-	 */
-	private final ClientPluginChannels clientPluginChannels;
-	
-	/**
-	 * Server plugin channel manager
-	 */
-	private final ServerPluginChannels serverPluginChannels;
-	
-	/**
 	 * Reference to the minecraft timer
 	 */
 	private Timer minecraftTimer;
@@ -67,7 +65,7 @@ public class Events
 	/**
 	 * Flags which keep track of whether hooks have been applied
 	 */
-	private boolean hookInitDone, lateInitDone, profilerHooked;
+	private boolean lateInitDone, profilerHooked;
 	
 	/**
 	 * Profiler hook objects
@@ -190,17 +188,15 @@ public class Events
 	 * 
 	 * @param loader
 	 * @param minecraft
-	 * @param pluginChannels
 	 */
-	Events(LiteLoader loader, Minecraft minecraft, ClientPluginChannels pluginChannels, ServerPluginChannels serverPluginChannels, boolean genMappings)
+	Events(LiteLoader loader, Minecraft minecraft, LoaderProperties properties)
 	{
 		this.loader = loader;
 		this.minecraft = minecraft;
-		this.clientPluginChannels = pluginChannels;
-		this.serverPluginChannels = serverPluginChannels;
+		
 		try
 		{
-			if (genMappings)
+			if (properties.getBooleanProperty(Events.OPTION_GENERATE_MAPPINGS))
 			{
 				this.genProfiler = GenProfiler.class.newInstance();
 			}
@@ -210,109 +206,56 @@ public class Events
 //			th.printStackTrace();
 		}
 	}
-
+	
 	/**
-	 * Add a listener to the relevant listener lists
-	 * 
 	 * @param listener
+	 * @deprecated Use LiteLoader.getInterfaceManager().registerListener() instead
 	 */
+	@Deprecated
 	public void addListener(LiteMod listener)
 	{
-		if (listener instanceof Tickable)
-		{
-			this.addTickListener((Tickable)listener);
-		}
+		LiteLoader.getInterfaceManager().registerListener(listener);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.mumfrey.liteloader.api.InterfaceProvider#getListenerBaseType()
+	 */
+	@Override
+	public Class<? extends Listener> getListenerBaseType()
+	{
+		return LiteMod.class;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.mumfrey.liteloader.api.InterfaceProvider#registerInterfaces(com.mumfrey.liteloader.core.InterfaceRegistrationDelegate)
+	 */
+	@Override
+	public void registerInterfaces(InterfaceRegistrationDelegate delegate)
+	{
+		delegate.registerInterface(Tickable.class);
+		delegate.registerInterface(GameLoopListener.class);
+		delegate.registerInterface(InitCompleteListener.class);
+		delegate.registerInterface(RenderListener.class);
+		delegate.registerInterface(PostRenderListener.class);
+		delegate.registerInterface(ChatFilter.class);
+		delegate.registerInterface(ChatListener.class);
+		delegate.registerInterface(ChatRenderListener.class);
+		delegate.registerInterface(HUDRenderListener.class);
+		delegate.registerInterface(PreJoinGameListener.class);
+		delegate.registerInterface(JoinGameListener.class);
+		delegate.registerInterface(ServerChatFilter.class);
+		delegate.registerInterface(ServerCommandProvider.class);
+		delegate.registerInterface(ServerPlayerListener.class);
+		delegate.registerInterface(OutboundChatListener.class);
 		
-		if (listener instanceof GameLoopListener)
-		{
-			this.addLoopListener((GameLoopListener)listener);
-		}
-		
-		if (listener instanceof InitCompleteListener)
-		{
-			this.addInitListener((InitCompleteListener)listener);
-		}
-		
-		if (listener instanceof RenderListener)
-		{
-			this.addRenderListener((RenderListener)listener);
-		}
-		
-		if (listener instanceof PostRenderListener)
-		{
-			this.addPostRenderListener((PostRenderListener)listener);
-		}
-		
-		if (listener instanceof ChatFilter)
-		{
-			this.addChatFilter((ChatFilter)listener);
-		}
-		
-		if (listener instanceof ChatListener)
-		{
-			if (listener instanceof ChatFilter)
-			{
-				LiteLoaderLogger.warning("Interface error initialising mod '%1s'. A mod implementing ChatFilter and ChatListener is not supported! Remove one of these interfaces", listener.getName());
-			}
-			else
-			{
-				this.addChatListener((ChatListener)listener);
-			}
-		}
-		
-		if (listener instanceof ChatRenderListener)
-		{
-			this.addChatRenderListener((ChatRenderListener)listener);
-		}
-		
-		if (listener instanceof HUDRenderListener)
-		{
-			this.addHUDRenderListener((HUDRenderListener)listener);
-		}
-		
-		if (listener instanceof PreJoinGameListener)
-		{
-			this.addPreJoinGameListener((PreJoinGameListener)listener);
-		}
-		
-		if (listener instanceof JoinGameListener)
-		{
-			this.addJoinGameListener((JoinGameListener)listener);
-		}
-		
-		if (listener instanceof ServerChatFilter)
-		{
-			this.addServerChatFilter((ServerChatFilter)listener);
-		}
-		
-		if (listener instanceof ServerCommandProvider)
-		{
-			this.addServerCommandProvider((ServerCommandProvider)listener);
-		}
-		
-		if (listener instanceof ServerPlayerListener)
-		{
-			this.addServerPlayerListener((ServerPlayerListener)listener);
-		}
-		
-		if (listener instanceof OutboundChatListener)
-		{
-			this.addOutboundChatListener((OutboundChatListener)listener);
-		}
-		
-		this.clientPluginChannels.addListener(listener);
-		this.serverPluginChannels.addListener(listener);
-		
-		if (listener instanceof CommonPluginChannelListener && !(listener instanceof PluginChannelListener) && !(listener instanceof ServerPluginChannelListener))
-		{
-			LiteLoaderLogger.warning("Interface error for mod '%1s'. Implementing CommonPluginChannelListener has no effect! Use PluginChannelListener or ServerPluginChannelListener instead", listener.getName());
-		}
+		delegate.registerInterface(CommonPluginChannelListener.class);
 	}
 	
 	/**
 	 * Initialise hooks
 	 */
-	public void initHooks()
+	@Override
+	public void initProvider()
 	{
 		if (this.genProfiler != null)
 		{
@@ -333,10 +276,21 @@ public class Events
 				ex.printStackTrace();
 			}
 		}	
-		
-		this.hookInitDone = true;
 	}
-	
+
+	/**
+	 * Add a listener to the relevant listener lists
+	 * 
+	 * @param listener
+	 */
+	public void addCommonPluginChannelListener(CommonPluginChannelListener listener)
+	{
+		if (!(listener instanceof PluginChannelListener) && !(listener instanceof ServerPluginChannelListener))
+		{
+			LiteLoaderLogger.warning("Interface error for mod '%1s'. Implementing CommonPluginChannelListener has no effect! Use PluginChannelListener or ServerPluginChannelListener instead", listener.getName());
+		}
+	}
+
 	/**
 	 * @param tickable
 	 */
@@ -345,8 +299,6 @@ public class Events
 		if (!this.tickListeners.contains(tickable))
 		{
 			this.tickListeners.add(tickable);
-			if (this.hookInitDone)
-				this.initHooks();
 		}
 	}
 	
@@ -358,8 +310,6 @@ public class Events
 		if (!this.loopListeners.contains(loopListener))
 		{
 			this.loopListeners.add(loopListener);
-			if (this.hookInitDone)
-				this.initHooks();
 		}
 	}
 	
@@ -371,8 +321,6 @@ public class Events
 		if (!this.initListeners.contains(initCompleteListener))
 		{
 			this.initListeners.add(initCompleteListener);
-			if (this.hookInitDone)
-				this.initHooks();
 		}
 	}
 	
@@ -384,8 +332,6 @@ public class Events
 		if (!this.renderListeners.contains(renderListener))
 		{
 			this.renderListeners.add(renderListener);
-			if (this.hookInitDone)
-				this.initHooks();
 		}
 	}
 	
@@ -397,8 +343,6 @@ public class Events
 		if (!this.postRenderListeners.contains(postRenderListener))
 		{
 			this.postRenderListeners.add(postRenderListener);
-			if (this.hookInitDone)
-				this.initHooks();
 		}
 	}
 	
@@ -418,7 +362,11 @@ public class Events
 	 */
 	public void addChatListener(ChatListener chatListener)
 	{
-		if (!this.chatListeners.contains(chatListener))
+		if (chatListener instanceof ChatFilter)
+		{
+			LiteLoaderLogger.warning("Interface error initialising mod '%1s'. A mod implementing ChatFilter and ChatListener is not supported! Remove one of these interfaces", chatListener.getName());
+		}
+		else if (!this.chatListeners.contains(chatListener))
 		{
 			this.chatListeners.add(chatListener);
 		}
@@ -432,8 +380,6 @@ public class Events
 		if (!this.chatRenderListeners.contains(chatRenderListener))
 		{
 			this.chatRenderListeners.add(chatRenderListener);
-			if (this.hookInitDone)
-				this.initHooks();
 		}
 	}
 	
@@ -445,8 +391,6 @@ public class Events
 		if (!this.hudRenderListeners.contains(hudRenderListener))
 		{
 			this.hudRenderListeners.add(hudRenderListener);
-			if (this.hookInitDone)
-				this.initHooks();
 		}
 	}
 	
@@ -519,20 +463,26 @@ public class Events
 	/**
 	 * @param outboundChatListener
 	 */
-	private void addOutboundChatListener(OutboundChatListener outboundChatListener)
+	public void addOutboundChatListener(OutboundChatListener outboundChatListener)
 	{
 		if (!this.outboundChatListeners.contains(outboundChatListener))
 		{
 			this.outboundChatListeners.add(outboundChatListener);
 		}
 	}
+	
+	@Override
+	public void onResourceManagerReload(IResourceManager resourceManager)
+	{
+		LoadingBar.setMessage("Reloading Resources...");
+	}
 
 	/**
 	 * Late initialisation callback
 	 */
-	public void preBeginGame()
+	public void onStartupComplete()
 	{
-		this.loader.preInitMods();
+		this.loader.refreshResources(false);
 		
 		if (!this.lateInitDone)
 		{
@@ -542,7 +492,8 @@ public class Events
 			{
 				try
 				{
-					LiteLoaderLogger.info("Calling late init for mod " + initMod.getName());
+					LoadingBar.setMessage("Calling late init for mod %s...", initMod.getName());
+					LiteLoaderLogger.info("Calling late init for mod %s", initMod.getName());
 					initMod.onInitCompleted(this.minecraft, this.loader);
 				}
 				catch (Throwable th)
@@ -552,7 +503,10 @@ public class Events
 			}
 		}
 
-		this.loader.preBeginGame();
+		LoadingBar.setMessage("Initialising CoreProviders...");
+		this.loader.onStartupComplete();
+		
+		LoadingBar.setMessage("Starting Game...");
 	}
 	
 	/**
@@ -699,7 +653,7 @@ public class Events
 		int mouseX = Mouse.getX() * this.screenWidth / this.minecraft.displayWidth;
 		int mouseY = this.screenHeight - Mouse.getY() * this.screenHeight / this.minecraft.displayHeight - 1;
 		this.minecraft.mcProfiler.endStartSection("postrender");
-		this.loader.postRender(mouseX, mouseY, partialTicks);
+		this.loader.onPostRender(mouseX, mouseY, partialTicks);
 		this.minecraft.mcProfiler.endSection();
 		
 		// Iterate tickable mods
@@ -782,7 +736,7 @@ public class Events
 	 */
 	public void onPostLogin(INetHandlerLoginClient netHandler, S02PacketLoginSuccess loginPacket)
 	{
-		this.clientPluginChannels.onPostLogin(netHandler, loginPacket);
+		LiteLoader.getClientPluginChannels().onPostLogin(netHandler, loginPacket);
 
 		for (PostLoginListener loginListener : this.postLoginListeners)
 			loginListener.onPostLogin(netHandler, loginPacket);
@@ -816,7 +770,7 @@ public class Events
 	public void onJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
 		this.loader.onJoinGame(netHandler, loginPacket);
-		this.clientPluginChannels.onJoinGame(netHandler, loginPacket);
+		LiteLoader.getClientPluginChannels().onJoinGame(netHandler, loginPacket);
 		
 		for (JoinGameListener joinGameListener : this.joinGameListeners)
 			joinGameListener.onJoinGame(netHandler, loginPacket);
@@ -880,7 +834,7 @@ public class Events
 	 */
 	public void onPlayerLogin(ServerConfigurationManager scm, EntityPlayerMP player)
 	{
-		this.serverPluginChannels.onPlayerJoined(player);
+		LiteLoader.getServerPluginChannels().onPlayerJoined(player);
 	}
 	
 	/**

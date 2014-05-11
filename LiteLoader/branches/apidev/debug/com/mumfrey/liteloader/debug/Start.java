@@ -1,6 +1,7 @@
 package com.mumfrey.liteloader.debug;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import net.minecraft.launchwrapper.Launch;
@@ -28,20 +29,28 @@ public abstract class Start
 		System.setProperty("mcpenv", "true");
 		
 		boolean fmlDetected = false;
-		List<String> argsList = new ArrayList<String>();
+		List<String> argsList = new ArrayList<String>(Arrays.asList(args));
 
 		// Detect the FML tweaker specified on the command line, this likely means someone has pulled us
 		// into a Forge MCP workspace
-		for (String arg : args) fmlDetected |= FML_TWEAKER_NAME.equals(arg);
+		for (String arg : argsList) fmlDetected |= FML_TWEAKER_NAME.equals(arg);
 		
 		if (fmlDetected)
 		{
-			args = new String[0];
+			argsList.clear();
 			argsList.add("--tweakClass");argsList.add(FML_TWEAKER_NAME);
 		}
 
-		String usernameFromCmdLine = (args.length > 0) ? args[0] : null;
-		String passwordFromCmdLine = (args.length > 1) ? args[1] : null;
+		String usernameFromCmdLine = null;
+		String passwordFromCmdLine = null;
+		
+		if (argsList.size() > 0 && !argsList.get(0).startsWith("-"))
+		{
+			usernameFromCmdLine = argsList.remove(0); 
+
+			if (argsList.size() > 0 && !argsList.get(0).startsWith("-"))
+				passwordFromCmdLine = argsList.remove(0); 
+		}
 		
 		File loginJson = new File(new File(System.getProperty("user.dir")), ".auth.json");
 		LoginManager loginManager = new LoginManager(loginJson);

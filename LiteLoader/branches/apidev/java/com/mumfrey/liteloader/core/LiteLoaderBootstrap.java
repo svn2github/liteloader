@@ -19,10 +19,19 @@ import org.apache.logging.log4j.core.layout.PatternLayout;
 import net.minecraft.client.ClientBrandRetriever;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
-import com.mumfrey.liteloader.launch.ILoaderBootstrap;
+import com.mumfrey.liteloader.api.manager.APIAdapter;
+import com.mumfrey.liteloader.api.manager.APIProvider;
+import com.mumfrey.liteloader.api.manager.APIRegistry;
+import com.mumfrey.liteloader.gui.startup.LoadingBar;
+import com.mumfrey.liteloader.interfaces.LoaderEnumerator;
+import com.mumfrey.liteloader.launch.LoaderBootstrap;
+import com.mumfrey.liteloader.launch.LoaderEnvironment;
+import com.mumfrey.liteloader.launch.LoaderProperties;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
+ * TODO Update description
+ * 
  * LiteLoaderBootstrap is a proxy class which handles the early part of the LiteLoader startup process which
  * used to be handled by the loader itself, this is to ensure that NONE of the Minecraft classes which by
  * necessity the Loader references get loaded before the pre-init stage has completed. This allows us to load
@@ -35,12 +44,10 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
  *
  * @author Adam Mummery-Smith
  */
-class LiteLoaderBootstrap implements ILoaderBootstrap
+class LiteLoaderBootstrap implements LoaderBootstrap, LoaderEnvironment, LoaderProperties
 {
-	/**
-	 * Liteloader version
-	 */
-	public static final LiteLoaderVersion VERSION = LiteLoaderVersion.CURRENT;
+	private static final String OPTION_BRAND = "brand";
+	private static final String OPTION_LOADING_BAR = "loadingbar";
 
 	/**
 	 * Base game directory, passed in from the tweaker
@@ -73,6 +80,16 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	private final File configBaseFolder;
 	
 	/**
+	 * Folder containing version-independent configuration
+	 */
+	private final File commonConfigFolder;
+	
+	/**
+	 * Folder containing version-specific configuration
+	 */
+	private final File versionConfigFolder;
+
+	/**
 	 * File to write log entries to
 	 */
 	private File logFile;
@@ -102,6 +119,14 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	 * crash reports
 	 */
 	private String branding = null;
+	
+	private boolean loadTweaks = true;
+
+	private final APIRegistry apiRegistry;
+	
+	private final APIProvider apiProvider;
+	
+	private final APIAdapter apiAdapter;
 
 	/**
 	 * The mod enumerator instance
@@ -118,8 +143,10 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	 * @param assetsDirectory
 	 * @param profile
 	 */
-	public LiteLoaderBootstrap(File gameDirectory, File assetsDirectory, String profile)
+	public LiteLoaderBootstrap(File gameDirectory, File assetsDirectory, String profile, List<String> apisToLoad)
 	{
+		this.apiRegistry         = new APIRegistry(this, this);
+		
 		this.gameDirectory       = gameDirectory;
 		this.assetsDirectory     = assetsDirectory;
 		this.profile             = profile;
@@ -131,9 +158,82 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		this.propertiesFile      = new File(this.configBaseFolder, "liteloader.properties");
 		this.enabledModsFile     = new File(this.configBaseFolder, "liteloader.profiles.json");
 
+		this.commonConfigFolder  = new File(this.configBaseFolder, "common");
+		this.versionConfigFolder = this.inflectVersionedConfigPath(LiteLoaderVersion.CURRENT);
+		
 		if (!this.modsFolder.exists()) this.modsFolder.mkdirs();
 		if (!this.versionedModsFolder.exists()) this.versionedModsFolder.mkdirs();
 		if (!this.configBaseFolder.exists()) this.configBaseFolder.mkdirs();
+		if (!this.commonConfigFolder.exists()) this.commonConfigFolder.mkdirs();
+		if (!this.versionConfigFolder.exists()) this.versionConfigFolder.mkdirs();
+
+		this.initAPIs(apisToLoad);
+		this.apiProvider = this.apiRegistry.getProvider();
+		this.apiAdapter = this.apiRegistry.getAdapter();
+	}
+	
+	/**
+	 * @param version
+	 * @return
+	 */
+	@Override
+	public File inflectVersionedConfigPath(LiteLoaderVersion version)
+	{
+		if (version.equals(LiteLoaderVersion.LEGACY))
+		{
+			return this.modsFolder;
+		}
+		
+		return new File(this.configBaseFolder, String.format("config.%s", version.getMinecraftVersion()));
+	}
+
+	/**
+	 * @return 
+	 * 
+	 */
+	private void initAPIs(List<String> apisToLoad)
+	{
+		this.registerAPI("com.mumfrey.liteloader.core.api.LiteLoaderCoreAPI");
+		
+		if (apisToLoad != null)
+		{
+			for (String apiClassName : apisToLoad)
+				this.registerAPI(apiClassName);
+		}
+		
+		this.apiRegistry.bake();
+	}
+
+	/**
+	 * @param apiClassName
+	 */
+	public void registerAPI(String apiClassName)
+	{
+		this.apiRegistry.registerAPI(apiClassName);
+	}
+	
+	@Override
+	public APIProvider getAPIProvider()
+	{
+		return this.apiProvider;
+	}
+	
+	@Override
+	public APIAdapter getAPIAdapter()
+	{
+		return this.apiAdapter;
+	}
+	
+	@Override
+	public EnabledModsList getEnabledModsList()
+	{
+		return this.enabledModsList;
+	}
+	
+	@Override
+	public LoaderEnumerator getEnumerator()
+	{
+		return this.enumerator;
 	}
 	
 	/* (non-Javadoc)
@@ -142,6 +242,8 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	@Override
 	public void preInit(LaunchClassLoader classLoader, boolean loadTweaks, List<String> modsToLoad)
 	{
+		this.loadTweaks = loadTweaks;
+		
 		LiteLoaderLogger.info("LiteLoader begin PREINIT...");
 
 		// Set up the bootstrap
@@ -160,10 +262,29 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		this.enabledModsList = EnabledModsList.createFrom(this.enabledModsFile);
 		this.enabledModsList.processModsList(this.profile, modsToLoad);
 
-		this.enumerator = new LiteLoaderEnumerator(this, classLoader, this.enabledModsList, loadTweaks);
-		this.enumerator.discoverMods();
+		this.enumerator = this.spawnEnumerator(classLoader);
+		this.enumerator.onPreInit();
 		
 		LiteLoaderLogger.info("LiteLoader PREINIT complete");
+	}
+
+	/**
+	 * @param classLoader
+	 * @param loadTweaks
+	 * @return
+	 */
+	protected LiteLoaderEnumerator spawnEnumerator(LaunchClassLoader classLoader)
+	{
+		return new LiteLoaderEnumerator(this, this, classLoader);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.mumfrey.liteloader.launch.LoaderBootstrap#beginGame()
+	 */
+	@Override
+	public void preBeginGame()
+	{
+		LoadingBar.setEnabled(this.getAndStoreBooleanProperty(LiteLoaderBootstrap.OPTION_LOADING_BAR, true));
 	}
 	
 	/* (non-Javadoc)
@@ -175,8 +296,8 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		// PreInit failed
 		if (this.enumerator == null) return;
 		
-		LiteLoaderLogger.info("LiteLoader begin INIT...");
-		LiteLoader.init(this, this.enumerator, this.enabledModsList, classLoader);
+		LiteLoader.createInstance(this, this, classLoader);
+		LiteLoader.init();
 	}
 
 	/* (non-Javadoc)
@@ -188,8 +309,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		// PreInit failed
 		if (this.enumerator == null) return;
 		
-		LiteLoaderLogger.info("LiteLoader begin POSTINIT...");
-		LiteLoader.getInstance().postInit();
+		LiteLoader.postInit();
 	}
 
 	/**
@@ -205,15 +325,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 			// Prepare the log writer
 			this.prepareLogger();
 			
-			this.branding = this.internalProperties.getProperty("brand", null);
-			if (this.branding != null && this.branding.length() < 1)
-				this.branding = null;
-			
-			// Save appropriate branding in the local properties file
-			if (this.branding != null)
-				this.localProperties.setProperty("brand", this.branding);
-			else
-				this.localProperties.remove("brand");
+			this.prepareBranding();
 		}
 		catch (Throwable th)
 		{
@@ -230,6 +342,8 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	 */
 	private void prepareLogger() throws SecurityException, IOException
 	{
+		LiteLoaderLogger.info("Setting up logger...");
+		
 		Logger logger = LiteLoaderLogger.getLogger();
 		Layout<? extends Serializable> layout = PatternLayout.createLayout("[%d{HH:mm:ss}] [%t/%level]: %msg%n", logger.getContext().getConfiguration(), null, "UTF-8", "True");
 		FileAppender fileAppender = FileAppender.createAppender(this.logFile.getAbsolutePath(), "False", "False", "LiteLoader", "True", "True", "True", layout, null, "False", "", logger.getContext().getConfiguration());
@@ -242,6 +356,8 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	 */
 	private void prepareProperties()
 	{
+		LiteLoaderLogger.info("Initialising Loader properties...");
+		
 		try
 		{
 			InputStream propertiesStream = LiteLoaderBootstrap.class.getResourceAsStream("/liteloader.properties");
@@ -295,6 +411,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	/**
 	 * Write current properties to the properties file
 	 */
+	@Override
 	public void writeProperties()
 	{
 		try
@@ -308,8 +425,25 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	}
 
 	/**
+	 * 
+	 */
+	private void prepareBranding()
+	{
+		this.branding = this.internalProperties.getProperty(LiteLoaderBootstrap.OPTION_BRAND, null);
+		if (this.branding != null && this.branding.length() < 1)
+			this.branding = null;
+		
+		// Save appropriate branding in the local properties file
+		if (this.branding != null)
+			this.localProperties.setProperty(LiteLoaderBootstrap.OPTION_BRAND, this.branding);
+		else
+			this.localProperties.remove(LiteLoaderBootstrap.OPTION_BRAND);
+	}
+
+	/**
 	 * Get the game directory
 	 */
+	@Override
 	public File getGameDirectory()
 	{
 		return this.gameDirectory;
@@ -318,6 +452,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	/**
 	 * Get the assets directory
 	 */
+	@Override
 	public File getAssetsDirectory()
 	{
 		return this.assetsDirectory;
@@ -326,6 +461,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	/**
 	 * Get the profile directory
 	 */
+	@Override
 	public String getProfile()
 	{
 		return this.profile;
@@ -334,6 +470,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	/**
 	 * Get the mods folder
 	 */
+	@Override
 	public File getModsFolder()
 	{
 		return this.modsFolder;
@@ -342,6 +479,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	/**
 	 * Get the mods folder
 	 */
+	@Override
 	public File getVersionedModsFolder()
 	{
 		return this.versionedModsFolder;
@@ -350,9 +488,28 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	/**
 	 * Get the base "liteconfig" folder
 	 */
+	@Override
 	public File getConfigBaseFolder()
 	{
 		return this.configBaseFolder;
+	}
+	
+	/**
+	 * @return
+	 */
+	@Override
+	public File getCommonConfigFolder()
+	{
+		return this.commonConfigFolder;
+	}
+	
+	/**
+	 * @return
+	 */
+	@Override
+	public File getVersionedConfigFolder()
+	{
+		return this.versionConfigFolder;
 	}
 
 	/**
@@ -400,6 +557,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	 * 
 	 * @param modKey
 	 */
+	@Override
 	public void storeLastKnownModRevision(String modKey)
 	{
 		if (this.localProperties != null)
@@ -415,6 +573,7 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 	 * @param modKey
 	 * @return
 	 */
+	@Override
 	public int getLastKnownModRevision(String modKey)
 	{
 		if (this.localProperties != null)
@@ -425,12 +584,22 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		
 		return 0;
 	}
+	
+	/* (non-Javadoc)
+	 * @see com.mumfrey.liteloader.launch.LoaderEnvironment#loadTweaksEnabled()
+	 */
+	@Override
+	public boolean loadTweaksEnabled()
+	{
+		return this.loadTweaks;
+	}
 
 	/**
 	 * Used to get the name of the modpack being used
 	 * 
 	 * @return name of the modpack in use or null if no pack
 	 */
+	@Override
 	public String getBranding()
 	{
 		return this.branding;
@@ -468,5 +637,23 @@ class LiteLoaderBootstrap implements ILoaderBootstrap
 		{
 			LiteLoaderLogger.warning(th, "Setting branding failed");
 		}
+	}
+
+	@Override
+	public List<String> getRequiredTransformers()
+	{
+		return this.apiAdapter.getRequiredTransformers();
+	}
+
+	@Override
+	public List<String> getRequiredDownstreamTransformers()
+	{
+		return this.apiAdapter.getRequiredDownstreamTransformers();
+	}
+
+	@Override
+	public List<String> getPacketTransformers()
+	{
+		return this.apiAdapter.getPacketTransformers();
 	}
 }

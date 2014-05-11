@@ -104,6 +104,11 @@ public abstract class ClassOverlayTransformer implements IClassTransformer
 	 * Methods which get a different name from an {@link Obfuscate} annotation
 	 */
 	private final Map<String, String> renamedMethods = new HashMap<String, String>();
+
+	/**
+	 * True to set the sourceFile property when applying the overlay 
+	 */
+	protected boolean setSourceFile = true;
 	
 	/**
 	 * @param targetClassName
@@ -267,7 +272,7 @@ public abstract class ClassOverlayTransformer implements IClassTransformer
 	 */
 	private void overlayAttributes(ClassNode targetClass, ClassNode overlayClass)
 	{
-		targetClass.sourceFile = overlayClass.sourceFile;
+		if (this.setSourceFile ) targetClass.sourceFile = overlayClass.sourceFile;
 	}
 
 	/**

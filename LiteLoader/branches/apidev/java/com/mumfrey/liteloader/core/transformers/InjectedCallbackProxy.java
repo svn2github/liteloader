@@ -33,11 +33,6 @@ import com.mumfrey.liteloader.core.ServerPluginChannels;
 public class InjectedCallbackProxy
 {
 	/**
-	 * Initialisation done
-	 */
-	private static boolean initDone = false;
-	
-	/**
 	 * Tick clock, sent as a flag to the core onTick so that mods know it's a new tick
 	 */
 	private static boolean clock = false;
@@ -58,7 +53,6 @@ public class InjectedCallbackProxy
 	 */
 	public static void handleChatPacket(INetHandler netHandler, S02PacketChat packet)
 	{
-//		Events events = LiteLoader.getEvents();
 		if (InjectedCallbackProxy.events.onChat(packet))
 		{
 			((INetHandlerPlayClient)netHandler).handleChat(packet);
@@ -73,7 +67,6 @@ public class InjectedCallbackProxy
 	 */
 	public static void handleServerChatPacket(INetHandler netHandler, C01PacketChatMessage packet)
 	{
-//		Events events = LiteLoader.getEvents();
 		if (InjectedCallbackProxy.events.onServerChat((INetHandlerPlayServer)netHandler, packet))
 		{
 			((INetHandlerPlayServer)netHandler).processChatMessage(packet);
@@ -88,7 +81,6 @@ public class InjectedCallbackProxy
 	 */
 	public static void handleJoinGamePacket(INetHandler netHandler, S01PacketJoinGame packet)
 	{
-//		Events events = LiteLoader.getEvents();
 		if (InjectedCallbackProxy.events.onPreJoinGame(netHandler, packet))
 		{
 			((INetHandlerPlayClient)netHandler).handleJoinGame(packet);
@@ -124,15 +116,14 @@ public class InjectedCallbackProxy
 		pluginChannels.onPluginChannelMessage((INetHandlerPlayServer)netHandler, packet);
 	}
 	
+	public static void onStartupComplete(int ref, Minecraft minecraft)
+	{
+		InjectedCallbackProxy.events = LiteLoader.getEvents();
+		InjectedCallbackProxy.events.onStartupComplete();
+	}
+	
 	public static void onTimerUpdate(int ref)
 	{
-		if (!InjectedCallbackProxy.initDone)
-		{
-			InjectedCallbackProxy.initDone = true;
-			InjectedCallbackProxy.events = LiteLoader.getEvents();
-			InjectedCallbackProxy.events.preBeginGame();
-		}
-		
 		InjectedCallbackProxy.events.onTimerUpdate();
 	}
 	

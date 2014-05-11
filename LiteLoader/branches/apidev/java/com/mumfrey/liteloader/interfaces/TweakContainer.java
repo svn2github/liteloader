@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core;
+package com.mumfrey.liteloader.interfaces;
 
 import java.util.List;
 

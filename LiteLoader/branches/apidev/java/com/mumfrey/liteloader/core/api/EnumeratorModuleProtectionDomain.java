@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core;
+package com.mumfrey.liteloader.core.api;
 
 import java.io.File;
 import java.net.URL;
@@ -6,6 +6,11 @@ import java.net.URLDecoder;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
+import com.mumfrey.liteloader.api.EnumeratorModule;
+import com.mumfrey.liteloader.interfaces.LoadableMod;
+import com.mumfrey.liteloader.interfaces.ModularEnumerator;
+import com.mumfrey.liteloader.launch.LoaderEnvironment;
+import com.mumfrey.liteloader.launch.LoaderProperties;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
@@ -13,7 +18,7 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
  * 
  * @author Adam Mummery-Smith
  */
-public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
+public class EnumeratorModuleProtectionDomain implements EnumeratorModule
 {
 	private LoadableMod<File> codeSource;
 
@@ -74,23 +79,24 @@ public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 		}
 	}
 	
+	
 	@Override
-	public void init(PluggableEnumerator enumerator)
+	public void init(LoaderEnvironment environment, LoaderProperties properties)
 	{
 	}
 
 	@Override
-	public void writeSettings(PluggableEnumerator enumerator)
+	public void writeSettings(LoaderEnvironment environment, LoaderProperties properties)
 	{
 	}
 
 	@Override
-	public void enumerate(PluggableEnumerator enumerator, EnabledModsList enabledModsList, String profile)
+	public void enumerate(ModularEnumerator enumerator, String profile)
 	{
 	}
 	
 	@Override
-	public void injectIntoClassLoader(PluggableEnumerator enumerator, LaunchClassLoader classLoader, EnabledModsList enabledModsList, String profile)
+	public void injectIntoClassLoader(ModularEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 	}
 
@@ -98,7 +104,7 @@ public class EnumeratorModuleProtectionDomain implements EnumeratorModule<File>
 	 * @param classLoader
 	 */
 	@Override
-	public void registerMods(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
+	public void registerMods(ModularEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 		LiteLoaderLogger.info("Discovering mods in protection domain...");
 

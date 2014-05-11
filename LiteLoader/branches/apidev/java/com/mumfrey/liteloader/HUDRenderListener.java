@@ -5,7 +5,7 @@ package com.mumfrey.liteloader;
  * 
  * @author Adam Mummery-Smith
  */
-public interface HUDRenderListener
+public interface HUDRenderListener extends LiteMod
 {
 	public abstract void onPreRenderHUD(int screenWidth, int screenHeight);
 	

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.mumfrey.liteloader.api.InterfaceProvider;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 import net.minecraft.network.INetHandler;
@@ -19,7 +20,7 @@ import net.minecraft.network.INetHandler;
  *
  * @author Adam Mummery-Smith
  */
-public abstract class PluginChannels<L extends CommonPluginChannelListener>
+public abstract class PluginChannels<L extends CommonPluginChannelListener> implements InterfaceProvider
 {
 	// reserved channel consts
 	protected static final String CHANNEL_REGISTER = "REGISTER";

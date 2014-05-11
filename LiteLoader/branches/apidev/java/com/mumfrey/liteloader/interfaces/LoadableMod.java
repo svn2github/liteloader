@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core;
+package com.mumfrey.liteloader.interfaces;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.mumfrey.liteloader.launch.InjectionStrategy;
+import com.mumfrey.liteloader.launch.LoaderEnvironment;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
@@ -64,6 +65,21 @@ public interface LoadableMod<L> extends Loadable<L>, Injectable
 	 * Get this mod's list of missing dependencies
 	 */
 	public abstract Set<String> getMissingDependencies();
+	
+	/**
+	 * Get this mod's list of required APIs
+	 */
+	public abstract Set<String> getRequiredAPIs();
+	
+	/**
+	 * Callback to notify the container that it's missing a specific required API
+	 */
+	public abstract void registerMissingAPI(String identifier);
+	
+	/**
+	 * Get this mod's list of missing APIs
+	 */
+	public abstract Set<String> getMissingAPIs();
 
 	/**
 	 * Get the specified metadata value and return the default value if not present
@@ -93,7 +109,7 @@ public interface LoadableMod<L> extends Loadable<L>, Injectable
 	 * Initialise the resource pack with the specified name
 	 */
 	public abstract void initResourcePack(String name);
-	
+
 	/**
 	 * Get all class names in this container
 	 */
@@ -180,7 +196,7 @@ public interface LoadableMod<L> extends Loadable<L>, Injectable
 		}
 
 		@Override
-		public boolean isEnabled(EnabledModsList enabledModsList, String profile)
+		public boolean isEnabled(LoaderEnvironment environment)
 		{
 			return true;
 		}
@@ -305,6 +321,23 @@ public interface LoadableMod<L> extends Loadable<L>, Injectable
 		
 		@Override
 		public Set<String> getMissingDependencies()
+		{
+			return new HashSet<String>();
+		}
+		
+		@Override
+		public Set<String> getRequiredAPIs()
+		{
+			return new HashSet<String>();
+		}
+
+		@Override
+		public void registerMissingAPI(String identifier)
+		{
+		}
+		
+		@Override
+		public Set<String> getMissingAPIs()
 		{
 			return new HashSet<String>();
 		}

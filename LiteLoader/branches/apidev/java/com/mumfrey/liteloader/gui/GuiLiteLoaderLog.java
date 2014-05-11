@@ -1,6 +1,5 @@
 package com.mumfrey.liteloader.gui;
 
-import static com.mumfrey.liteloader.gui.GuiScreenModInfo.*;
 import static org.lwjgl.opengl.GL11.*;
 
 import java.net.URI;
@@ -10,6 +9,11 @@ import java.util.Date;
 import java.util.List;
 
 import org.lwjgl.input.Keyboard;
+
+
+
+
+
 
 
 import net.minecraft.client.Minecraft;
@@ -24,23 +28,18 @@ import com.mumfrey.liteloader.util.net.PastebinUpload;
  *
  * @author Adam Mummery-Smith
  */
-public class GuiLiteLoaderLog extends ModInfoScreenPanel
+public class GuiLiteLoaderLog extends ModInfoScreenPanel implements ScrollPanelContent
 {
 	private static boolean useNativeRes = false;
 	
 	/**
-	 * Scroll bar for the panel
+	 * Scroll pane
 	 */
-	GuiSimpleScrollBar scrollBar = new GuiSimpleScrollBar();
+	private GuiScrollPane scrollPane;
 	
 	private List<String> logEntries = new ArrayList<String>();
 	
 	private long logIndex = -1;
-	
-	/**
-	 * Panel's internal height (for scrolling)
-	 */
-	private int totalHeight = -1;
 	
 	private GuiCheckbox chkScale;
 	
@@ -55,6 +54,8 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 	private int throb;
 
 	private boolean closeDialog;
+
+	private GuiScreenModInfo parent;
 	
 	/**
 	 * @param parent
@@ -62,18 +63,25 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 	 * @param panel
 	 * @param mod
 	 */
-	GuiLiteLoaderLog(Minecraft minecraft)
+	GuiLiteLoaderLog(Minecraft minecraft, GuiScreenModInfo parent)
 	{
 		super(minecraft);
+		this.parent = parent;
+		this.scrollPane = new GuiScrollPane(minecraft, this, MARGIN, TOP, this.width - (MARGIN * 2), this.height - TOP - BOTTOM);
 	}
 
 	private void updateLog()
 	{
 		this.logEntries = LiteLoaderLogger.getLogTail();
 		this.logIndex = LiteLoaderLogger.getLogIndex();
-		this.totalHeight = (int)(this.logEntries.size() * 10 / (this.chkScale.checked ? this.guiScale : 1.0F));
-		this.scrollBar.setMaxValue(this.totalHeight);
-		this.scrollBar.setValue(this.totalHeight);
+		this.scrollPane.updateHeight();
+		this.scrollPane.scrollToBottom();
+	}
+	
+	@Override
+	public int getScrollPaneContentHeight(GuiScrollPane source)
+	{
+		return (int)(this.logEntries.size() * 10 / (this.chkScale.checked ? this.guiScale : 1.0F));
 	}
 
 	/**
@@ -95,6 +103,8 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 		
 		ScaledResolution res = new ScaledResolution(this.mc.gameSettings, this.mc.displayWidth, this.mc.displayHeight);
 		this.guiScale = res.getScaleFactor();
+		
+		this.scrollPane.setSizeAndPosition(MARGIN, TOP, this.width - (MARGIN * 2), this.height - TOP - BOTTOM);
 
 		this.updateLog();
 	}
@@ -138,7 +148,7 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 			{
 				LiteLoaderLogger.info("Log file upload succeeded, url is %s", this.pasteBinURL);
 				int urlWidth = this.mc.fontRendererObj.getStringWidth(this.pasteBinURL);
-				this.controls.add(new GuiHoverLabel(3, xMid - (urlWidth / 2), this.height / 2, this.mc.fontRendererObj, "\247n" + this.pasteBinURL));
+				this.controls.add(new GuiHoverLabel(3, xMid - (urlWidth / 2), this.height / 2, this.mc.fontRendererObj, "\247n" + this.pasteBinURL, this.parent.getBrandColour()));
 			}
 			else
 			{
@@ -166,9 +176,6 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 	@Override
 	void draw(int mouseX, int mouseY, float partialTicks)
 	{
-		// Scroll position
-		this.innerTop = TOP - this.scrollBar.getValue();
-	
 		// Draw panel title
 		this.mc.fontRendererObj.drawString(I18n.format("gui.log.title"), MARGIN, TOP - 14, 0xFFFFFFFF);
 		
@@ -176,20 +183,7 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 		drawRect(MARGIN, TOP - 4, this.width - MARGIN, TOP - 3, 0xFF999999);
 		drawRect(MARGIN, this.height - BOTTOM + 2, this.width - MARGIN, this.height - BOTTOM + 3, 0xFF999999);
 
-		// Clip rect
-		glEnableClipping(MARGIN, this.width - MARGIN - 6, TOP, this.height - BOTTOM);
-		
-		// Offset by scroll
-		glPushMatrix();
-		glTranslatef(MARGIN, this.innerTop, 0.0F);
-
-		this.drawLog(this.scrollBar.getValue());
-		
-		// Disable clip rect
-		glDisableClipping();
-		
-		// Restore transform
-		glPopMatrix();
+		this.scrollPane.draw(mouseX, mouseY, partialTicks);
 		
 		int xMid = this.width / 2;
 		int yMid = this.height / 2;
@@ -216,15 +210,12 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 			}
 		}
 		
-		// Update and draw scroll bar
-		this.scrollBar.setMaxValue(this.totalHeight - this.innerHeight);
-		this.scrollBar.drawScrollBar(mouseX, mouseY, partialTicks, this.width - MARGIN - 5, TOP, 5, this.innerHeight, Math.max(this.innerHeight, this.totalHeight));
-		
 		// Draw other buttons
 		super.draw(mouseX, mouseY, partialTicks);
 	}
-
-	private void drawLog(int offset)
+	
+	@Override
+	public void drawScrollPaneContent(GuiScrollPane source, int mouseX, int mouseY, float partialTicks, int scrollAmount, int visibleHeight)
 	{
 		int yPos = 0;
 		int height = this.innerHeight;
@@ -235,17 +226,22 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 			glScalef(scale, scale, scale);
 			
 			height = (int)(height * this.guiScale);
-			offset = (int)(offset * this.guiScale);
+			scrollAmount = (int)(scrollAmount * this.guiScale);
 		}
 		
 		for (String logLine : this.logEntries)
 		{
-			if (yPos > offset - 10 && yPos <= offset + height)
+			if (yPos > scrollAmount - 10 && yPos <= scrollAmount + height)
 			{
 				this.mc.fontRendererObj.drawString(logLine, 0, yPos, this.getMessageColour(logLine.toLowerCase()));
 			}
 			yPos += 10;
 		}
+	}
+	
+	@Override
+	public void scrollPaneMousePressed(GuiScrollPane source, int mouseX, int mouseY, int mouseButton)
+	{
 	}
 
 	private int getMessageColour(String logLine)
@@ -278,7 +274,7 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 	 * @param control
 	 */
 	@Override
-	void actionPerformed(GuiButton control)
+	public void actionPerformed(GuiButton control)
 	{
 		if (control.id == 0) this.close();
 		if (control.id == 1) this.postLog();
@@ -300,6 +296,11 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 			this.closeDialog = true;
 		}
 	}
+	
+	@Override
+	public void scrollPaneActionPerformed(GuiScrollPane source, GuiButton control)
+	{
+	}
 
 	/**
 	 * @param mouseWheelDelta
@@ -307,7 +308,7 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 	@Override
 	void mouseWheelScrolled(int mouseWheelDelta)
 	{
-		this.scrollBar.offsetValue(-mouseWheelDelta / 8);
+		this.scrollPane.mouseWheelScrolled(mouseWheelDelta);
 	}
 
 	/**
@@ -318,11 +319,7 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 	@Override
 	void mousePressed(int mouseX, int mouseY, int mouseButton)
 	{
-		if (mouseButton == 0)
-		{
-			if (this.scrollBar.wasMouseOver())
-				this.scrollBar.setDragging(true);
-		}
+		this.scrollPane.mousePressed(mouseX, mouseY, mouseButton);
 		
 		super.mousePressed(mouseX, mouseY, mouseButton);
 	}
@@ -335,10 +332,7 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 	@Override
 	void mouseReleased(int mouseX, int mouseY, int mouseButton)
 	{
-		if (mouseButton == 0)
-		{
-			this.scrollBar.setDragging(false);
-		}
+		this.scrollPane.mouseReleased(mouseX, mouseY, mouseButton);
 	}
 	
 	/**
@@ -358,15 +352,9 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel
 	void keyPressed(char keyChar, int keyCode)
 	{
 		if (keyCode == Keyboard.KEY_ESCAPE) this.close();
-		
 		if (keyCode == Keyboard.KEY_SPACE) this.actionPerformed(this.chkScale);
-		
-		if (keyCode == Keyboard.KEY_UP) this.scrollBar.offsetValue(-10);
-		if (keyCode == Keyboard.KEY_DOWN) this.scrollBar.offsetValue(10);
-		if (keyCode == Keyboard.KEY_PRIOR) this.scrollBar.offsetValue(-this.innerHeight + 10);
-		if (keyCode == Keyboard.KEY_NEXT) this.scrollBar.offsetValue(this.innerHeight - 10);
-		if (keyCode == Keyboard.KEY_HOME) this.scrollBar.setValue(0);
-		if (keyCode == Keyboard.KEY_END) this.scrollBar.setValue(this.totalHeight);
+
+		this.scrollPane.keyPressed(keyChar, keyCode);
 	}
 
 	private void postLog()

@@ -1,6 +1,9 @@
 package com.mumfrey.liteloader.gui;
 
 import static org.lwjgl.opengl.GL11.*;
+
+import com.mumfrey.liteloader.core.api.LiteLoaderBrandingProvider;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 
@@ -21,9 +24,9 @@ public class GuiCheckbox extends GuiButton
 	@Override
 	public void drawButton(Minecraft minecraft, int mouseX, int mouseY)
 	{
-		if (this.visible) // drawButton
+		if (this.visible)
 		{
-			minecraft.getTextureManager().bindTexture(GuiScreenModInfo.aboutTextureResource);
+			minecraft.getTextureManager().bindTexture(LiteLoaderBrandingProvider.ABOUT_TEXTURE);
 			glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
 			this.hovered = mouseX >= this.xPosition && mouseY >= this.yPosition && mouseX < this.xPosition + this.width && mouseY < this.yPosition + this.height;
 			

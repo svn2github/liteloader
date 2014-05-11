@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core;
+package com.mumfrey.liteloader.core.api;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -6,6 +6,12 @@ import java.util.List;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
+import com.mumfrey.liteloader.api.EnumeratorModule;
+import com.mumfrey.liteloader.gui.startup.LoadingBar;
+import com.mumfrey.liteloader.interfaces.LoadableMod;
+import com.mumfrey.liteloader.interfaces.ModularEnumerator;
+import com.mumfrey.liteloader.launch.LoaderEnvironment;
+import com.mumfrey.liteloader.launch.LoaderProperties;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
@@ -13,7 +19,7 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
  * 
  * @author Adam Mummery-Smith
  */
-public class EnumeratorModuleClassPath implements EnumeratorModule<File>
+public class EnumeratorModuleClassPath implements EnumeratorModule
 {
 	/**
 	 * Array of class path entries specified to the JVM instance 
@@ -33,12 +39,10 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	 * @param searchClassPath
 	 * @param loadTweaks
 	 */
-	public EnumeratorModuleClassPath(boolean loadTweaks)
+	public EnumeratorModuleClassPath()
 	{
 		// Read the JVM class path into the local array
 		this.classPathEntries = this.readClassPath();
-		
-		this.loadTweaks = loadTweaks;
 	}
 	
 	@Override
@@ -48,12 +52,13 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	}
 	
 	@Override
-	public void init(PluggableEnumerator enumerator)
+	public void init(LoaderEnvironment environment, LoaderProperties properties)
 	{
+		this.loadTweaks = properties.loadTweaksEnabled();
 	}
-
+	
 	@Override
-	public void writeSettings(PluggableEnumerator enumerator)
+	public void writeSettings(LoaderEnvironment environment, LoaderProperties properties)
 	{
 	}
 
@@ -74,7 +79,7 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	}
 
 	@Override
-	public void enumerate(PluggableEnumerator enumerator, EnabledModsList enabledModsList, String profile)
+	public void enumerate(ModularEnumerator enumerator, String profile)
 	{
 		if (this.loadTweaks)
 		{
@@ -82,29 +87,36 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 			
 			for (String classPathPart : this.classPathEntries)
 			{
-				File packagePath = new File(classPathPart);
-				if (packagePath.exists())
+				try
 				{
-					LoadableModClassPath classPathMod = new LoadableModClassPath(packagePath);
-					if (enumerator.isContainerEnabled(classPathMod))
+					File packagePath = new File(classPathPart);
+					if (packagePath.exists())
 					{
-						this.loadableMods.add(classPathMod);
-						if (classPathMod.hasTweakClass() || classPathMod.hasClassTransformers())
+						LoadableModClassPath classPathMod = new LoadableModClassPath(packagePath);
+						if (enumerator.registerModContainer(classPathMod))
 						{
-							enumerator.registerTweakContainer(classPathMod);
+							this.loadableMods.add(classPathMod);
+							if (classPathMod.hasTweakClass() || classPathMod.hasClassTransformers())
+							{
+								enumerator.registerTweakContainer(classPathMod);
+							}
+						}
+						else
+						{
+							LiteLoaderLogger.info("Mod %s is disabled or missing a required dependency, not injecting tranformers", classPathMod.getIdentifier());
 						}
 					}
-					else
-					{
-						LiteLoaderLogger.info("Mod %s is disabled or missing a required dependency, not injecting tranformers", classPathMod.getIdentifier());
-					}
+				}
+				catch (Throwable th)
+				{
+					LiteLoaderLogger.warning(th, "Error encountered whilst inspecting %s", classPathPart);
 				}
 			}
 		}
 	}
 	
 	@Override
-	public void injectIntoClassLoader(PluggableEnumerator enumerator, LaunchClassLoader classLoader, EnabledModsList enabledModsList, String profile)
+	public void injectIntoClassLoader(ModularEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 	}
 
@@ -112,14 +124,23 @@ public class EnumeratorModuleClassPath implements EnumeratorModule<File>
 	 * @param classLoader
 	 */
 	@Override
-	public void registerMods(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
+	public void registerMods(ModularEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 		LiteLoaderLogger.info("Discovering mods on class path...");
-		
+		LoadingBar.incTotalLiteLoaderProgress(this.loadableMods.size());
+
 		for (LoadableMod<File> classPathMod : this.loadableMods)
 		{
 			LiteLoaderLogger.info("Searching %s...", classPathMod);
-			enumerator.registerModsFrom(classPathMod, true);
+			LoadingBar.incLiteLoaderProgress("Searching for mods in " + classPathMod.getModName() + "...");
+			try
+			{
+				enumerator.registerModsFrom(classPathMod, true);
+			}
+			catch (Exception ex)
+			{
+				LiteLoaderLogger.warning("Error encountered whilst searching in %s...", classPathMod);
+			}
 		}
 	}
 }

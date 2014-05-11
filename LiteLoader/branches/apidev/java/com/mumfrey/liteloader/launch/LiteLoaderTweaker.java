@@ -19,6 +19,8 @@ import java.util.TreeSet;
 
 import com.google.common.base.Throwables;
 import com.google.gson.Gson;
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonSyntaxException;
 import com.mumfrey.liteloader.util.SortableValue;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
@@ -96,10 +98,11 @@ public class LiteLoaderTweaker implements ITweaker
 					if (otherState.canGotoState(this))
 						otherState.leaveState();
 					else
-						throw new IllegalStateException(String.format("Cannot go to state \"%s\" as %s %s", this.name(), otherState, otherState.getNextState() == this ? "" : "and expects \""  + otherState.getNextState().name() + "\" instead"));
+						throw new IllegalStateException(String.format("Cannot go to state \"%s\" as %s %s", this.name(), otherState, otherState.getNextState() == this ? "" : "and expects \""  + otherState.getNextState().name() + "\" instead"), LiteLoaderLogger.getLastThrowable());
 				}
 			}
 			
+			LiteLoaderLogger.clearLastThrowable();
 			StartupState.currentState = this;
 			
 			this.inState = true;
@@ -114,7 +117,7 @@ public class LiteLoaderTweaker implements ITweaker
 		@Override
 		public String toString()
 		{
-			return String.format("\"%s\" is %s %s", this.name(), this.inState ? "[ACTIVE]" : "not [ACTIVE]", this.completed ? "and [COMPLETED]" : "but not [COMPLETED]");
+			return String.format("\"%s\" is %s %s", this.name(), this.inState ? "[ACTIVE]" : "[INACTIVE]", this.completed ? "and [COMPLETED]" : "but [INCOMPLETE]");
 		}
 		
 		/**
@@ -131,7 +134,7 @@ public class LiteLoaderTweaker implements ITweaker
 		public void completed()
 		{
 			if (!this.inState || this.completed)
-				throw new IllegalStateException("Attempted to complete state " + this.name() + " but the state is already completed or is not active");
+				throw new IllegalStateException("Attempted to complete state " + this.name() + " but the state is already completed or is not active", LiteLoaderLogger.getLastThrowable());
 			
 			this.completed = true;
 		}
@@ -171,7 +174,6 @@ public class LiteLoaderTweaker implements ITweaker
 	
 	private static final String OPTION_GENERATE_MAPPINGS = "genMappings";
 	
-	private File jarFile;
 	private URL jarUrl;
 	
 	private List<String> singularLaunchArgs = new ArrayList<String>();
@@ -179,6 +181,7 @@ public class LiteLoaderTweaker implements ITweaker
 	
 	private ArgumentAcceptingOptionSpec<String> jarOption;
 	private ArgumentAcceptingOptionSpec<String> modsOption;
+	private ArgumentAcceptingOptionSpec<String> apisOption;
 	private OptionSet parsedOptions;
 	
 	private int tweakOrder = 0;
@@ -190,7 +193,9 @@ public class LiteLoaderTweaker implements ITweaker
 	/**
 	 * Loader bootstrap object
 	 */
-	private ILoaderBootstrap bootstrap;
+	private LoaderBootstrap bootstrap;
+	
+	private LoaderProperties properties;
 	
 	/**
 	 * Transformer manager
@@ -198,38 +203,125 @@ public class LiteLoaderTweaker implements ITweaker
 	private ClassTransformerManager transformerManager;
 	
 	private static final String bootstrapClassName = "com.mumfrey.liteloader.core.LiteLoaderBootstrap";
-
-	private static final String[] requiredTransformers = {
-		"com.mumfrey.liteloader.launch.LiteLoaderTransformer",
-		"com.mumfrey.liteloader.core.transformers.CrashReportTransformer"
-	};
-	
-	private static final String[] requiredDownstreamTransformers = {
-		"com.mumfrey.liteloader.core.transformers.LiteLoaderCallbackInjectionTransformer",
-		"com.mumfrey.liteloader.core.transformers.MinecraftOverlayTransformer"
-	};
 	
 	private static final String genTransformerClassName = "com.mumfrey.liteloader.core.gen.GenProfilerTransformer";
 
-	private static final String[] defaultPacketTransformers = {
-		"com.mumfrey.liteloader.core.transformers.LoginSuccessPacketTransformer",
-		"com.mumfrey.liteloader.core.transformers.ChatPacketTransformer",
-		"com.mumfrey.liteloader.core.transformers.JoinGamePacketTransformer",
-		"com.mumfrey.liteloader.core.transformers.CustomPayloadPacketTransformer",
-		"com.mumfrey.liteloader.core.transformers.ServerChatPacketTransformer",
-		"com.mumfrey.liteloader.core.transformers.ServerCustomPayloadPacketTransformer"
-	};
-	
-	@SuppressWarnings("unchecked")
 	@Override
 	public void acceptOptions(List<String> args, File gameDirectory, File assetsDirectory, String profile)
 	{
-		List<String> modsToLoad = null;
 		LiteLoaderTweaker.instance = this;
 		
+		this.initArgs(args, gameDirectory, assetsDirectory);
+		
+		List<String> modsToLoad = (this.parsedOptions.has(this.modsOption)) ? this.modsOption.values(this.parsedOptions) : null;
+		List<String> apisToLoad = (this.parsedOptions.has(this.apisOption)) ? this.apisOption.values(this.parsedOptions) : null;
+
+		if (this.parsedOptions.has(this.jarOption))
+		{
+			this.initJarUsing(this.jarOption.value(this.parsedOptions));
+		}
+		else
+		{
+			this.initJar();
+		}
+
+		LiteLoaderLogger.info("Bootstrapping LiteLoader " + LiteLoaderTweaker.VERSION);
+		
+		this.bootstrap = this.spawnBootstrap(LiteLoaderTweaker.bootstrapClassName, Launch.classLoader, gameDirectory, assetsDirectory, profile, apisToLoad);
+		this.properties = this.bootstrap instanceof LoaderProperties ? (LoaderProperties)this.bootstrap : null;
+		
+		this.transformerManager = new ClassTransformerManager(this.bootstrap.getRequiredTransformers());
+		this.transformerManager.injectTransformers(this.bootstrap.getPacketTransformers());
+		
+		StartupState.CONSTRUCT.completed();
+		
+		this.preInit(modsToLoad);
+	}
+	
+	/**
+	 * 
+	 */
+	private void initJarUsing(String jarPath)
+	{
+		try
+		{
+			if (jarPath.matches("^[0-9\\.]+$")) jarPath = String.format("versions/%1$s/%1$s.jar", jarPath);
+			LiteLoaderLogger.info("Version jar '%s' was specified on the command line", jarPath);
+			File jarFile = new File(jarPath);
+			this.jarUrl = jarFile.toURI().toURL();
+			this.injectVersionJar(jarFile);
+		}
+		catch (Exception ex)
+		{
+			ex.printStackTrace();
+		}
+	}
+
+	/**
+	 * @throws JsonSyntaxException
+	 * @throws JsonIOException
+	 */
+	private void initJar() throws JsonSyntaxException, JsonIOException
+	{
+		String resource = "/jarfile.ref";
+		InputStream refResource = LiteLoaderTweaker.class.getResourceAsStream(resource);
+		File refContainer = ClassPathUtilities.getPathToResource(LiteLoaderTweaker.class, resource);
+		if (refResource != null && refContainer != null)
+		{
+			InputStreamReader refReader = new InputStreamReader(refResource);
+			
+			try
+			{
+				@SuppressWarnings("unchecked")
+				Map<String, String> refMap = new Gson().fromJson(refReader, HashMap.class);
+				if (refMap.containsKey("jarfile"))
+				{
+					String jarPath = refMap.get("jarfile");
+					LiteLoaderLogger.info("Version jar '%s' specified via jarfile.ref", jarPath);
+					File jarFile = new File(refContainer.getParentFile(), jarPath);
+					this.jarUrl = jarFile.toURI().toURL();
+					this.injectVersionJar(jarFile);
+					return;
+				}
+			}
+			catch (IOException ex) {}
+			finally
+			{
+				try
+				{
+					refReader.close();
+					refResource.close();
+				}
+				catch (IOException ex) {}
+			}
+		}
+			
+		URL[] urls = Launch.classLoader.getURLs();
+		this.jarUrl = urls[urls.length - 1]; // probably?
+	}
+
+	/**
+	 * @param jarFile
+	 */
+	private void injectVersionJar(File jarFile)
+	{
+		LiteLoaderLogger.info("Injecting version jar '%s'", jarFile.getAbsolutePath());
+		Launch.classLoader.addURL(this.jarUrl);
+		LiteLoaderTweaker.addURLToParentClassLoader(this.jarUrl);
+	}
+
+	/**
+	 * @param args
+	 * @param gameDirectory
+	 * @param assetsDirectory
+	 */
+	@SuppressWarnings("unchecked")
+	public void initArgs(List<String> args, File gameDirectory, File assetsDirectory)
+	{
 		OptionParser optionParser = new OptionParser();
 		this.jarOption = optionParser.accepts("versionJar", "Minecraft version jar to use").withRequiredArg().ofType(String.class);
 		this.modsOption = optionParser.accepts("mods", "Comma-separated list of mods to load").withRequiredArg().ofType(String.class).withValuesSeparatedBy(',');
+		this.apisOption = optionParser.accepts("api", "Additional API classes to load").withRequiredArg().ofType(String.class);
 		optionParser.allowsUnrecognizedOptions();
 		NonOptionArgumentSpec<String> nonOptions = optionParser.nonOptions();
 		
@@ -247,90 +339,6 @@ public class LiteLoaderTweaker implements ITweaker
 		
 		// Put required arguments to the blackboard if they don't already exist there
 		this.provideRequiredArgs(gameDirectory, assetsDirectory);
-		
-		if (this.parsedOptions.has(this.modsOption))
-		{
-			modsToLoad = this.modsOption.values(this.parsedOptions);
-		}
-		
-		this.initJarUrl();
-		
-		if (this.jarFile != null)
-		{
-			LiteLoaderLogger.info("Injecting version jar '%s'", this.jarFile.getAbsolutePath());
-			Launch.classLoader.addURL(this.jarUrl);
-			LiteLoaderTweaker.addURLToParentClassLoader(this.jarUrl);
-		}
-		
-		LiteLoaderLogger.info("Bootstrapping LiteLoader " + LiteLoaderTweaker.VERSION);
-
-		this.bootstrap = this.spawnBootstrap(LiteLoaderTweaker.bootstrapClassName, Launch.classLoader, gameDirectory, assetsDirectory, profile);
-		
-		this.transformerManager = new ClassTransformerManager(LiteLoaderTweaker.requiredTransformers);
-		this.transformerManager.injectTransformers(LiteLoaderTweaker.defaultPacketTransformers);
-		
-		StartupState.CONSTRUCT.completed();
-		
-		this.preInit(modsToLoad);
-	}
-	
-	/**
-	 * 
-	 */
-	protected void initJarUrl()
-	{
-		if (this.parsedOptions.has(this.jarOption))
-		{
-			try
-			{
-				String jarPath = this.jarOption.value(this.parsedOptions);
-				if (jarPath.matches("^[0-9\\.]+$")) jarPath = String.format("versions/%1$s/%1$s.jar", jarPath);
-				LiteLoaderLogger.info("Version jar '%s' was specified on the command line", jarPath);
-				this.jarFile = new File(jarPath);
-				this.jarUrl = this.jarFile.toURI().toURL();
-			}
-			catch (Exception ex)
-			{
-				ex.printStackTrace();
-			}
-		}
-		else
-		{
-			String resource = "/jarfile.ref";
-			InputStream refResource = LiteLoaderTweaker.class.getResourceAsStream(resource);
-			File refContainer = ClassPathUtilities.getPathToResource(LiteLoaderTweaker.class, resource);
-			if (refResource != null && refContainer != null)
-			{
-				InputStreamReader refReader = new InputStreamReader(refResource);
-				
-				try
-				{
-					@SuppressWarnings("unchecked")
-					Map<String, String> refMap = new Gson().fromJson(refReader, HashMap.class);
-					if (refMap.containsKey("jarfile"))
-					{
-						String jarPath = refMap.get("jarfile");
-						LiteLoaderLogger.info("Version jar '%s' specified via jarfile.ref", jarPath);
-						this.jarFile = new File(refContainer.getParentFile(), jarPath);
-						this.jarUrl = this.jarFile.toURI().toURL();
-						return;
-					}
-				}
-				catch (IOException ex) {}
-				finally
-				{
-					try
-					{
-						refReader.close();
-						refResource.close();
-					}
-					catch (IOException ex) {}
-				}
-			}
-				
-			URL[] urls = Launch.classLoader.getURLs();
-			this.jarUrl = urls[urls.length - 1]; // probably?
-		}
 	}
 
 	/**
@@ -396,13 +404,14 @@ public class LiteLoaderTweaker implements ITweaker
 
 		LiteLoaderTweaker.instance.transformerManager.injectUpstreamTransformers(classLoader);
 
-		if (LiteLoaderTweaker.instance.bootstrap.getBooleanProperty(OPTION_GENERATE_MAPPINGS))
+		LoaderBootstrap bootstrap = LiteLoaderTweaker.instance.bootstrap;
+		if (bootstrap instanceof LoaderProperties && ((LoaderProperties)bootstrap).getBooleanProperty(LiteLoaderTweaker.OPTION_GENERATE_MAPPINGS))
 		{
 			LiteLoaderLogger.info("Injecting gen trasnformer '%s'", LiteLoaderTweaker.genTransformerClassName);
 			LiteLoaderTweaker.instance.transformerManager.injectTransformer(LiteLoaderTweaker.genTransformerClassName);
 		}
 		
-		for (String transformerClassName : LiteLoaderTweaker.requiredDownstreamTransformers)
+		for (String transformerClassName : this.bootstrap.getRequiredDownstreamTransformers())
 		{
 			LiteLoaderLogger.info("Queuing required class transformer '%s'", transformerClassName);
 			LiteLoaderTweaker.instance.transformerManager.injectTransformer(transformerClassName);
@@ -535,7 +544,7 @@ public class LiteLoaderTweaker implements ITweaker
 		return false;
 	}
 
-	private ILoaderBootstrap spawnBootstrap(String bootstrapClassName, ClassLoader classLoader, File gameDirectory, File assetsDirectory, String profile)
+	private LoaderBootstrap spawnBootstrap(String bootstrapClassName, ClassLoader classLoader, File gameDirectory, File assetsDirectory, String profile, List<String> apisToLoad)
 	{
 		if (!StartupState.CONSTRUCT.isInState())
 		{
@@ -545,15 +554,15 @@ public class LiteLoaderTweaker implements ITweaker
 		try
 		{
 			@SuppressWarnings("unchecked")
-			Class<? extends ILoaderBootstrap> bootstrapClass = (Class<? extends ILoaderBootstrap>)Class.forName(bootstrapClassName, false, classLoader);
-			Constructor<? extends ILoaderBootstrap> bootstrapCtor = bootstrapClass.getDeclaredConstructor(File.class, File.class, String.class);
+			Class<? extends LoaderBootstrap> bootstrapClass = (Class<? extends LoaderBootstrap>)Class.forName(bootstrapClassName, false, classLoader);
+			Constructor<? extends LoaderBootstrap> bootstrapCtor = bootstrapClass.getDeclaredConstructor(File.class, File.class, String.class, List.class);
 			bootstrapCtor.setAccessible(true);
 			
-			return bootstrapCtor.newInstance(gameDirectory, assetsDirectory, profile);
+			return bootstrapCtor.newInstance(gameDirectory, assetsDirectory, profile, apisToLoad);
 		}
-		catch (Exception ex)
+		catch (Throwable th)
 		{
-			Throwables.propagate(ex);
+			Throwables.propagate(th);
 		}
 		
 		return null;
@@ -585,6 +594,7 @@ public class LiteLoaderTweaker implements ITweaker
 		try
 		{
 			LiteLoaderTweaker.instance.transformerManager.injectDownstreamTransformers(Launch.classLoader);
+			LiteLoaderTweaker.instance.bootstrap.preBeginGame();
 			StartupState.BEGINGAME.completed();
 		}
 		catch (Throwable th)
@@ -669,5 +679,10 @@ public class LiteLoaderTweaker implements ITweaker
 		}
 		
 		return false;
+	}
+
+	public static boolean injectLoadingBarInsns()
+	{
+		return LiteLoaderTweaker.instance.properties != null ? LiteLoaderTweaker.instance.properties.getBooleanProperty("loadingbar") : false; 
 	}
 }

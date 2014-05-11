@@ -2,6 +2,7 @@ package com.mumfrey.liteloader;
 
 import java.io.File;
 
+import com.mumfrey.liteloader.api.Listener;
 import com.mumfrey.liteloader.modconfig.Exposable;
 
 /**
@@ -9,15 +10,8 @@ import com.mumfrey.liteloader.modconfig.Exposable;
  *
  * @author Adam Mummery-Smith
  */
-public interface LiteMod extends Exposable
+public interface LiteMod extends Exposable, Listener
 {
-	/**
-	 * Get the mod's display name
-	 * 
-	 * @return display name
-	 */
-	public abstract String getName();
-	
 	/**
 	 * Get the mod version string
 	 * 

@@ -6,7 +6,6 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
@@ -257,12 +256,11 @@ public class UpdateSite implements Comparator<Long>
 		
 		try
 		{
-			@SuppressWarnings("serial")
-			Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>>> data = UpdateSite.gson.fromJson(json, new TypeToken<Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>>>>(){}.getType());
+			Map<?, ?> data = UpdateSite.gson.fromJson(json, Map.class);
 			
 			if (data.containsKey("versions"))
 			{
-				this.handleVersionsData(data.get("versions"));
+				this.handleVersionsData((Map<?, ?>)data.get("versions"));
 			}
 			else
 			{
@@ -271,6 +269,7 @@ public class UpdateSite implements Comparator<Long>
 		}
 		catch (JsonSyntaxException ex)
 		{
+			ex.printStackTrace();
 			LiteLoaderLogger.warning("Error parsing update site JSON: %s: %s", ex.getClass().getSimpleName(), ex.getMessage());
 		}
 	}
@@ -278,13 +277,13 @@ public class UpdateSite implements Comparator<Long>
 	/**
 	 * @param versions
 	 */
-	private void handleVersionsData(Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>> versions)
+	private void handleVersionsData(Map<?, ?> versions)
 	{
 		if (versions.containsKey(this.targetVersion))
 		{
-			for (Entry<String, Map<String, Map<String, Map<String, String>>>> versionDataEntry : versions.get(this.targetVersion).entrySet())
+			for (Entry<?, ?> versionDataEntry : ((Map<?, ?>)versions.get(this.targetVersion)).entrySet())
 			{
-				this.handleVersionData(versionDataEntry.getKey(), versionDataEntry.getValue());
+				this.handleVersionData(versionDataEntry.getKey(), (Map<?, ?>)versionDataEntry.getValue());
 			}
 		}
 		else
@@ -297,13 +296,13 @@ public class UpdateSite implements Comparator<Long>
 	 * @param key
 	 * @param value
 	 */
-	private void handleVersionData(String key, Map<String, Map<String, Map<String, String>>> value)
+	private void handleVersionData(Object key, Map<?, ?> value)
 	{
-		if (key.equals("artefacts"))
+		if ("artefacts".equals(key))
 		{
 			if (value.containsKey(this.artefact))
 			{
-				this.handleArtefactData(value.get(this.artefact));
+				this.handleArtefactData((Map<?, ?>)value.get(this.artefact));
 			}
 			else
 			{
@@ -315,11 +314,12 @@ public class UpdateSite implements Comparator<Long>
 	/**
 	 * @param availableArtefacts
 	 */
-	private void handleArtefactData(Map<String, Map<String, String>> availableArtefacts)
+	@SuppressWarnings("unchecked")
+	private void handleArtefactData(Map<?, ?> availableArtefacts)
 	{
 		if (availableArtefacts.containsKey("latest"))
 		{
-			Map<String, String> latestArtefact = availableArtefacts.get("latest");
+			Map<?, ?> latestArtefact = (Map<?, ?>)availableArtefacts.get("latest");
 			this.checkAndUseRemoteArtefact(latestArtefact, this.currentTimeStamp, false);
 		}
 		else
@@ -327,21 +327,21 @@ public class UpdateSite implements Comparator<Long>
 			LiteLoaderLogger.warning("No key 'latest' in update site JSON");
 			
 			long bestTimeStamp = this.currentTimeStamp;
-			Map<String, String> bestRemoteArtefact = null; 
+			Map<?, ?> bestRemoteArtefact = null; 
 			
-			for (Map<String, String> remoteArtefact : availableArtefacts.values())
+			for (Map<?, ?> remoteArtefact : ((Map<?, Map<?, ?>>)availableArtefacts).values())
 			{
 				if (this.checkAndUseRemoteArtefact(remoteArtefact, bestTimeStamp, true))
 				{
-					bestTimeStamp = Long.parseLong(remoteArtefact.get("timestamp"));
+					bestTimeStamp = Long.parseLong(remoteArtefact.get("timestamp").toString());
 					bestRemoteArtefact = remoteArtefact;
 				}
 			}
 			
 			if (bestRemoteArtefact != null)
 			{
-				this.availableVersion = bestRemoteArtefact.get("version");
-				this.availableVersionURL = this.createArtefactURL(bestRemoteArtefact.get("file"));
+				this.availableVersion = bestRemoteArtefact.get("version").toString();
+				this.availableVersionURL = this.createArtefactURL(bestRemoteArtefact.get("file").toString());
 				this.updateAvailable = this.compareTimeStamps(this.currentTimeStamp, bestTimeStamp);
 			}
 		}
@@ -353,20 +353,20 @@ public class UpdateSite implements Comparator<Long>
 	 * @param checkOnly
 	 * @return
 	 */
-	private boolean checkAndUseRemoteArtefact(Map<String, String> artefact, long bestTimeStamp, boolean checkOnly)
+	private boolean checkAndUseRemoteArtefact(Map<?, ?> artefact, long bestTimeStamp, boolean checkOnly)
 	{
 		if (artefact.containsKey("file") && artefact.containsKey("version") && artefact.containsKey("timestamp"))
 		{
-			Long remoteTimeStamp = Long.parseLong(artefact.get("timestamp"));
+			Long remoteTimeStamp = Long.parseLong(artefact.get("timestamp").toString());
 			
 			if (checkOnly)
 			{
 				return this.compareTimeStamps(bestTimeStamp, remoteTimeStamp);
 			}
 			
-			this.availableVersion = artefact.get("version");
+			this.availableVersion = artefact.get("version").toString();
 			this.availableVersionDate = DateFormat.getDateTimeInstance().format(new Date(remoteTimeStamp * 1000L));
-			this.availableVersionURL = this.createArtefactURL(artefact.get("file"));
+			this.availableVersionURL = this.createArtefactURL(artefact.get("file").toString());
 			this.updateAvailable = this.compareTimeStamps(bestTimeStamp, remoteTimeStamp);
 			
 			return true;

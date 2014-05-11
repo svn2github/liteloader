@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core;
+package com.mumfrey.liteloader.core.api;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -13,14 +14,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import net.minecraft.client.resources.I18n;
 import joptsimple.internal.Strings;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import com.mumfrey.liteloader.api.manager.APIProvider;
+import com.mumfrey.liteloader.interfaces.LoadableFile;
+import com.mumfrey.liteloader.interfaces.LoadableMod;
 import com.mumfrey.liteloader.launch.InjectionStrategy;
+import com.mumfrey.liteloader.launch.LoaderEnvironment;
 import com.mumfrey.liteloader.resources.ModResourcePack;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
@@ -88,7 +95,7 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 	/**
 	 * ALL of the parsed metadata from the file, associated with the mod later on for retrieval via the loader
 	 */
-	protected Map<String, String> metaData = new HashMap<String, String>();
+	protected Map<String, Object> metaData = new HashMap<String, Object>();
 
 	/**
 	 * Dependencies declared in the metadata
@@ -101,6 +108,16 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 	private Set<String> missingDependencies = new HashSet<String>();;
 
 	/**
+	 * Required APIs declared in the metadata
+	 */
+	private Set<String> requiredAPIs = new HashSet<String>();
+
+	/**
+	 * Required APIs which are missing 
+	 */
+	private Set<String> missingAPIs = new HashSet<String>();
+	
+	/**
 	 * Classes in this container 
 	 */
 	protected List<String> classNames = null;
@@ -109,42 +126,70 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 	 * @param file
 	 * @param strVersion
 	 */
-	LoadableModFile(File file, String strVersion)
+	@SuppressWarnings("unchecked")
+	protected LoadableModFile(File file, String strVersion)
 	{
 		super(file.getAbsolutePath());
 		
 		this.timeStamp = this.lastModified();
-		this.parseVersionFile(strVersion);
+		this.tweakPriority = 0;
+		
+		if (!Strings.isNullOrEmpty(strVersion))
+		{
+			try
+			{
+				this.metaData = LoadableModFile.gson.fromJson(strVersion, HashMap.class);
+			}
+			catch (JsonSyntaxException jsx)
+			{
+				LiteLoaderLogger.warning("Error reading %s in %s, JSON syntax exception: %s", LoadableMod.METADATA_FILENAME, this.getAbsolutePath(), jsx.getMessage());
+				return;
+			}
+			
+			this.valid = this.parseVersionFile(strVersion);
+		}
 	}
 
-	@SuppressWarnings("unchecked")
-	protected void parseVersionFile(String strVersionData)
+	protected boolean parseVersionFile(String strVersionData)
 	{
-		if (Strings.isNullOrEmpty(strVersionData)) return;
-		
 		try
 		{
-			this.metaData = LoadableModFile.gson.fromJson(strVersionData, HashMap.class);
+			this.modName     = this.getMetaValue("name", this.getDefaultName());
+			this.displayName = this.getMetaValue("displayName", null);
+			this.version     = this.getMetaValue("version", "Unknown");
+			this.author      = this.getMetaValue("author", "Unknown");
+			
+			if (!this.parseVersions()) return false;
+
+			this.injectionStrategy = InjectionStrategy.parseStrategy(this.getMetaValue("injectAt", null));
+
+			this.tweakClassName = this.getMetaValue("tweakClass", null);
+			
+			this.getMetaValuesInto(this.classTransformerClassNames, "classTransformerClasses", ",");
+			this.getMetaValuesInto(this.dependencies, "dependsOn", ",");
+			this.getMetaValuesInto(this.requiredAPIs, "requiredAPIs", ",");
 		}
-		catch (JsonSyntaxException jsx)
+		catch (ClassCastException ex)
 		{
-			LiteLoaderLogger.warning("Error reading %s in %s, JSON syntax exception: %s", LoadableMod.METADATA_FILENAME, this.getAbsolutePath(), jsx.getMessage());
-			return;
+			LiteLoaderLogger.debug(ex);
+			LiteLoaderLogger.warning("Error parsing version metadata file in %s, check the format of the file", this.getAbsolutePath());
 		}
 		
-		this.modName = this.getMetaValue("name", this.getDefaultName());
-		this.version = this.getMetaValue("version", "Unknown");
-		this.author = this.getMetaValue("author", "Unknown");
-		this.targetVersion = this.metaData.get("mcversion");
+		return true;
+	}
+
+	public boolean parseVersions()
+	{
+		this.targetVersion = this.getMetaValue("mcversion", null);
 		if (this.targetVersion == null)
 		{
-			LiteLoaderLogger.warning("Mod in %s has no loader version number reading %s" + this.getAbsolutePath(), LoadableMod.METADATA_FILENAME);
-			return;
+			LiteLoaderLogger.warning("Mod in %s has no loader version number reading %s", this.getAbsolutePath(), LoadableMod.METADATA_FILENAME);
+			return false;
 		}
 		
 		try
 		{
-			this.revision = Float.parseFloat(this.metaData.get("revision"));
+			this.revision = Float.parseFloat(this.getMetaValue("revision", null));
 			this.hasRevision = true;
 		}
 		catch (NullPointerException ex) {}
@@ -152,24 +197,8 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 		{
 			LiteLoaderLogger.warning("Mod in %s has an invalid revision number reading %s", this.getAbsolutePath(), LoadableMod.METADATA_FILENAME);
 		}
-
-		this.valid = true;
 		
-		this.tweakClassName = this.metaData.get("tweakClass");
-		this.tweakPriority = 0;
-		
-		for (String name : this.getMetaValues("classTransformerClasses", ","))
-		{
-			if (!Strings.isNullOrEmpty(name))
-				this.classTransformerClassNames.add(name);
-		}
-		
-		this.injectionStrategy = InjectionStrategy.parseStrategy(this.metaData.get("injectAt"));
-		
-		for (String dependency : this.getMetaValues("dependsOn", ","))
-		{
-			this.dependencies.add(dependency);
-		}
+		return true;
 	}
 
 	protected String getDefaultName()
@@ -190,19 +219,57 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 	}
 	
 	@Override
-	public String getDisplayName()
-	{
-		return this.getName();
-	}
-	
-	@Override
 	public String getDescription(String key)
 	{
+		if (this.missingAPIs.size() > 0)
+		{
+			return I18n.format("gui.description.missingapis", "\n" + compileMissingAPIList());
+		}
+		
+		if (this.missingDependencies.size() > 0)
+		{
+			return I18n.format("gui.description.missingdeps", "\n" + this.missingDependencies.toString());
+		}
+		
 		String descriptionKey = "description";
 		if (key != null && key.length() > 0)
 			descriptionKey += "." + key.toLowerCase();
 		
 		return this.getMetaValue(descriptionKey, this.getMetaValue("description", ""));
+	}
+
+	/**
+	 * @return
+	 */
+	private String compileMissingAPIList()
+	{
+		StringBuilder missingAPIList = new StringBuilder();
+		
+		for (String missingAPI : this.missingAPIs)
+		{
+			if (missingAPI != null)
+			{
+				if (missingAPI.contains("@"))
+				{
+					Matcher matcher = APIProvider.idAndRevisionPattern.matcher(missingAPI);
+					if (matcher.matches())
+					{
+						missingAPIList.append("   ").append(matcher.group(1)).append(" (revision ").append(matcher.group(2)).append(")\n");
+						continue;
+					}
+				}
+
+				missingAPIList.append("   ").append(missingAPI).append("\n");
+			}
+		}
+		
+		return missingAPIList.toString();
+	}
+	
+	@Override
+	public boolean isEnabled(LoaderEnvironment environment)
+	{
+		return this.missingDependencies.size() == 0 && this.missingAPIs.size() == 0 && super.isEnabled(environment);
 	}
 	
 	@Override
@@ -235,15 +302,44 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 		return this.revision;
 	}
 	
+	protected Object getMetaValue(String metaKey)
+	{
+		Object metaValue = this.metaData.get(metaKey);
+		if (metaValue != null) return metaValue;
+		return this.metaData.get(metaKey.toLowerCase());
+	}
+	
 	@Override
 	public String getMetaValue(String metaKey, String defaultValue)
 	{
-		return this.metaData.containsKey(metaKey) ? this.metaData.get(metaKey) : defaultValue;
+		Object metaValue = this.getMetaValue(metaKey);
+		return metaValue != null ? metaValue.toString() : defaultValue;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public String[] getMetaValues(String metaKey, String separator)
 	{
-		return this.metaData.containsKey(metaKey) ? this.metaData.get(metaKey).split(separator) : new String[0];
+		Object metaValue = this.getMetaValue(metaKey);
+		
+		if (metaValue instanceof String)
+		{
+			return ((String)metaValue).split(separator);
+		}
+		else if (metaValue instanceof ArrayList)
+		{
+			return ((ArrayList<String>)metaValue).toArray(new String[0]);
+		}
+		
+		return new String[0];
+	}
+
+	protected void getMetaValuesInto(Collection<String> collection, String metaKey, String separator)
+	{
+		for (String name : this.getMetaValues(metaKey, separator))
+		{
+			if (!Strings.isNullOrEmpty(name))
+				collection.add(name);
+		}
 	}
 
 	@Override
@@ -321,7 +417,25 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 	{
 		return this.missingDependencies;
 	}
+	
+	@Override
+	public Set<String> getRequiredAPIs()
+	{
+		return this.requiredAPIs;
+	}
 
+	@Override
+	public void registerMissingAPI(String identifier)
+	{
+		this.missingAPIs.add(identifier);
+	}
+	
+	@Override
+	public Set<String> getMissingAPIs()
+	{
+		return this.missingAPIs;
+	}
+	
 	@Override
 	public List<String> getContainedClassNames()
 	{

@@ -11,7 +11,7 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  * 
  * @author Adam Mummery-Smith
  */
-public interface ILoaderBootstrap
+public interface LoaderBootstrap
 {
 	/**
 	 * Pre-init, perform mod file discovery and initial setup (eg. logger, properties)
@@ -21,6 +21,11 @@ public interface ILoaderBootstrap
 	 * @param modsToLoad
 	 */
 	public abstract void preInit(LaunchClassLoader classLoader, boolean loadTweaks, List<String> modsToLoad);
+	
+	/**
+	 * 
+	 */
+	public abstract void preBeginGame();
 	
 	/**
 	 * Init, create the loader instance and load mods
@@ -33,9 +38,9 @@ public interface ILoaderBootstrap
 	 */
 	public abstract void postInit();
 
-	public abstract void setBooleanProperty(String propertyName, boolean value);
-
-	public abstract boolean getBooleanProperty(String propertyName);
-
-	public abstract boolean getAndStoreBooleanProperty(String propertyName, boolean defaultValue);
+	public abstract List<String> getRequiredTransformers();
+	
+	public abstract List<String> getRequiredDownstreamTransformers();
+	
+	public abstract List<String> getPacketTransformers();
 }

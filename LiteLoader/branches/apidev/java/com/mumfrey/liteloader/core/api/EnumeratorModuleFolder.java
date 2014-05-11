@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core;
+package com.mumfrey.liteloader.core.api;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -15,6 +15,15 @@ import java.util.zip.ZipFile;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
+import com.mumfrey.liteloader.api.EnumeratorModule;
+import com.mumfrey.liteloader.core.LiteLoaderVersion;
+import com.mumfrey.liteloader.gui.startup.LoadingBar;
+import com.mumfrey.liteloader.interfaces.LoadableFile;
+import com.mumfrey.liteloader.interfaces.LoadableMod;
+import com.mumfrey.liteloader.interfaces.ModularEnumerator;
+import com.mumfrey.liteloader.interfaces.TweakContainer;
+import com.mumfrey.liteloader.launch.LoaderEnvironment;
+import com.mumfrey.liteloader.launch.LoaderProperties;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
@@ -22,7 +31,7 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
  * 
  * @author Adam Mummery-Smith
  */
-public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<File>
+public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule
 {
 	private static final String OPTION_SEARCH_ZIPFILES  = "search.zipfiles";
 	private static final String OPTION_SEARCH_JARFILES  = "search.jarfiles";
@@ -37,6 +46,8 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	 */
 	private final List<LoadableMod<File>> loadableMods = new ArrayList<LoadableMod<File>>();
 
+	private LiteLoaderCoreAPI coreAPI;
+	
 	private File directory;
 
 	private boolean readZipFiles;
@@ -48,28 +59,31 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	 */
 	private final boolean requireMetaData;
 
-	public EnumeratorModuleFolder(File directory, boolean loadTweaks, boolean requireMetaData)
+	public EnumeratorModuleFolder(LiteLoaderCoreAPI coreAPI, File directory, boolean requireMetaData)
 	{
+		this.coreAPI         = coreAPI;
 		this.directory       = directory;
-		this.loadTweaks      = loadTweaks;
 		this.requireMetaData = requireMetaData;
 	}
 	
 	@Override
-	public void init(PluggableEnumerator enumerator)
+	public void init(LoaderEnvironment environment, LoaderProperties properties)
 	{
-		this.readZipFiles = enumerator.getAndStoreBooleanProperty(OPTION_SEARCH_ZIPFILES,  false);
-		this.readJarFiles = enumerator.getAndStoreBooleanProperty(OPTION_SEARCH_JARFILES,  true);
+		this.loadTweaks = properties.loadTweaksEnabled();
+		this.readZipFiles = properties.getAndStoreBooleanProperty(OPTION_SEARCH_ZIPFILES, false);
+		this.readJarFiles = properties.getAndStoreBooleanProperty(OPTION_SEARCH_JARFILES, true);
+		
+		this.coreAPI.writeDiscoverySettings();
 	}
 	
 	/**
 	 * Write settings
 	 */
 	@Override
-	public void writeSettings(PluggableEnumerator enumerator)
+	public void writeSettings(LoaderEnvironment environment, LoaderProperties properties)
 	{
-		enumerator.setBooleanProperty(OPTION_SEARCH_ZIPFILES, this.readZipFiles);
-		enumerator.setBooleanProperty(OPTION_SEARCH_JARFILES, this.readJarFiles);
+		properties.setBooleanProperty(OPTION_SEARCH_ZIPFILES, this.readZipFiles);
+		properties.setBooleanProperty(OPTION_SEARCH_JARFILES, this.readJarFiles);
 	}
 	
 	@Override
@@ -112,23 +126,21 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	 * @see com.mumfrey.liteloader.core.Enumerator#enumerate(com.mumfrey.liteloader.core.EnabledModsList, java.lang.String)
 	 */
 	@Override
-	public void enumerate(PluggableEnumerator enumerator, EnabledModsList enabledModsList, String profile)
+	public void enumerate(ModularEnumerator enumerator, String profile)
 	{
 		if (this.directory.exists() && this.directory.isDirectory())
 		{
 			LiteLoaderLogger.info("Discovering valid mod files in folder %s", this.directory.getPath());
 
-			this.findValidFiles(enumerator, enabledModsList, profile);
-			this.sortAndAllocateFiles(enumerator, enabledModsList, profile);
+			this.findValidFiles(enumerator);
+			this.sortAndAllocateFiles(enumerator);
 			this.versionOrderingSets.clear();
 		}
 	}
 	
 	/**
-	 * @param enabledModsList
-	 * @param profile
 	 */
-	private void findValidFiles(PluggableEnumerator enumerator, EnabledModsList enabledModsList, String profile)
+	private void findValidFiles(ModularEnumerator enumerator)
 	{
 		for (File candidateFile : this.directory.listFiles(this))
 		{
@@ -217,20 +229,16 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 
 	/**
 	 * @param enumerator 
-	 * @param enabledModsList 
-	 * @param enabledModsList
-	 * @param profile 
-	 * @param profile
 	 */
 	@SuppressWarnings("unchecked")
-	private void sortAndAllocateFiles(PluggableEnumerator enumerator, EnabledModsList enabledModsList, String profile)
+	private void sortAndAllocateFiles(ModularEnumerator enumerator)
 	{
 		// Copy the first entry in every version set into the modfiles list
 		for (Entry<String, TreeSet<LoadableMod<File>>> modFileEntry : this.versionOrderingSets.entrySet())
 		{
 			LoadableMod<File> newestVersion = modFileEntry.getValue().iterator().next();
 
-			if (enumerator.isContainerEnabled(newestVersion))
+			if (enumerator.registerModContainer(newestVersion))
 			{
 				LiteLoaderLogger.info("Adding newest valid mod file '%s' at revision %.4f", newestVersion.getLocation(), newestVersion.getRevision());
 				this.loadableMods.add(newestVersion);
@@ -258,7 +266,7 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	}
 	
 	@Override
-	public void injectIntoClassLoader(PluggableEnumerator enumerator, LaunchClassLoader classLoader, EnabledModsList enabledModsList, String profile)
+	public void injectIntoClassLoader(ModularEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 		LiteLoaderLogger.info("Injecting external mods into class path...");
 		
@@ -279,14 +287,23 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule<
 	}
 	
 	@Override
-	public void registerMods(PluggableEnumerator enumerator, LaunchClassLoader classLoader)
+	public void registerMods(ModularEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 		LiteLoaderLogger.info("Discovering mods in valid mod files...");
+		LoadingBar.incTotalLiteLoaderProgress(this.loadableMods.size());
 
 		for (LoadableMod<?> modFile : this.loadableMods)
 		{
+			LoadingBar.incLiteLoaderProgress("Searching for mods in " + modFile.getModName() + "...");
 			LiteLoaderLogger.info("Searching %s...", modFile.getLocation());
-			enumerator.registerModsFrom(modFile, true);
+			try
+			{
+				enumerator.registerModsFrom(modFile, true);
+			}
+			catch (Exception ex)
+			{
+				LiteLoaderLogger.warning("Error encountered whilst searching in %s...", modFile.getLocation());
+			}
 		}
 	}
 }

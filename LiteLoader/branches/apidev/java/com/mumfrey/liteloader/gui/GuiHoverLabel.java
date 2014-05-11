@@ -1,5 +1,7 @@
 package com.mumfrey.liteloader.gui;
 
+import com.mumfrey.liteloader.core.api.LiteLoaderBrandingProvider;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiButton;
@@ -12,7 +14,12 @@ public class GuiHoverLabel extends GuiButton
 
 	public GuiHoverLabel(int id, int xPosition, int yPosition, FontRenderer fontRenderer, String displayText)
 	{
-		this(id, xPosition, yPosition, fontRenderer, displayText, 0xFF4785D1, 0xFFFFFFAA);
+		this(id, xPosition, yPosition, fontRenderer, displayText, LiteLoaderBrandingProvider.BRANDING_COLOUR);
+	}
+	
+	public GuiHoverLabel(int id, int xPosition, int yPosition, FontRenderer fontRenderer, String displayText, int colour)
+	{
+		this(id, xPosition, yPosition, fontRenderer, displayText, colour, 0xFFFFFFAA);
 	}
 	
 	public GuiHoverLabel(int id, int xPosition, int yPosition, FontRenderer fontRenderer, String displayText, int colour, int hoverColour)

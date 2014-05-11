@@ -20,7 +20,7 @@ public class LiteLoaderTransformer implements IClassTransformer
 	@Override
 	public byte[] transform(String name, String transformedName, byte[] basicClass)
 	{
-		if (Obf.MinecraftMain.name.equals(name))
+		if (Obf.MinecraftMain.name.equals(transformedName))
 		{
 			return this.transformMain(basicClass);
 		}

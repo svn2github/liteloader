@@ -11,12 +11,10 @@ import java.util.TreeMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiButton;
-import net.minecraft.client.gui.GuiIngameMenu;
-import net.minecraft.client.gui.GuiMainMenu;
-import net.minecraft.client.gui.GuiOptions;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.resources.I18n;
+import net.minecraft.util.IIcon;
 import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.BufferUtils;
@@ -24,10 +22,15 @@ import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
 import com.mumfrey.liteloader.LiteMod;
-import com.mumfrey.liteloader.core.EnabledModsList;
+import com.mumfrey.liteloader.api.LiteAPI;
+import com.mumfrey.liteloader.api.BrandingProvider;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.core.LiteLoaderVersion;
-import com.mumfrey.liteloader.core.Loadable;
+import com.mumfrey.liteloader.core.LiteLoaderMods;
+import com.mumfrey.liteloader.core.api.LiteLoaderBrandingProvider;
+import com.mumfrey.liteloader.core.api.LiteLoaderCoreAPI;
+import com.mumfrey.liteloader.interfaces.Loadable;
+import com.mumfrey.liteloader.launch.LoaderEnvironment;
 import com.mumfrey.liteloader.modconfig.ConfigManager;
 import com.mumfrey.liteloader.modconfig.ConfigPanel;
 
@@ -58,9 +61,6 @@ public class GuiScreenModInfo extends GuiScreen
 	 */
 	private static DoubleBuffer doubleBuffer = BufferUtils.createByteBuffer(64).asDoubleBuffer();
 	
-	// Texture resources for the "about mods" screen
-	public static ResourceLocation aboutTextureResource = new ResourceLocation("liteloader", "textures/gui/about.png");
-
 	/**
 	 * Reference to the main menu which this screen is either overlaying or using as its background
 	 */
@@ -96,7 +96,7 @@ public class GuiScreenModInfo extends GuiScreen
 	 */
 	private float tabOpacity = 0.0F;
 	
-	private boolean hideTab = true;
+	private boolean showTab = true;
 	
 	/**
 	 * List of enumerated mods
@@ -145,56 +145,115 @@ public class GuiScreenModInfo extends GuiScreen
 	 */
 	private ModInfoScreenPanel currentPanel;
 	
+	private int brandColour = LiteLoaderBrandingProvider.BRANDING_COLOUR;
+	
+	private ResourceLocation logoResource = LiteLoaderBrandingProvider.ABOUT_TEXTURE;
+	private IIcon logoCoords = LiteLoaderBrandingProvider.LOGO_COORDS;
+	
+	private ResourceLocation iconResource = LiteLoaderBrandingProvider.ABOUT_TEXTURE;
+	private IIcon iconCoords = LiteLoaderBrandingProvider.ICON_COORDS;
+	
+	private boolean mouseOverLogo = false;
+	
 	/**
 	 * @param minecraft
 	 * @param mainMenu
-	 * @param loader
-	 * @param enabledModsList
+	 * @param mods
 	 */
-	public GuiScreenModInfo(Minecraft minecraft, GuiScreen mainMenu, LiteLoader loader, EnabledModsList enabledModsList, ConfigManager configManager, boolean hideTab)
+	public GuiScreenModInfo(Minecraft minecraft, GuiScreen mainMenu, LiteLoaderMods mods, LoaderEnvironment environment, ConfigManager configManager, boolean showTab)
 	{
-		this.mc = minecraft;
+		this.mc              = minecraft;
 		this.fontRendererObj = minecraft.fontRendererObj;
-		this.mainMenu = mainMenu;
-		this.configManager = configManager;
-		this.hideTab = hideTab;
+		this.mainMenu        = mainMenu;
+		this.configManager   = configManager;
+		this.showTab         = showTab;
 		
 		this.versionText = I18n.format("gui.about.versiontext", LiteLoader.getVersion());
+		
+		this.initBranding();
 
-		this.populateModList(loader, enabledModsList);
+		this.populateModList(mods, environment);
+	}
+
+	/**
+	 * 
+	 */
+	private void initBranding()
+	{
+		LiteAPI logoProvider = null;
+		
+		int brandingColourProviderPriority = Integer.MIN_VALUE;
+		int logoProviderPriority = Integer.MIN_VALUE;
+		int iconProviderPriority = Integer.MIN_VALUE;
+		
+		for (LiteAPI api : LiteLoader.getAPIs())
+		{
+			BrandingProvider brandingProvider = api.getBrandingProvider();
+			if (brandingProvider == null) continue;
+			
+			if (brandingProvider.getBrandingColour() != 0 && brandingProvider.getPriority() > brandingColourProviderPriority)
+			{
+				brandingColourProviderPriority = brandingProvider.getPriority();
+				this.brandColour = 0xFF000000 | brandingProvider.getBrandingColour();
+			}
+			
+			ResourceLocation logoResource = brandingProvider.getLogoResource();
+			IIcon logoCoords = brandingProvider.getLogoCoords();
+			if (logoResource != null && logoCoords != null && brandingProvider.getPriority() > logoProviderPriority)
+			{
+				logoProvider = api;
+				logoProviderPriority = brandingProvider.getPriority();
+				this.logoResource = logoResource;
+				this.logoCoords = logoCoords;
+			}
+			
+			ResourceLocation iconResource = brandingProvider.getIconResource();
+			IIcon iconCoords = brandingProvider.getIconCoords();
+			if (iconResource != null && iconCoords != null && brandingProvider.getPriority() > iconProviderPriority)
+			{
+				iconProviderPriority = brandingProvider.getPriority();
+				this.iconResource = iconResource;
+				this.iconCoords = iconCoords;
+			}
+		}
+		
+		if (logoProvider != null && !logoProvider.getClass().equals(LiteLoaderCoreAPI.class))
+		{
+			this.versionText = I18n.format("gui.about.poweredbyversion", logoProvider.getVersion(), LiteLoader.getVersion());
+		}
 	}
 	
 	/**
 	 * Populate the mods list
 	 * 
-	 * @param loader
-	 * @param enabledModsList
+	 * @param mods
+	 * @param environment
 	 */
-	private void populateModList(LiteLoader loader, EnabledModsList enabledModsList)
+	private void populateModList(LiteLoaderMods mods, LoaderEnvironment environment)
 	{
-		this.activeModText = I18n.format("gui.about.modsloaded", loader.getLoadedMods().size());
+		this.activeModText = I18n.format("gui.about.modsloaded", mods.getLoadedMods().size());
 		
 		// Add mods to this treeset first, in order to sort them
 		Map<String, GuiModListEntry> sortedMods = new TreeMap<String, GuiModListEntry>();
 		
 		// Active mods
-		for (LiteMod mod : loader.getLoadedMods())
+		for (LiteMod mod : mods.getLoadedMods())
 		{
-			GuiModListEntry modListEntry = new GuiModListEntry(loader, enabledModsList, this.mc.fontRendererObj, mod);
+			GuiModListEntry modListEntry = new GuiModListEntry(mods, environment, this.mc.fontRendererObj, this.brandColour, mod);
 			sortedMods.put(modListEntry.getKey(), modListEntry);
 		}
 		
 		// Disabled mods
-		for (Loadable<?> disabledMod : loader.getDisabledMods())
+		for (Loadable<?> disabledMod : mods.getDisabledMods())
 		{
-			GuiModListEntry modListEntry = new GuiModListEntry(loader, enabledModsList, this.mc.fontRendererObj, disabledMod);
+			GuiModListEntry modListEntry = new GuiModListEntry(mods, environment, this.mc.fontRendererObj, this.brandColour, disabledMod);
 			sortedMods.put(modListEntry.getKey(), modListEntry);
 		}
 
 		// Injected tweaks
-		for (Loadable<?> injectedTweak : loader.getInjectedTweaks())
+		for (Loadable<?> injectedTweak : mods.getInjectedTweaks())
 		{
-			GuiModListEntry modListEntry = new GuiModListEntry(loader, enabledModsList, this.mc.fontRendererObj, injectedTweak);
+			GuiModListEntry modListEntry = new GuiModListEntry(mods, environment, this.mc.fontRendererObj, this.brandColour, injectedTweak);
 			sortedMods.put(modListEntry.getKey(), modListEntry);
 		}
 		
@@ -204,6 +263,14 @@ public class GuiScreenModInfo extends GuiScreen
 		// Select the first mod in the list
 		if (this.mods.size() > 0)
 			this.selectedMod = this.mods.get(0);
+	}
+	
+	/**
+	 * @return
+	 */
+	public int getBrandColour()
+	{
+		return this.brandColour;
 	}
 
 	/**
@@ -247,12 +314,12 @@ public class GuiScreenModInfo extends GuiScreen
 		this.buttonList.clear();
 		this.buttonList.add(this.btnToggle = new GuiButton(0, rightPanelLeftEdge, this.height - PANEL_BOTTOM - 24, 90, 20, I18n.format("gui.enablemod")));
 		this.buttonList.add(this.btnConfig = new GuiButton(1, rightPanelLeftEdge + 92, this.height - PANEL_BOTTOM - 24, 69, 20, I18n.format("gui.modsettings")));
-		if (!this.hideTab)
+		if (this.showTab)
 		{
 			this.buttonList.add(this.chkEnabled = new GuiCheckbox(2, LEFT_EDGE + MARGIN, this.height - PANEL_BOTTOM + 9, I18n.format("gui.about.showtabmessage")));
 		}
 		
-		this.buttonList.add(new GuiHoverLabel(3, LEFT_EDGE + MARGIN + 38 + this.fontRendererObj.getStringWidth(this.versionText) + 6, 50, this.fontRendererObj, I18n.format("gui.about.checkupdates")));
+		this.buttonList.add(new GuiHoverLabel(3, LEFT_EDGE + MARGIN + 38 + this.fontRendererObj.getStringWidth(this.versionText) + 6, 50, this.fontRendererObj, I18n.format("gui.about.checkupdates"), this.brandColour));
 		
 		this.selectMod(this.selectedMod);
 
@@ -298,7 +365,7 @@ public class GuiScreenModInfo extends GuiScreen
 			this.mc.currentScreen = this.mainMenu;
 			this.mainMenu.updateScreen();
 			this.mc.currentScreen = this;
-			if (this.chkEnabled != null) this.chkEnabled.checked = LiteLoader.getInstance().getDisplayModInfoScreenTab();
+			if (this.chkEnabled != null) this.chkEnabled.checked = LiteLoader.getModPanelManager().isTabVisible();
 		}
 		
 		if (this.toggled)
@@ -337,7 +404,7 @@ public class GuiScreenModInfo extends GuiScreen
 		int offsetMouseX = mouseX - (int)xOffset;
 		
 		// Handle mouse stuff here since we won't get mouse events when not the active GUI
-		boolean mouseOverTab = !this.hideTab && (offsetMouseX > LEFT_EDGE - TAB_WIDTH && offsetMouseX < LEFT_EDGE && mouseY > TAB_TOP && mouseY < TAB_TOP + TAB_HEIGHT);
+		boolean mouseOverTab = this.showTab && (offsetMouseX > LEFT_EDGE - TAB_WIDTH && offsetMouseX < LEFT_EDGE && mouseY > TAB_TOP && mouseY < TAB_TOP + TAB_HEIGHT);
 		this.handleMouseClick(offsetMouseX, mouseY, partialTicks, active, mouseOverTab);
 		
 		// Calculate the tab opacity, not framerate adjusted because we don't really care
@@ -362,24 +429,25 @@ public class GuiScreenModInfo extends GuiScreen
 	 */
 	private void drawPanel(int mouseX, int mouseY, float partialTicks, boolean active, float xOffset)
 	{
+		this.mouseOverLogo = false;
+		
 		glPushMatrix();
 		glTranslatef(xOffset, 0.0F, 0.0F);
 		
 		// Draw the background and left edge
 		drawRect(LEFT_EDGE, 0, this.width, this.height, 0xB0000000);
 		
-		if (!this.hideTab)
+		if (this.showTab)
 		{
 			drawRect(LEFT_EDGE, 0, LEFT_EDGE + 1, TAB_TOP, 0xFFFFFFFF);
 			drawRect(LEFT_EDGE, TAB_TOP + TAB_HEIGHT, LEFT_EDGE + 1, this.height, 0xFFFFFFFF);
 			
-			this.mc.getTextureManager().bindTexture(aboutTextureResource);
+			this.mc.getTextureManager().bindTexture(LiteLoaderBrandingProvider.ABOUT_TEXTURE);
 			glDrawTexturedRect(LEFT_EDGE - TAB_WIDTH, TAB_TOP, TAB_WIDTH + 1, TAB_HEIGHT, 80, 80, 122, 160, 0.5F + this.tabOpacity);
 		}
 		else
 		{
 			drawRect(LEFT_EDGE, 0, LEFT_EDGE + 1, this.height, 0xFFFFFFFF);
-			this.mc.getTextureManager().bindTexture(aboutTextureResource);
 		}
 
 		// Only draw the panel contents if we are actually open
@@ -396,7 +464,7 @@ public class GuiScreenModInfo extends GuiScreen
 			}
 			else
 			{
-				this.drawInfoPanel(mouseX, mouseY, partialTicks, LEFT_EDGE, PANEL_BOTTOM);
+				this.mouseOverLogo = this.drawInfoPanel(mouseX, mouseY, partialTicks, LEFT_EDGE, PANEL_BOTTOM);
 				
 				int innerWidth = this.width - LEFT_EDGE - MARGIN - MARGIN - 4;
 				int panelWidth = innerWidth / 2;
@@ -437,21 +505,26 @@ public class GuiScreenModInfo extends GuiScreen
 	 * @param mouseY
 	 * @param partialTicks
 	 */
-	protected void drawInfoPanel(int mouseX, int mouseY, float partialTicks, int left, int bottom)
+	protected boolean drawInfoPanel(int mouseX, int mouseY, float partialTicks, int left, int bottom)
 	{
 		int right = this.width - MARGIN - LEFT_EDGE + left;
+		left += MARGIN;
 		
 		// Draw the header pieces
-		glDrawTexturedRect(left + MARGIN, 12, 128, 40, 0, 0, 256, 80, 1.0F); // liteloader logo
-		glDrawTexturedRect(right - 32, 12, 32, 45, 0, 80, 64, 170, 1.0F); // chicken
+		this.mc.getTextureManager().bindTexture(this.logoResource);
+		glDrawTexturedRect(left, MARGIN, this.logoCoords, 1.0F);
+		this.mc.getTextureManager().bindTexture(this.iconResource);
+		glDrawTexturedRect(right - this.iconCoords.getIconWidth(), MARGIN, this.iconCoords, 1.0F);
 		
 		// Draw header text
-		this.fontRendererObj.drawString(this.versionText, left + MARGIN + 38, 50, 0xFFFFFFFF);
-		this.fontRendererObj.drawString(this.activeModText, left + MARGIN + 38, 60, 0xFFAAAAAA);
+		this.fontRendererObj.drawString(this.versionText, left + 38, 50, 0xFFFFFFFF);
+		this.fontRendererObj.drawString(this.activeModText, left + 38, 60, 0xFFAAAAAA);
 		
 		// Draw top and bottom horizontal rules
-		drawRect(left + MARGIN, 80, right, 81, 0xFF999999);
-		drawRect(left + MARGIN, this.height - bottom + 2, right, this.height - bottom + 3, 0xFF999999);
+		drawRect(left, 80, right, 81, 0xFF999999);
+		drawRect(left, this.height - bottom + 2, right, this.height - bottom + 3, 0xFF999999);
+		
+		return (mouseY > MARGIN && mouseY < MARGIN + this.logoCoords.getIconHeight() && mouseX > left && mouseX < left + this.logoCoords.getIconWidth());
 	}
 
 	/**
@@ -570,7 +643,7 @@ public class GuiScreenModInfo extends GuiScreen
 		if (button.id == 2 && this.chkEnabled != null)
 		{
 			this.chkEnabled.checked = !this.chkEnabled.checked;
-			LiteLoader.getInstance().setDisplayModInfoScreenTab(this.chkEnabled.checked);
+			LiteLoader.getModPanelManager().setTabVisible(this.chkEnabled.checked);
 			
 			if (!this.chkEnabled.checked)
 			{
@@ -619,14 +692,30 @@ public class GuiScreenModInfo extends GuiScreen
 		}
 		else if (keyCode == Keyboard.KEY_F3)
 		{
-			this.setCurrentPanel(new GuiLiteLoaderLog(this.mc));
+			this.showLogPanel();
 		}
 		else if (keyCode == Keyboard.KEY_F1)
 		{
-			this.setCurrentPanel(new GuiAboutPanel(this.mc, this));
+			this.showAboutPanel();
 		}
 	}
-	
+
+	/**
+	 * 
+	 */
+	void showLogPanel()
+	{
+		this.setCurrentPanel(new GuiLiteLoaderLog(this.mc, this));
+	}
+
+	/**
+	 * 
+	 */
+	void showAboutPanel()
+	{
+		this.setCurrentPanel(new GuiAboutPanel(this.mc, this));
+	}
+
 	private void scrollSelectedModIntoView()
 	{
 		if (this.selectedMod == null) return;
@@ -680,7 +769,7 @@ public class GuiScreenModInfo extends GuiScreen
 				
 				for (GuiModListEntry mod : this.mods)
 				{
-					if (mod.mouseWasOverListEntry())
+					if (mod.isMouseOver())
 					{
 						this.selectMod(mod);
 						
@@ -698,6 +787,10 @@ public class GuiScreenModInfo extends GuiScreen
 				{
 					this.selectedMod.mousePressed();
 				}
+			}
+			else if (this.mouseOverLogo)
+			{
+				this.showAboutPanel();
 			}
 		}
 		
@@ -851,15 +944,6 @@ public class GuiScreenModInfo extends GuiScreen
 		}
 	}
 	
-	public final static boolean isSupportedOnScreen(GuiScreen guiScreen)
-	{
-		return (
-			guiScreen instanceof GuiMainMenu ||
-			guiScreen instanceof GuiIngameMenu ||
-			guiScreen instanceof GuiOptions
-		);
-	}
-	
 	/**
 	 * Draw a tooltip at the specified location and clip to screenWidth and screenHeight
 	 * 
@@ -895,24 +979,50 @@ public class GuiScreenModInfo extends GuiScreen
 	 */
 	static void glDrawTexturedRect(int x, int y, int width, int height, int u, int v, int u2, int v2, float alpha)
 	{
+		float texMapScale = 0.00390625F; // 256px
+		glDrawTexturedRect(x, y, width, height, u * texMapScale, v * texMapScale, u2 * texMapScale, v2 * texMapScale, alpha);
+	}
+		
+	/**
+	 * @param x
+	 * @param y
+	 * @param width
+	 * @param height
+	 * @param u
+	 * @param v
+	 * @param u2
+	 * @param v2
+	 * @param alpha
+	 */
+	static void glDrawTexturedRect(int x, int y, int width, int height, float u, float v, float u2, float v2, float alpha)
+	{
 		glDisable(GL_LIGHTING);
 		glEnable(GL_BLEND);
 		glAlphaFunc(GL_GREATER, 0.0F);
 		glEnable(GL_TEXTURE_2D);
 		glColor4f(1.0F, 1.0F, 1.0F, alpha);
 		
-		float texMapScale = 0.00390625F; // 256px
-		
 		Tessellator tessellator = Tessellator.instance;
 		tessellator.startDrawingQuads();
-		tessellator.addVertexWithUV(x + 0,     y + height, 0, u  * texMapScale, v2 * texMapScale);
-		tessellator.addVertexWithUV(x + width, y + height, 0, u2 * texMapScale, v2 * texMapScale);
-		tessellator.addVertexWithUV(x + width, y + 0,      0, u2 * texMapScale, v  * texMapScale);
-		tessellator.addVertexWithUV(x + 0,     y + 0,      0, u  * texMapScale, v  * texMapScale);
+		tessellator.addVertexWithUV(x + 0,     y + height, 0, u , v2);
+		tessellator.addVertexWithUV(x + width, y + height, 0, u2, v2);
+		tessellator.addVertexWithUV(x + width, y + 0,      0, u2, v );
+		tessellator.addVertexWithUV(x + 0,     y + 0,      0, u , v );
 		tessellator.draw();
 		
 		glDisable(GL_BLEND);
 		glAlphaFunc(GL_GREATER, 0.01F);
+	}
+
+	/**
+	 * @param resource
+	 * @param x
+	 * @param y
+	 * @param icon
+	 */
+	static void glDrawTexturedRect(int x, int y, IIcon icon, float alpha)
+	{
+		glDrawTexturedRect(x, y, icon.getIconWidth(), icon.getIconHeight(), icon.getMinU(), icon.getMinV(), icon.getMaxU(), icon.getMaxV(), alpha);
 	}
 	
 	/**

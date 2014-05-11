@@ -1,36 +1,90 @@
 package com.mumfrey.liteloader.gui;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.lwjgl.input.Keyboard;
 
+import com.mumfrey.liteloader.api.BrandingProvider;
+import com.mumfrey.liteloader.api.LiteAPI;
 import com.mumfrey.liteloader.core.LiteLoader;
+import com.mumfrey.liteloader.core.api.LiteLoaderBrandingProvider;
+import com.mumfrey.liteloader.util.SortableValue;
+import com.mumfrey.liteloader.util.render.IconAbsolute;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.resources.I18n;
+import net.minecraft.util.IIcon;
+import net.minecraft.util.ResourceLocation;
 
 /**
- * "About LiteLoader" panel which docks in the mod info screen
+ * "About LiteLoader" panel which docks in the mod info screen and lists information about the installed APIs
  *
  * @author Adam Mummery-Smith
  */
-public class GuiAboutPanel extends ModInfoScreenPanel
+public class GuiAboutPanel extends ModInfoScreenPanel implements ScrollPanelContent
 {
-	private static final URI LITELOADER_URI = URI.create("http://www.liteloader.com/");
+	public static final IconAbsolute apiIconCoords = new IconAbsolute(LiteLoaderBrandingProvider.ABOUT_TEXTURE, "api_icon", 32, 32, 192, 144, 256, 208);
+
+	private static final int ROW_HEIGHT = 40;
+	
 	private static final URI MCP_URI = URI.create("http://mcp.ocean-labs.de/");
-	private static final URI TWITTER_URI = URI.create("https://twitter.com/therealeq2");
 
 	private GuiScreenModInfo parent;
 
-	private String versionText;
+	private GuiScrollPane scrollPane;
+	
+	private List<BrandingProvider> brandings = new ArrayList<BrandingProvider>();
+
+	private boolean mouseOverLogo;
 	
 	public GuiAboutPanel(Minecraft minecraft, GuiScreenModInfo parent)
 	{
 		super(minecraft);
 		this.parent = parent;
-		this.versionText = "LiteLoader " + I18n.format("gui.about.versiontext", LiteLoader.getVersion());
+		this.scrollPane = new GuiScrollPane(minecraft, this, MARGIN, 90, 100, 100);
+		
+		this.sortBrandingProviders();
+		
+		this.scrollPane.addControl(new GuiHoverLabel(-2, 38, 22 + this.brandings.size() * GuiAboutPanel.ROW_HEIGHT, this.mc.fontRendererObj, "\247n" + MCP_URI.toString(), this.parent.getBrandColour()));
+	}
+
+	/**
+	 * 
+	 */
+	private void sortBrandingProviders()
+	{
+		Set<SortableValue<BrandingProvider>> sortedBrandingProviders = new TreeSet<SortableValue<BrandingProvider>>();
+		
+		for (LiteAPI api : LiteLoader.getAPIs())
+		{
+			BrandingProvider brandingProvider = api.getBrandingProvider();
+			if (brandingProvider != null)
+			{
+				sortedBrandingProviders.add(new SortableValue<BrandingProvider>(Integer.MAX_VALUE - brandingProvider.getPriority(), 0, brandingProvider));
+			}
+		}	
+			
+		int brandingIndex = 0;
+		
+		for (SortableValue<BrandingProvider> sortedBrandingProvider : sortedBrandingProviders)
+		{
+			BrandingProvider brandingProvider = sortedBrandingProvider.getValue();
+			
+			this.brandings.add(brandingProvider);
+			URI homepage = brandingProvider.getHomepage();
+			if (homepage != null)
+			{
+				this.scrollPane.addControl(new GuiHoverLabel(brandingIndex, 38, 22 + brandingIndex * GuiAboutPanel.ROW_HEIGHT, this.mc.fontRendererObj, "\247n" + homepage, this.parent.getBrandColour()));
+			}
+			
+			brandingIndex++;
+		}
 	}
 	
 	@Override
@@ -38,31 +92,74 @@ public class GuiAboutPanel extends ModInfoScreenPanel
 	{
 		super.setSize(width, height);
 		
-		this.controls.add(new GuiButton(0, this.width - 99 - MARGIN, this.height - BOTTOM + 9, 100, 20, I18n.format("gui.done")));
-		this.controls.add(new GuiHoverLabel(1, 50, 112, this.mc.fontRendererObj, "\247n" + LITELOADER_URI.toString()));
-		this.controls.add(new GuiHoverLabel(2, 50, 154, this.mc.fontRendererObj, "\247n" + MCP_URI.toString()));
+		this.scrollPane.setSizeAndPosition(MARGIN, 86, this.width - MARGIN * 2, this.height - 126);
+		this.controls.add(new GuiButton(-1, this.width - 99 - MARGIN, this.height - BOTTOM + 9, 100, 20, I18n.format("gui.done")));
+		this.controls.add(new GuiButton(-3, MARGIN, this.height - BOTTOM + 9, 100, 20, I18n.format("gui.log.button")));
 	}
 	
 	@Override
 	void draw(int mouseX, int mouseY, float partialTicks)
 	{
+		this.mouseOverLogo = this.parent.drawInfoPanel(mouseX, mouseY, partialTicks, 0, 38);
+		
+		this.scrollPane.draw(mouseX, mouseY, partialTicks);
+
+		super.draw(mouseX, mouseY, partialTicks);
+	}
+	
+	@Override
+	public int getScrollPaneContentHeight(GuiScrollPane source)
+	{
+		return 64 + this.brandings.size() * GuiAboutPanel.ROW_HEIGHT;
+	}
+	
+	@Override
+	public void drawScrollPaneContent(GuiScrollPane source, int mouseX, int mouseY, float partialTicks, int scrollAmount, int visibleHeight)
+	{
 		FontRenderer fontRenderer = this.mc.fontRendererObj;
 		int textColour = 0xFFAAAAAA;
+		
+		int yPos = 0;
+		
+		for (BrandingProvider branding : this.brandings)
+		{
+			ResourceLocation twitterAvatarResource = branding.getTwitterAvatarResource();
+			IIcon twitterAvatarCoords = branding.getTwitterAvatarCoords();
+			
+			this.mc.getTextureManager().bindTexture(twitterAvatarResource != null ? twitterAvatarResource : LiteLoaderBrandingProvider.ABOUT_TEXTURE);
+			GuiScreenModInfo.glDrawTexturedRect(0, yPos, twitterAvatarCoords != null ? twitterAvatarCoords : GuiAboutPanel.apiIconCoords, 1.0F);
+			
+			fontRenderer.drawString(branding.getDisplayName(), 38, yPos, 0xFFFFFFFF);
+			fontRenderer.drawString(branding.getCopyrightText(), 38, yPos + 11, textColour);
+			
+			yPos += GuiAboutPanel.ROW_HEIGHT;
+		}
+		
+		fontRenderer.drawString("Created using Mod Coder Pack", 38, yPos, 0xFFFFFFFF);
+		fontRenderer.drawString("MCP is (c) Copyright by the MCP Team", 38, yPos + 11, textColour);
+		
+		yPos += GuiAboutPanel.ROW_HEIGHT;
 
-		this.mc.getTextureManager().bindTexture(GuiScreenModInfo.aboutTextureResource);
-		GuiScreenModInfo.glDrawTexturedRect(MARGIN, 90, 32, 32, 192, 80, 192 + 64, 80 + 64, 1.0F);
-		this.parent.drawInfoPanel(mouseX, mouseY, partialTicks, 0, 38);
-		
-		fontRenderer.drawString(this.versionText, 50, 90, 0xFFFFFFFF);
-		fontRenderer.drawString("Copyright (c) 2012-2014 Adam Mummery-Smith", 50, 101, textColour);
-		
-		fontRenderer.drawString("Created using Mod Coder Pack", 50, 132, 0xFFFFFFFF);
-		fontRenderer.drawString("MCP is (c) Copyright by the MCP Team", 50, 143, textColour);
+		fontRenderer.drawString("Minecraft is Copyright (c) Mojang AB", 38, yPos, textColour);
+		fontRenderer.drawString("All rights reserved.", 38, yPos + 11, textColour);
+	}
+	
+	@Override
+	public void scrollPaneMousePressed(GuiScrollPane source, int mouseX, int mouseY, int mouseButton)
+	{
+		int index = mouseY / GuiAboutPanel.ROW_HEIGHT;
+		int yOffset = mouseY - (GuiAboutPanel.ROW_HEIGHT * index);
 
-		fontRenderer.drawString("Minecraft is Copyright (c) Mojang AB", 50, 174, textColour);
-		fontRenderer.drawString("All rights reserved.", 50, 185, textColour);
-		
-		super.draw(mouseX, mouseY, partialTicks);
+		if (mouseButton == 0 && mouseX < 33 && index >= 0 && index < this.brandings.size() && yOffset < 33)
+		{
+			String twitterUserName = this.brandings.get(index).getTwitterUserName();
+			if (twitterUserName != null)
+			{
+				URI twitterURI = URI.create("https://www.twitter.com/" + twitterUserName);
+				System.out.println(twitterURI);
+				this.openURI(twitterURI);
+			}
+		}
 	}
 
 	/**
@@ -71,9 +168,19 @@ public class GuiAboutPanel extends ModInfoScreenPanel
 	@Override
 	void actionPerformed(GuiButton control)
 	{
-		if (control.id == 0) this.close();
-		if (control.id == 1) this.openURI(LITELOADER_URI);
-		if (control.id == 2) this.openURI(MCP_URI);
+		if (control.id == -1) this.close();
+		if (control.id == -2) this.openURI(MCP_URI);
+		if (control.id == -3) this.parent.showLogPanel();
+	}
+	
+	@Override
+	public void scrollPaneActionPerformed(GuiScrollPane source, GuiButton control)
+	{
+		if (control.id >= 0 && control.id < this.brandings.size())
+		{
+			URI homepage = this.brandings.get(control.id).getHomepage();
+			if (homepage != null) this.openURI(homepage);
+		}
 	}
 	
     private void openURI(URI uri)
@@ -111,8 +218,12 @@ public class GuiAboutPanel extends ModInfoScreenPanel
 	@Override
 	void mousePressed(int mouseX, int mouseY, int mouseButton)
 	{
-		if (mouseButton == 0 && mouseX > MARGIN && mouseX < MARGIN + 32 && mouseY > 90 && mouseY < 122)
-			this.openURI(TWITTER_URI);
+		this.scrollPane.mousePressed(mouseX, mouseY, mouseButton);
+		
+		if (mouseButton == 0 && this.mouseOverLogo)
+		{
+			this.close();
+		}
 		
 		super.mousePressed(mouseX, mouseY, mouseButton);
 	}
@@ -125,10 +236,12 @@ public class GuiAboutPanel extends ModInfoScreenPanel
 	@Override
 	void mouseReleased(int mouseX, int mouseY, int mouseButton)
 	{
+		this.scrollPane.mouseReleased(mouseX, mouseY, mouseButton);
 	}
 	
 	@Override
 	void mouseWheelScrolled(int mouseWheelDelta)
 	{
+		this.scrollPane.mouseWheelScrolled(mouseWheelDelta);
 	}
 }

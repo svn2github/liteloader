@@ -7,7 +7,7 @@ import net.minecraft.client.Minecraft;
  * 
  * @author Adam Mummery-Smith
  */
-public interface GameLoopListener
+public interface GameLoopListener extends LiteMod
 {
 	/**
 	 * Called every frame, before the world is ticked

@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core;
+package com.mumfrey.liteloader.interfaces;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -33,5 +33,8 @@ public interface Injectable
 	 */
 	public abstract boolean injectIntoClassPath(LaunchClassLoader classLoader, boolean injectIntoParent) throws MalformedURLException;
 	
+	/**
+	 * @return
+	 */
 	public abstract InjectionStrategy getInjectionStrategy();
 }

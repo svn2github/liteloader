@@ -1,6 +1,8 @@
-package com.mumfrey.liteloader.core;
+package com.mumfrey.liteloader.interfaces;
 
 import java.io.File;
+
+import com.mumfrey.liteloader.launch.LoaderEnvironment;
 
 /**
  * Interface for things which are loadable, essentially mods and tweaks
@@ -64,11 +66,10 @@ public interface Loadable<L> extends Comparable<L>
 	/**
 	 * Get whether this loadable is currently enabled in the context of the supplied mods list
 	 * 
-	 * @param enabledModsList
-	 * @param profile
+	 * @param environment
 	 * @return
 	 */
-	public abstract boolean isEnabled(EnabledModsList enabledModsList, String profile);
+	public abstract boolean isEnabled(LoaderEnvironment environment);
 	
 	/**
 	 * Get whether this loadable is a file container

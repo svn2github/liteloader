@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -47,12 +48,12 @@ public class ClassTransformerManager
 	/**
 	 * Transformers passed into the constructor which are required and must be injected upstream
 	 */
-	private final String[] requiredTransformers;
+	private final List<String> requiredTransformers;
 	
 	/**
 	 * @param requiredTransformers
 	 */
-	public ClassTransformerManager(String[] requiredTransformers)
+	public ClassTransformerManager(List<String> requiredTransformers)
 	{
 		this.requiredTransformers = requiredTransformers;
 	}

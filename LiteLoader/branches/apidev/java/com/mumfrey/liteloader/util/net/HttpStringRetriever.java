@@ -171,7 +171,7 @@ public class HttpStringRetriever extends Thread
 			
 			httpClient.setRequestMethod("GET");
 			httpClient.setRequestProperty("Connection", "Close");
-			httpClient.addRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)"); // For CloudFlare
+			httpClient.addRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:19.0) Gecko/20100101 Firefox/21.0"); // For CloudFlare
 		
 			if (this.headers != null)
 			{

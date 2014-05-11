@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core;
+package com.mumfrey.liteloader.core.api;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,6 +10,8 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
+import com.mumfrey.liteloader.core.LiteLoaderVersion;
+import com.mumfrey.liteloader.interfaces.LoadableMod;
 import com.mumfrey.liteloader.resources.ModResourcePack;
 import com.mumfrey.liteloader.resources.ModResourcePackDir;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;

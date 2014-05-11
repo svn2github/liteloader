@@ -1,4 +1,4 @@
-package com.mumfrey.liteloader.core;
+package com.mumfrey.liteloader.interfaces;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,6 +15,7 @@ import com.google.common.primitives.Ints;
 import com.mumfrey.liteloader.launch.ClassPathUtilities;
 import com.mumfrey.liteloader.launch.InjectionStrategy;
 import com.mumfrey.liteloader.launch.LiteLoaderTweaker;
+import com.mumfrey.liteloader.launch.LoaderEnvironment;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
@@ -270,9 +271,9 @@ public class LoadableFile extends File implements TweakContainer<File>
 	@Override
 	public String getDisplayName()
 	{
-		return this.displayName;
+		return this.displayName != null ? this.displayName : this.getName();
 	}
-
+	
 	@Override
 	public String getVersion()
 	{
@@ -304,8 +305,8 @@ public class LoadableFile extends File implements TweakContainer<File>
 	}
 	
 	@Override
-	public boolean isEnabled(EnabledModsList enabledModsList, String profile)
+	public boolean isEnabled(LoaderEnvironment environment)
 	{
-		return enabledModsList.isEnabled(profile, this.getIdentifier());
+		return environment.getEnabledModsList().isEnabled(environment.getProfile(), this.getIdentifier());
 	}
 }

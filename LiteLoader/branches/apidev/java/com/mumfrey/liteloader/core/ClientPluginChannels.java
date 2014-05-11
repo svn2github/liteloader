@@ -11,8 +11,8 @@ import net.minecraft.network.play.client.C17PacketCustomPayload;
 import net.minecraft.network.play.server.S01PacketJoinGame;
 import net.minecraft.network.play.server.S3FPacketCustomPayload;
 
-import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.PluginChannelListener;
+import com.mumfrey.liteloader.api.Listener;
 import com.mumfrey.liteloader.core.exceptions.UnregisteredChannelException;
 import com.mumfrey.liteloader.permissions.PermissionsManagerClient;
 import com.mumfrey.liteloader.util.PrivateFields;
@@ -38,16 +38,36 @@ public class ClientPluginChannels extends PluginChannels<PluginChannelListener>
 	{
 		return instance;
 	}
-
-	/**
-	 * @param listener
+	
+	/* (non-Javadoc)
+	 * @see com.mumfrey.liteloader.api.InterfaceProvider#initProvider()
 	 */
-	void addListener(LiteMod listener)
+	@Override
+	public void initProvider()
 	{
-		if (listener instanceof PluginChannelListener)
-		{
-			this.addPluginChannelListener((PluginChannelListener)listener);
-		}
+	}
+
+	/* (non-Javadoc)
+	 * @see com.mumfrey.liteloader.api.InterfaceProvider#getListenerBaseType()
+	 */
+	@Override
+	public Class<? extends Listener> getListenerBaseType()
+	{
+		return Listener.class;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.mumfrey.liteloader.api.InterfaceProvider#registerInterfaces(com.mumfrey.liteloader.core.InterfaceRegistrationDelegate)
+	 */
+	@Override
+	public void registerInterfaces(InterfaceRegistrationDelegate delegate)
+	{
+		delegate.registerInterface(PluginChannelListener.class);
+	}
+	
+	void addClientPluginChannelListener(PluginChannelListener pluginChannelListener)
+	{
+		super.addPluginChannelListener(pluginChannelListener);
 	}
 
 	/**
