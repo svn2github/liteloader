@@ -23,6 +23,8 @@ public class MinecraftOverlayTransformer extends ClassOverlayTransformer
 
 	private static final String METHOD_INIT = "init";
 	private static final String METHOD_POSTINIT = "postInit";
+	
+	private static boolean injected = false;
 
 	public MinecraftOverlayTransformer()
 	{
@@ -58,6 +60,8 @@ public class MinecraftOverlayTransformer extends ClassOverlayTransformer
 				if (Obf.EntityRenderer.obf.equals(typeNode.desc) || Obf.EntityRenderer.ref.equals(typeNode.desc))
 				{
 					LiteLoaderLogger.info("MinecraftOverlayTransformer found INIT injection point, this is good.");
+					MinecraftOverlayTransformer.injected = true;
+					
 					InsnList insns = new InsnList();
 					insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, MinecraftOverlayTransformer.LITELOADER_TWEAKER_CLASS, MinecraftOverlayTransformer.METHOD_INIT, "()V"));
 					insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, MinecraftOverlayTransformer.LITELOADER_TWEAKER_CLASS, MinecraftOverlayTransformer.METHOD_POSTINIT, "()V"));
@@ -70,5 +74,10 @@ public class MinecraftOverlayTransformer extends ClassOverlayTransformer
 		}
 
 		LiteLoaderLogger.severe("MinecraftOverlayTransformer failed to find the INIT injection point, the game will probably crash pretty soon.");
+	}
+	
+	public static boolean isInjected()
+	{
+		return MinecraftOverlayTransformer.injected;
 	}
 }

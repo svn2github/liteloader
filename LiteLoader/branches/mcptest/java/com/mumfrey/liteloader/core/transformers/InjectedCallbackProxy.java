@@ -22,6 +22,7 @@ import com.mumfrey.liteloader.core.ClientPluginChannels;
 import com.mumfrey.liteloader.core.Events;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.core.ServerPluginChannels;
+import com.mumfrey.liteloader.launch.LiteLoaderTweaker;
 
 /**
  * Proxy class which handles the redirected calls from the injected packet hooks and routes them to the
@@ -123,7 +124,16 @@ public class InjectedCallbackProxy
 		ServerPluginChannels pluginChannels = LiteLoader.getServerPluginChannels();
 		pluginChannels.onPluginChannelMessage((INetHandlerPlayServer)netHandler, packet);
 	}
-	
+
+	public static void onStartupComplete(int ref, Minecraft minecraft)
+	{
+		if (!MinecraftOverlayTransformer.isInjected())
+		{
+			LiteLoaderTweaker.init();
+			LiteLoaderTweaker.postInit();
+		}
+	}
+		
 	public static void onTimerUpdate(int ref)
 	{
 		if (!InjectedCallbackProxy.initDone)
@@ -146,6 +156,7 @@ public class InjectedCallbackProxy
 		if (ref == 2)
 		{
 			InjectedCallbackProxy.events.onTick(InjectedCallbackProxy.clock);
+			InjectedCallbackProxy.clock = false;
 		}
 	}
 	

@@ -141,7 +141,7 @@ public class LiteLoaderTweaker implements ITweaker
 		 */
 		private StartupState getNextState()
 		{
-			return this.ordinal() < StartupState.values().length - 1 ? StartupState.values()[this.ordinal() + 1] : null;
+			return this.ordinal() < StartupState.values().length - 1 ? StartupState.values()[this.ordinal() + 1] : StartupState.DONE;
 		}
 		
 		/**
