@@ -137,6 +137,7 @@ public class InjectedCallbackProxy
 		if (ref == 2)
 		{
 			InjectedCallbackProxy.events.onTick(InjectedCallbackProxy.clock);
+			InjectedCallbackProxy.clock = false;
 		}
 	}
 	
