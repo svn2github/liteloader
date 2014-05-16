@@ -293,7 +293,8 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 		int argNumber = methodIsStatic ? 0 : 1;
 		for (Type type : Type.getArgumentTypes(methodNode.desc))
 		{
-			injected.add(new VarInsnNode(type.getOpcode(Opcodes.ILOAD), argNumber++));
+			injected.add(new VarInsnNode(type.getOpcode(Opcodes.ILOAD), argNumber));
+			argNumber += type.getSize();
 		}
 		
 		// Generate the callback method descriptor
