@@ -354,7 +354,7 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 	 */
 	private static String generateSignature(String className, String methodName, String methodSignature, Callback.CallbackType callbackType)
 	{
-		return String.format("%s::%s%s@%s", className.replace('.', '/'), methodName, methodSignature, callbackType.toString().toLowerCase());
+		return String.format("%s::%s%s@%s", className.replace('.', '/'), methodName, methodSignature, callbackType.getSignature());
 	}
 	
 	/**

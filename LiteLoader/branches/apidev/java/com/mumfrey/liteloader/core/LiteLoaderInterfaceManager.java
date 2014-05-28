@@ -94,19 +94,33 @@ public class LiteLoaderInterfaceManager implements InterfaceRegistry
 		 * @param interfaceType
 		 * @return
 		 */
+		@SuppressWarnings("unchecked")
 		private Method findRegistrationMethod(InterfaceProvider provider, Class<? extends Listener> interfaceType)
 		{
 			Method registrationMethod = null;
 			
-			for (Method method : provider.getClass().getDeclaredMethods())
+			Class<? extends InterfaceProvider> providerClass = provider.getClass();
+			while (registrationMethod == null && providerClass != null)
+			{
+				registrationMethod = this.findRegistrationMethod(providerClass, interfaceType);
+				providerClass = (Class<? extends InterfaceProvider>)providerClass.getSuperclass();
+			}
+				
+			return registrationMethod;
+		}
+
+		private Method findRegistrationMethod(Class<? extends InterfaceProvider> providerClass, Class<? extends Listener> interfaceType)
+		{
+			for (Method method : providerClass.getDeclaredMethods())
 			{
 				if (method.getParameterTypes().length == 1 && method.getParameterTypes()[0].equals(interfaceType))
 				{
-					LiteLoaderLogger.debug("Found method %s for registering %s with provider %s", method.getName(), interfaceType, provider.getClass().getSimpleName());
-					registrationMethod = method;
+					LiteLoaderLogger.debug("Found method %s for registering %s with provider %s", method.getName(), interfaceType, providerClass.getSimpleName());
+					return method;
 				}
 			}
-			return registrationMethod;
+			
+			return null;
 		}
 		
 		/**

@@ -245,4 +245,25 @@ class APIProviderBasic implements APIProvider, APIAdapter
 	{
 		return this.apiMap.get(identifier);
 	}
+	
+	/* (non-Javadoc)
+	 * @see com.mumfrey.liteloader.api.manager.APIProvider#getAPI(java.lang.Class)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public <T extends LiteAPI> T getAPI(Class<T> apiClass)
+	{
+		try
+		{
+			for (LiteAPI api : this.apis)
+			{
+				if (apiClass.isAssignableFrom(api.getClass()))
+					return (T)api;
+			}
+		}
+		catch (NullPointerException ex1) {}
+		catch (ClassCastException ex2) {}
+		
+		return null;
+	}
 }

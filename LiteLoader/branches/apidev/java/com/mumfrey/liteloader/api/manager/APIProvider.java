@@ -41,4 +41,12 @@ public interface APIProvider
 	 * @return
 	 */
 	public abstract LiteAPI getAPI(String identifier);
+	
+	/**
+	 * Gets a specific API by class
+	 * 
+	 * @param apiClass
+	 * @return
+	 */
+	public abstract <T extends LiteAPI> T getAPI(Class<T> apiClass);
 }

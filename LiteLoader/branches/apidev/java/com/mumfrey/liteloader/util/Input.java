@@ -5,29 +5,28 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-import com.mumfrey.liteloader.api.CoreProvider;
-import com.mumfrey.liteloader.core.LiteLoader;
-import com.mumfrey.liteloader.core.LiteLoaderMods;
-import com.mumfrey.liteloader.util.jinput.ComponentRegistry;
-
 import net.java.games.input.Component;
 import net.java.games.input.Controller;
 import net.java.games.input.Event;
 import net.java.games.input.EventQueue;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.network.INetHandler;
-import net.minecraft.network.play.server.S01PacketJoinGame;
+import net.minecraft.network.Packet;
+import net.minecraft.profiler.Profiler;
 import net.minecraft.world.World;
+
+import com.mumfrey.liteloader.api.CoreProvider;
+import com.mumfrey.liteloader.common.GameEngine;
+import com.mumfrey.liteloader.core.LiteLoader;
+import com.mumfrey.liteloader.core.LiteLoaderMods;
+import com.mumfrey.liteloader.util.jinput.ComponentRegistry;
 
 /**
  * Mod input class, aggregates functionality from LiteLoader's mod key registration functions and JInputLib
@@ -36,10 +35,12 @@ import net.minecraft.world.World;
  */
 public final class Input implements CoreProvider
 {
+	private GameEngine<?, ?> engine;
+	
 	/**
 	 * 
 	 */
-	private Minecraft minecraft;
+	private Profiler profiler;
 
 	/**
 	 * File in which we will store mod key mappings
@@ -106,9 +107,10 @@ public final class Input implements CoreProvider
 	}
 	
 	@Override
-	public void onPostInit(Minecraft minecraft)
+	public void onPostInit(GameEngine<?, ?> engine)
 	{
-		this.minecraft = minecraft;
+		this.engine = engine;
+		this.profiler = engine.getProfiler();
 	}
 
 	@Override
@@ -122,7 +124,7 @@ public final class Input implements CoreProvider
 	}
 	
 	@Override
-	public void onJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
+	public void onJoinGame(INetHandler netHandler, Packet loginPacket)
 	{
 	}
 	
@@ -143,9 +145,7 @@ public final class Input implements CoreProvider
 	 */
 	public void registerKeyBinding(KeyBinding binding)
 	{
-		Minecraft minecraft = Minecraft.getMinecraft();
-		LinkedList<KeyBinding> keyBindings = new LinkedList<KeyBinding>();
-		keyBindings.addAll(Arrays.asList(minecraft.gameSettings.keyBindings));
+		List<KeyBinding> keyBindings = this.engine.getKeyBindings();
 		
 		if (!keyBindings.contains(binding))
 		{
@@ -159,7 +159,8 @@ public final class Input implements CoreProvider
 			}
 
 			keyBindings.add(binding);
-			minecraft.gameSettings.keyBindings = keyBindings.toArray(new KeyBinding[0]);
+			
+			this.engine.setKeyBindings(keyBindings);
 			this.modKeyBindings.add(binding);
 			
 			this.updateBinding(binding);
@@ -176,15 +177,12 @@ public final class Input implements CoreProvider
 	 */
 	public void unRegisterKeyBinding(KeyBinding binding)
 	{
-		Minecraft minecraft = Minecraft.getMinecraft();
-		
-		LinkedList<KeyBinding> keyBindings = new LinkedList<KeyBinding>();
-		keyBindings.addAll(Arrays.asList(minecraft.gameSettings.keyBindings));
+		List<KeyBinding> keyBindings = this.engine.getKeyBindings();
 		
 		if (keyBindings.contains(binding))
 		{
 			keyBindings.remove(binding);
-			minecraft.gameSettings.keyBindings = keyBindings.toArray(new KeyBinding[0]);
+			this.engine.setKeyBindings(keyBindings);
 
 			this.modKeyBindings.remove(binding);
 			
@@ -198,7 +196,7 @@ public final class Input implements CoreProvider
 	@Override
 	public void onTick(boolean clock, float partialTicks, boolean inGame)
 	{
-		this.minecraft.mcProfiler.startSection("keybindings");
+		this.profiler.startSection("keybindings");
 		if (clock)
 		{
 			boolean updated = false;
@@ -216,7 +214,7 @@ public final class Input implements CoreProvider
 		}
 		
 		this.pollControllers();
-		this.minecraft.mcProfiler.endSection();
+		this.profiler.endSection();
 	}
 	
 	/**

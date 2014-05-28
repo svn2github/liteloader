@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Properties;
 
@@ -16,13 +17,15 @@ import org.apache.logging.log4j.core.Logger;
 import org.apache.logging.log4j.core.appender.FileAppender;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 
-import net.minecraft.client.ClientBrandRetriever;
+import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
+import com.mumfrey.liteloader.api.LiteAPI;
 import com.mumfrey.liteloader.api.manager.APIAdapter;
 import com.mumfrey.liteloader.api.manager.APIProvider;
 import com.mumfrey.liteloader.api.manager.APIRegistry;
-import com.mumfrey.liteloader.gui.startup.LoadingBar;
+import com.mumfrey.liteloader.common.LoadingProgress;
+import com.mumfrey.liteloader.core.api.LiteLoaderCoreAPI;
 import com.mumfrey.liteloader.interfaces.LoaderEnumerator;
 import com.mumfrey.liteloader.launch.LoaderBootstrap;
 import com.mumfrey.liteloader.launch.LoaderEnvironment;
@@ -127,6 +130,8 @@ class LiteLoaderBootstrap implements LoaderBootstrap, LoaderEnvironment, LoaderP
 	private final APIProvider apiProvider;
 	
 	private final APIAdapter apiAdapter;
+	
+	private final EnvironmentType environmentType;
 
 	/**
 	 * The mod enumerator instance
@@ -143,8 +148,10 @@ class LiteLoaderBootstrap implements LoaderBootstrap, LoaderEnvironment, LoaderP
 	 * @param assetsDirectory
 	 * @param profile
 	 */
-	public LiteLoaderBootstrap(File gameDirectory, File assetsDirectory, String profile, List<String> apisToLoad)
+	public LiteLoaderBootstrap(int environmentTypeId, File gameDirectory, File assetsDirectory, String profile, List<String> apisToLoad)
 	{
+		this.environmentType     = EnvironmentType.values()[environmentTypeId];
+		
 		this.apiRegistry         = new APIRegistry(this, this);
 		
 		this.gameDirectory       = gameDirectory;
@@ -193,8 +200,6 @@ class LiteLoaderBootstrap implements LoaderBootstrap, LoaderEnvironment, LoaderP
 	 */
 	private void initAPIs(List<String> apisToLoad)
 	{
-		this.registerAPI("com.mumfrey.liteloader.core.api.LiteLoaderCoreAPI");
-		
 		if (apisToLoad != null)
 		{
 			for (String apiClassName : apisToLoad)
@@ -234,6 +239,12 @@ class LiteLoaderBootstrap implements LoaderBootstrap, LoaderEnvironment, LoaderP
 	public LoaderEnumerator getEnumerator()
 	{
 		return this.enumerator;
+	}
+	
+	@Override
+	public EnvironmentType getType()
+	{
+		return this.environmentType;
 	}
 	
 	/* (non-Javadoc)
@@ -284,7 +295,12 @@ class LiteLoaderBootstrap implements LoaderBootstrap, LoaderEnvironment, LoaderP
 	@Override
 	public void preBeginGame()
 	{
-		LoadingBar.setEnabled(this.getAndStoreBooleanProperty(LiteLoaderBootstrap.OPTION_LOADING_BAR, true));
+		LoadingProgress.setEnabled(this.getAndStoreBooleanProperty(LiteLoaderBootstrap.OPTION_LOADING_BAR, true));
+		LiteAPI api = this.getAPIProvider().getAPI("liteloader");
+		if (api instanceof LiteLoaderCoreAPI)
+		{
+			((LiteLoaderCoreAPI)api).getObjectFactory().preBeginGame();
+		}
 	}
 	
 	/* (non-Javadoc)
@@ -297,7 +313,7 @@ class LiteLoaderBootstrap implements LoaderBootstrap, LoaderEnvironment, LoaderP
 		if (this.enumerator == null) return;
 		
 		LiteLoader.createInstance(this, this, classLoader);
-		LiteLoader.init();
+		LiteLoader.invokeInit();
 	}
 
 	/* (non-Javadoc)
@@ -309,7 +325,7 @@ class LiteLoaderBootstrap implements LoaderBootstrap, LoaderEnvironment, LoaderP
 		// PreInit failed
 		if (this.enumerator == null) return;
 		
-		LiteLoader.postInit();
+		LiteLoader.invokePostInit();
 	}
 
 	/**
@@ -614,7 +630,19 @@ class LiteLoaderBootstrap implements LoaderBootstrap, LoaderEnvironment, LoaderP
 	{
 		try
 		{
-			String oldBrand = ClientBrandRetriever.getClientModName();
+			Method mGetClientModName;
+			
+			try
+			{
+				Class<?> cbrClass = Class.forName("net.minecraft.client.ClientBrandRetriever", false, Launch.classLoader);
+				mGetClientModName = cbrClass.getDeclaredMethod("getClientModName");
+			}
+			catch (ClassNotFoundException ex)
+			{
+				return;
+			}
+			
+			String oldBrand = (String)mGetClientModName.invoke(null);
 			
 			if (oldBrand.equals("vanilla"))
 			{

@@ -111,6 +111,16 @@ public class Callback
 		{
 			return this.sectionRequired;
 		}
+
+		public String getSignature()
+		{
+			if (this == CallbackType.EVENT || this == CallbackType.REDIRECT)
+			{
+				return "head";
+			}
+			
+			return this.name().toString().toLowerCase();
+		}
 	}
 	
 	/**

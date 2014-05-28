@@ -18,6 +18,14 @@ import com.mumfrey.liteloader.interfaces.LoaderEnumerator;
  */
 public interface LoaderEnvironment
 {
+	public enum EnvironmentType
+	{
+		CLIENT,
+		DEDICATEDSERVER
+	}
+	
+	public abstract EnvironmentType getType();
+	
 	/**
 	 * Get the API Adapter, the API Adapter provides functionality for working with all loaded APIs
 	 */

@@ -16,8 +16,8 @@ import java.util.zip.ZipFile;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import com.mumfrey.liteloader.api.EnumeratorModule;
+import com.mumfrey.liteloader.common.LoadingProgress;
 import com.mumfrey.liteloader.core.LiteLoaderVersion;
-import com.mumfrey.liteloader.gui.startup.LoadingBar;
 import com.mumfrey.liteloader.interfaces.LoadableFile;
 import com.mumfrey.liteloader.interfaces.LoadableMod;
 import com.mumfrey.liteloader.interfaces.ModularEnumerator;
@@ -290,11 +290,11 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule
 	public void registerMods(ModularEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 		LiteLoaderLogger.info("Discovering mods in valid mod files...");
-		LoadingBar.incTotalLiteLoaderProgress(this.loadableMods.size());
+		LoadingProgress.incTotalLiteLoaderProgress(this.loadableMods.size());
 
 		for (LoadableMod<?> modFile : this.loadableMods)
 		{
-			LoadingBar.incLiteLoaderProgress("Searching for mods in " + modFile.getModName() + "...");
+			LoadingProgress.incLiteLoaderProgress("Searching for mods in " + modFile.getModName() + "...");
 			LiteLoaderLogger.info("Searching %s...", modFile.getLocation());
 			try
 			{

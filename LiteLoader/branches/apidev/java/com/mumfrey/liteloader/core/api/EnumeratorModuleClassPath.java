@@ -7,7 +7,7 @@ import java.util.List;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import com.mumfrey.liteloader.api.EnumeratorModule;
-import com.mumfrey.liteloader.gui.startup.LoadingBar;
+import com.mumfrey.liteloader.common.LoadingProgress;
 import com.mumfrey.liteloader.interfaces.LoadableMod;
 import com.mumfrey.liteloader.interfaces.ModularEnumerator;
 import com.mumfrey.liteloader.launch.LoaderEnvironment;
@@ -127,19 +127,19 @@ public class EnumeratorModuleClassPath implements EnumeratorModule
 	public void registerMods(ModularEnumerator enumerator, LaunchClassLoader classLoader)
 	{
 		LiteLoaderLogger.info("Discovering mods on class path...");
-		LoadingBar.incTotalLiteLoaderProgress(this.loadableMods.size());
+		LoadingProgress.incTotalLiteLoaderProgress(this.loadableMods.size());
 
 		for (LoadableMod<File> classPathMod : this.loadableMods)
 		{
 			LiteLoaderLogger.info("Searching %s...", classPathMod);
-			LoadingBar.incLiteLoaderProgress("Searching for mods in " + classPathMod.getModName() + "...");
+			LoadingProgress.incLiteLoaderProgress("Searching for mods in " + classPathMod.getModName() + "...");
 			try
 			{
 				enumerator.registerModsFrom(classPathMod, true);
 			}
 			catch (Exception ex)
 			{
-				LiteLoaderLogger.warning("Error encountered whilst searching in %s...", classPathMod);
+				LiteLoaderLogger.warning(ex, "Error encountered whilst searching in %s...", classPathMod);
 			}
 		}
 	}

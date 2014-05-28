@@ -29,7 +29,6 @@ public interface LoaderBootstrap
 	
 	/**
 	 * Init, create the loader instance and load mods
-	 * @param classLoader
 	 */
 	public abstract void init(LaunchClassLoader classLoader);
 	

@@ -131,7 +131,7 @@ public class LiteLoaderEnumerator implements LoaderEnumerator
 		this.supportedPrefixes = this.getSupportedPrefixes(environment);
 		
 		// Initialise the shared mod list if we haven't already
-        this.getSharedModList();
+		this.getSharedModList();
 	}
 
 	/**
@@ -203,8 +203,8 @@ public class LiteLoaderEnumerator implements LoaderEnumerator
 			
 			if (sharedModList == null)
 			{
-			    sharedModList = new HashMap<String, Map<String,String>>();
-			    Launch.blackboard.put("modList", sharedModList);
+				sharedModList = new HashMap<String, Map<String,String>>();
+				Launch.blackboard.put("modList", sharedModList);
 			}
 			
 			return sharedModList;
@@ -589,8 +589,10 @@ public class LiteLoaderEnumerator implements LoaderEnumerator
 		
 		if (modClasses.size() > 0)
 		{
-			this.registerEnabledContainer(container);
 			LiteLoaderLogger.info("Found %d potential matches", modClasses.size());
+
+			this.disabledContainers.remove(container.getIdentifier());
+			this.containers.put(container.getIdentifier(), container);
 		}
 	}
 

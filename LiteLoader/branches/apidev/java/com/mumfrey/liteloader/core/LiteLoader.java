@@ -3,21 +3,17 @@ package com.mumfrey.liteloader.core;
 import java.io.File;
 import java.io.PrintStream;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 import javax.activity.InvalidActivityException;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.resources.IResourcePack;
-import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 import net.minecraft.network.INetHandler;
 import net.minecraft.network.play.server.S01PacketJoinGame;
+import net.minecraft.profiler.Profiler;
 import net.minecraft.world.World;
 
 import org.apache.logging.log4j.Logger;
@@ -31,19 +27,23 @@ import com.mumfrey.liteloader.api.TickObserver;
 import com.mumfrey.liteloader.api.WorldObserver;
 import com.mumfrey.liteloader.api.manager.APIAdapter;
 import com.mumfrey.liteloader.api.manager.APIProvider;
-import com.mumfrey.liteloader.core.overlays.IMinecraft;
+import com.mumfrey.liteloader.common.GameEngine;
+import com.mumfrey.liteloader.common.LoadingProgress;
+import com.mumfrey.liteloader.core.api.LiteLoaderCoreAPI;
 import com.mumfrey.liteloader.crashreport.CallableLaunchWrapper;
 import com.mumfrey.liteloader.crashreport.CallableLiteLoaderBrand;
 import com.mumfrey.liteloader.crashreport.CallableLiteLoaderMods;
-import com.mumfrey.liteloader.gui.startup.LoadingBar;
 import com.mumfrey.liteloader.interfaces.Loadable;
 import com.mumfrey.liteloader.interfaces.LoadableMod;
 import com.mumfrey.liteloader.interfaces.LoaderEnumerator;
+import com.mumfrey.liteloader.interfaces.ModPanelManager;
+import com.mumfrey.liteloader.interfaces.ObjectFactory;
 import com.mumfrey.liteloader.launch.LoaderEnvironment;
 import com.mumfrey.liteloader.launch.LoaderProperties;
 import com.mumfrey.liteloader.modconfig.ConfigManager;
 import com.mumfrey.liteloader.modconfig.Exposable;
 import com.mumfrey.liteloader.permissions.PermissionsManagerClient;
+import com.mumfrey.liteloader.permissions.PermissionsManagerServer;
 import com.mumfrey.liteloader.util.Input;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
@@ -71,9 +71,14 @@ public final class LiteLoader
 	private static LaunchClassLoader classLoader;
 	
 	/**
-	 * Reference to the Minecraft game instance
+	 * Reference to the game engine instance
 	 */
-	private Minecraft minecraft;
+	private GameEngine<?, ?> engine;
+	
+	/**
+	 * Minecraft Profiler
+	 */
+	private Profiler profiler;
 	
 	/**
 	 * Loader environment instance 
@@ -89,11 +94,6 @@ public final class LiteLoader
 	 * Mod enumerator instance
 	 */
 	private final LoaderEnumerator enumerator;
-	
-	/**
-	 * Registered resource packs 
-	 */
-	private final Map<String, IResourcePack> registeredResourcePacks = new HashMap<String, IResourcePack>();
 
 	/**
 	 * Mods
@@ -109,6 +109,16 @@ public final class LiteLoader
 	 * API Adapter instance
 	 */
 	private final APIAdapter apiAdapter;
+	
+	/**
+	 * Our core API instance
+	 */
+	private final LiteLoaderCoreAPI api;
+	
+	/**
+	 * Factory which can be used to instance main loader helper objects
+	 */
+	private final ObjectFactory<?, ?> objectFactory;
 	
 	/**
 	 * Core providers
@@ -135,7 +145,11 @@ public final class LiteLoader
 	 */
 	private final List<PostRenderObserver> postRenderObservers = new LinkedList<PostRenderObserver>();
 	
-	protected final LiteLoaderModPanelManager modPanelManager;
+	/**
+	 * Mod panel manager, deliberately raw
+	 */
+	@SuppressWarnings("rawtypes")
+	private ModPanelManager modPanelManager;
 	
 	/**
 	 * Interface Manager
@@ -145,22 +159,24 @@ public final class LiteLoader
 	/**
 	 * Event manager
 	 */
-	private Events events;
+	private Events<?, ?> events;
 
 	/**
 	 * Plugin channel manager 
 	 */
-	private final ClientPluginChannels clientPluginChannels = new ClientPluginChannels();
+	private final ClientPluginChannels clientPluginChannels;
 	
 	/**
 	 * Server channel manager 
 	 */
-	private final ServerPluginChannels serverPluginChannels = new ServerPluginChannels();
+	private final ServerPluginChannels serverPluginChannels;
 	
 	/**
 	 * Permission Manager
 	 */
-	private final PermissionsManagerClient permissionsManager = PermissionsManagerClient.getInstance();
+	private final PermissionsManagerClient permissionsManagerClient;
+	
+	private final PermissionsManagerServer permissionsManagerServer;
 	
 	/**
 	 * Mod configuration manager
@@ -171,11 +187,6 @@ public final class LiteLoader
 	 * Flag which keeps track of whether late initialisation has completed
 	 */
 	private boolean modInitComplete;
-
-	/**
-	 * True while initialising mods if we need to do a resource manager reload once the process is completed
-	 */
-	private boolean pendingResourceReload;
 	
 	/**
 	 * 
@@ -201,7 +212,19 @@ public final class LiteLoader
 		this.apiProvider = environment.getAPIProvider();
 		this.apiAdapter = environment.getAPIAdapter();
 		
-		this.modPanelManager = new LiteLoaderModPanelManager(environment, properties, this.mods, this.configManager);
+		this.api = this.apiProvider.getAPI(LiteLoaderCoreAPI.class);
+		if (this.api == null)
+		{
+			throw new IllegalStateException("The core API was not registered. Startup halted");
+		}
+		
+		this.objectFactory = this.api.getObjectFactory();
+
+		this.clientPluginChannels = this.objectFactory.getClientPluginChannels();
+		this.serverPluginChannels = this.objectFactory.getServerPluginChannels();
+		
+		this.permissionsManagerClient = this.objectFactory.getClientPermissionManager();
+		this.permissionsManagerServer = this.objectFactory.getServerPermissionManager();
 	}
 	
 	/**
@@ -227,7 +250,7 @@ public final class LiteLoader
 		}
 		catch (Throwable th)
 		{
-			LiteLoaderLogger.severe("Error initialising LiteLoader", th);
+			LiteLoaderLogger.severe(th, "Error initialising LiteLoader", th);
 		}
 	}
 	
@@ -236,25 +259,14 @@ public final class LiteLoader
 	 */
 	private void onPostInit()
 	{
-		this.initCoreObjects();
+		LoadingProgress.setMessage("LiteLoader POSTINIT...");
 		
-		for (CoreProvider coreProvider : this.coreProviders)
-		{
-			coreProvider.onPostInit(this.minecraft);
-		}
-
-		this.interfaceManager.registerInterfaces();
+		this.initLifetimeObjects();
+		
+		this.postInitCoreProviders();
 		
 		// Spawn mod instances and initialise them
 		this.loadAndInitMods();
-		
-		LoadingBar.setMessage("LiteLoader POSTINIT...");
-		
-		// Initialises the required hooks for loaded mods
-		this.interfaceManager.onPostInit();
-		
-		this.modInitComplete = true;
-		this.mods.onPostInit();
 
 		for (CoreProvider coreProvider : this.coreProviders)
 		{
@@ -270,20 +282,7 @@ public final class LiteLoader
 	 */
 	public boolean registerModResourcePack(IResourcePack resourcePack)
 	{
-		if (!this.registeredResourcePacks.containsKey(resourcePack.getPackName()))
-		{
-			this.pendingResourceReload = true;
-
-			List<IResourcePack> defaultResourcePacks = ((IMinecraft)this.minecraft).getDefaultResourcePacks();
-			if (!defaultResourcePacks.contains(resourcePack))
-			{
-				defaultResourcePacks.add(resourcePack);
-				this.registeredResourcePacks.put(resourcePack.getPackName(), resourcePack);
-				return true;
-			}
-		}
-		
-		return false;
+		return this.engine.registerResourcePack(resourcePack);
 	}
 	
 	/* (non-Javadoc)
@@ -291,17 +290,7 @@ public final class LiteLoader
 	 */
 	public boolean unRegisterModResourcePack(IResourcePack resourcePack)
 	{
-		if (this.registeredResourcePacks.containsValue(resourcePack))
-		{
-			this.pendingResourceReload = true;
-
-			List<IResourcePack> defaultResourcePacks = ((IMinecraft)this.minecraft).getDefaultResourcePacks();
-			this.registeredResourcePacks.remove(resourcePack.getPackName());
-			defaultResourcePacks.remove(resourcePack);
-			return true;
-		}
-		
-		return false;
+		return this.engine.unRegisterResourcePack(resourcePack);
 	}
 	
 	/**
@@ -411,10 +400,23 @@ public final class LiteLoader
 	
 	/**
 	 * @return
+	 * 
+	 * @deprecated use getClientPermissionsManager instead
 	 */
+	@Deprecated
 	public static PermissionsManagerClient getPermissionsManager()
 	{
-		return LiteLoader.instance.permissionsManager;
+		return LiteLoader.instance.permissionsManagerClient;
+	}
+	
+	public static PermissionsManagerClient getClientPermissionsManager()
+	{
+		return LiteLoader.instance.permissionsManagerClient;
+	}
+
+	public static PermissionsManagerServer getServerPermissionsManager()
+	{
+		return LiteLoader.instance.permissionsManagerServer;
 	}
 	
 	/**
@@ -428,9 +430,12 @@ public final class LiteLoader
 	/**
 	 * Get the event manager
 	 * 
+	 * @deprecated DO NOT USE, register listeners with the interface manager instead!
+	 * 
 	 * @return
 	 */
-	public static Events getEvents()
+	@Deprecated
+	public static Events<?, ?> getEvents()
 	{
 		return LiteLoader.instance.events;
 	}
@@ -480,9 +485,10 @@ public final class LiteLoader
 	 * 
 	 * @return
 	 */
-	public static LiteLoaderModPanelManager getModPanelManager()
+	@SuppressWarnings({ "cast", "unchecked" })
+	public static <T> ModPanelManager<T> getModPanelManager()
 	{
-		return LiteLoader.instance.modPanelManager;
+		return (ModPanelManager<T>)LiteLoader.instance.modPanelManager;
 	}
 	
 	/**
@@ -792,21 +798,41 @@ public final class LiteLoader
 	}
 
 	/**
-	 * 
+	 * Initialise lifetime objects like the game engine, event broker and interface manager
 	 */
-	private void initCoreObjects()
+	private void initLifetimeObjects()
 	{
-		// Cache local minecraft reference
-		this.minecraft = Minecraft.getMinecraft();
+		// Cache game engine reference
+		this.engine = this.objectFactory.getGameEngine();
+		
+		// Cache profiler instance
+		this.profiler = this.objectFactory.getProfiler();
+		
+		// Create the event broker
+		this.events = this.objectFactory.getEventBroker();
+
+		// Get the mod panel manager
+		this.modPanelManager = this.objectFactory.getModPanelManager();
+		if (this.modPanelManager != null)
+		{
+			this.modPanelManager.init(this.mods, this.configManager);
+		}
 		
 		// Create the interface manager
 		this.interfaceManager = new LiteLoaderInterfaceManager(this.apiAdapter);
-		
-		// Create the event broker
-		this.events = new Events(this, this.minecraft, this.properties);
-		
-		// Put the minecraft reference into the mod panel manager
-		this.modPanelManager.setMinecraft(this.minecraft);
+	}
+
+	/**
+	 * 
+	 */
+	private void postInitCoreProviders()
+	{
+		for (CoreProvider coreProvider : this.coreProviders)
+		{
+			coreProvider.onPostInit(this.engine);
+		}
+
+		this.interfaceManager.registerInterfaces();
 	}
 
 	private void loadAndInitMods()
@@ -823,32 +849,28 @@ public final class LiteLoader
 		{
 			LiteLoaderLogger.info("Mod class discovery failed or no mod classes were found. Not loading any mods.");
 		}
+		
+		// Initialises the required hooks for loaded mods
+		this.interfaceManager.onPostInit();
+		
+		this.modInitComplete = true;
+		this.mods.onPostInit();
 	}
 
 	void onPostInitMod(LiteMod mod)
 	{
 		// add mod to permissions manager if permissible
-		this.permissionsManager.registerMod(mod);
+		this.permissionsManagerClient.registerMod(mod);
 	}
 
-	/**
-	 * Called before mod late initialisation, refresh the resources that have been added so that mods can use them
-	 */
-	void refreshResources(boolean force)
-	{
-		if (this.pendingResourceReload || force)
-		{
-			LoadingBar.setMessage("Reloading Resources...");
-			this.pendingResourceReload = false;
-			this.minecraft.refreshResources();
-		}
-	}
-	
 	/**
 	 * Called after mod late init
 	 */
 	void onStartupComplete()
 	{
+		// Set the loader branding in ClientBrandRetriever using reflection
+		LiteLoaderBootstrap.setBranding("LiteLoader");
+		
 		for (CoreProvider coreProvider : this.coreProviders)
 		{
 			coreProvider.onStartupComplete();
@@ -863,7 +885,7 @@ public final class LiteLoader
 	 */
 	void onJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
-		this.permissionsManager.onJoinGame(netHandler, loginPacket);
+		this.permissionsManagerClient.onJoinGame(netHandler, loginPacket);
 
 		for (CoreProvider coreProvider : this.coreProviders)
 		{
@@ -881,7 +903,7 @@ public final class LiteLoader
 		if (world != null)
 		{
 			// For bungeecord
-			this.permissionsManager.scheduleRefresh();
+			this.permissionsManagerClient.scheduleRefresh();
 		}
 		
 		for (WorldObserver worldObserver : this.worldObservers)
@@ -897,14 +919,14 @@ public final class LiteLoader
 	 */
 	void onPostRender(int mouseX, int mouseY, float partialTicks)
 	{
-		this.minecraft.mcProfiler.startSection("core");
+		this.profiler.startSection("core");
 		
 		for (PostRenderObserver postRenderObserver : this.postRenderObservers)
 		{
 			postRenderObserver.onPostRender(mouseX, mouseY, partialTicks);
 		}
 		
-		this.minecraft.mcProfiler.endSection();
+		this.profiler.endSection();
 	}
 
 	/**
@@ -917,30 +939,30 @@ public final class LiteLoader
 		if (clock)
 		{
 			// Tick the permissions manager
-			this.minecraft.mcProfiler.startSection("permissionsmanager");
-			this.permissionsManager.onTick(this.minecraft, partialTicks, inGame);
+			this.profiler.startSection("permissionsmanager");
+			this.permissionsManagerClient.onTick(this.engine, partialTicks, inGame);
 			
 			// Tick the config manager
-			this.minecraft.mcProfiler.endStartSection("configmanager");
+			this.profiler.endStartSection("configmanager");
 			this.configManager.onTick();
 			
-			this.minecraft.mcProfiler.endSection();
+			this.profiler.endSection();
 			
-			if (!((IMinecraft)this.minecraft).isRunning())
+			if (!this.engine.isRunning())
 			{
 				this.onShutDown();
 				return;
 			}
 		}
 
-		this.minecraft.mcProfiler.startSection("observers");
+		this.profiler.startSection("observers");
 		
 		for (TickObserver tickObserver : this.tickObservers)
 		{
 			tickObserver.onTick(clock, partialTicks, inGame);
 		}
 		
-		this.minecraft.mcProfiler.endSection();
+		this.profiler.endSection();
 	}
 
 	private void onShutDown()
@@ -954,28 +976,16 @@ public final class LiteLoader
 
 		this.configManager.syncConfig();
 	}
-
-	/**
-	 * Register a key for a mod
-	 * 
-	 * @param binding
-	 * @deprecated Deprecated : use LiteLoader.getInput().registerKeyBinding() instead
-	 */
-	@Deprecated
-	public void registerModKey(KeyBinding binding)
-	{
-		this.input.registerKeyBinding(binding);
-	}
 	
 	/**
 	 * Set the "mod info" screen tab to hidden, regardless of the property setting
 	 * 
-	 * @deprecated use getModPanelManager().hideModInfoScreenTab(); instead
+	 * @deprecated use getModPanelManager().hideTab(); instead
 	 */
 	@Deprecated
 	public void hideModInfoScreenTab()
 	{
-		this.modPanelManager.hideTab();
+		if (this.modPanelManager != null) this.modPanelManager.hideTab();
 	}
 	
 	/**
@@ -986,7 +996,7 @@ public final class LiteLoader
 	@Deprecated
 	public void setDisplayModInfoScreenTab(boolean show)
 	{
-		this.modPanelManager.setTabVisible(show);
+		if (this.modPanelManager != null) this.modPanelManager.setTabVisible(show);
 	}
 	
 	/**
@@ -997,7 +1007,7 @@ public final class LiteLoader
 	@Deprecated
 	public boolean getDisplayModInfoScreenTab()
 	{
-		return this.modPanelManager.isTabVisible();
+		return (this.modPanelManager != null) ? this.modPanelManager.isTabVisible() : false;
 	}
 
 	/**
@@ -1007,10 +1017,12 @@ public final class LiteLoader
 	 * 
 	 * @deprecated use getModPanelManager().displayModInfoScreen(parentScreen); instead
 	 */
+	@SuppressWarnings("unchecked")
 	@Deprecated
-	public void displayModInfoScreen(GuiScreen parentScreen)
+	public void displayModInfoScreen(Object parentScreen)
 	{
-		this.modPanelManager.displayModInfoScreen(parentScreen);
+		// Use implicit cast, because we want this to fail if the user tries to give us an invalid class
+		if (this.modPanelManager != null) this.modPanelManager.displayModInfoScreen(parentScreen);
 	}
 
 	/**
@@ -1036,14 +1048,14 @@ public final class LiteLoader
 		}
 	}
 	
-	static final void init()
+	static final void invokeInit()
 	{
 		LiteLoaderLogger.info("LiteLoader begin INIT...");
 		
 		LiteLoader.instance.onInit();
 	}
 
-	static final void postInit()
+	static final void invokePostInit()
 	{
 		LiteLoaderLogger.info("LiteLoader begin POSTINIT...");
 

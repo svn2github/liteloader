@@ -1,12 +1,7 @@
 package com.mumfrey.liteloader.permissions;
 
-import java.util.List;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.network.INetHandler;
-import net.minecraft.network.play.server.S01PacketJoinGame;
-
 import com.mumfrey.liteloader.Permissible;
+import com.mumfrey.liteloader.common.GameEngine;
 
 /**
  * Interface for permissions manager implementations
@@ -30,40 +25,15 @@ public interface PermissionsManager
 	 * @return Timestamp when the permissions were last updated
 	 */
 	public abstract Long getPermissionUpdateTime(Permissible mod);
-	
-	/**
-	 * Handler for login event, should be called when connecting to a new server. Clears the replicated
-	 * permissions ready to receive new permissions from the server
-	 * 
-	 * @param netHandler
-	 * @param joinGamePacket
-	 */
-	public abstract void onJoinGame(INetHandler netHandler, S01PacketJoinGame joinGamePacket);
 
 	/**
 	 * Handler for tick event
 	 * 
-	 * @param minecraft
+	 * @param engine
 	 * @param partialTicks
 	 * @param inGame
 	 */
-	public abstract void onTick(Minecraft minecraft, float partialTicks, boolean inGame);
-
-	/**
-	 * Handler for custom payload
-	 * 
-	 * @param channel
-	 * @param length
-	 * @param data
-	 */
-	public abstract void onCustomPayload(String channel, int length, byte[] data);
-	
-	/**
-	 * LiteLoader support, gets the list of plugin channels to listen on
-	 * 
-	 * @return
-	 */
-	public abstract List<String> getChannels();
+	public abstract void onTick(GameEngine<?, ?> engine, float partialTicks, boolean inGame);
 	
 	/**
 	 * Register a new event listener, the registered object will receive callbacks for permissions events

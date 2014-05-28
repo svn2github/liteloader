@@ -88,7 +88,7 @@ public abstract class PluginChannels<L extends CommonPluginChannelListener> impl
 	/**
 	 * @param pluginChannelListener
 	 */
-	void addPluginChannelListener(L pluginChannelListener)
+	protected void addPluginChannelListener(L pluginChannelListener)
 	{
 		if (!this.pluginChannelListeners.contains(pluginChannelListener))
 		{

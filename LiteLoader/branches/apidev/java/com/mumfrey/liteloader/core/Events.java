@@ -2,9 +2,6 @@ package com.mumfrey.liteloader.core;
 
 import java.util.LinkedList;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiNewChat;
-import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.resources.IResourceManager;
 import net.minecraft.client.resources.IResourceManagerReloadListener;
 import net.minecraft.command.ICommandManager;
@@ -13,149 +10,52 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.INetHandler;
 import net.minecraft.network.NetHandlerPlayServer;
 import net.minecraft.network.NetworkManager;
-import net.minecraft.network.login.INetHandlerLoginClient;
-import net.minecraft.network.login.server.S02PacketLoginSuccess;
 import net.minecraft.network.play.INetHandlerPlayServer;
 import net.minecraft.network.play.client.C01PacketChatMessage;
 import net.minecraft.network.play.server.S01PacketJoinGame;
-import net.minecraft.network.play.server.S02PacketChat;
 import net.minecraft.profiler.Profiler;
-import net.minecraft.server.integrated.IntegratedServer;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.management.ServerConfigurationManager;
-import net.minecraft.util.IChatComponent;
-import net.minecraft.util.Timer;
+import net.minecraft.world.World;
 import net.minecraft.world.WorldSettings;
 
-import org.lwjgl.input.Mouse;
-
 import com.mojang.authlib.GameProfile;
-import com.mumfrey.liteloader.*;
-import com.mumfrey.liteloader.api.Listener;
+import com.mumfrey.liteloader.LiteMod;
+import com.mumfrey.liteloader.PluginChannelListener;
+import com.mumfrey.liteloader.ServerChatFilter;
+import com.mumfrey.liteloader.ServerCommandProvider;
+import com.mumfrey.liteloader.ServerPlayerListener;
+import com.mumfrey.liteloader.ServerPluginChannelListener;
 import com.mumfrey.liteloader.api.InterfaceProvider;
-import com.mumfrey.liteloader.core.gen.GenProfiler;
-import com.mumfrey.liteloader.core.overlays.IMinecraft;
-import com.mumfrey.liteloader.gui.startup.LoadingBar;
+import com.mumfrey.liteloader.api.Listener;
+import com.mumfrey.liteloader.common.GameEngine;
+import com.mumfrey.liteloader.common.LoadingProgress;
 import com.mumfrey.liteloader.launch.LoaderProperties;
-import com.mumfrey.liteloader.util.PrivateFields;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
- *
  * @author Adam Mummery-Smith
+ *
+ * @param <TClient> Type of the client runtime, "Minecraft" on client and null on the server
+ * @param <TServer> Type of the server runtime, "IntegratedServer" on the client, "MinecraftServer" on the server 
  */
-public class Events implements InterfaceProvider, IResourceManagerReloadListener
+public abstract class Events<TClient, TServer extends MinecraftServer> implements InterfaceProvider, IResourceManagerReloadListener
 {
-	private static final String OPTION_GENERATE_MAPPINGS = "genMappings";
-
 	/**
 	 * Reference to the loader instance
 	 */
-	private final LiteLoader loader;
+	protected final LiteLoader loader;
 	
 	/**
 	 * Reference to the game
 	 */
-	private final Minecraft minecraft;
+	protected final GameEngine<TClient, TServer> engine;
 	
 	/**
-	 * Reference to the minecraft timer
+	 * Profiler 
 	 */
-	private Timer minecraftTimer;
+	protected final Profiler profiler;
 	
-	/**
-	 * Flags which keep track of whether hooks have been applied
-	 */
-	private boolean lateInitDone, profilerHooked;
-	
-	/**
-	 * Profiler hook objects
-	 */
-	private Profiler genProfiler = null;
-	
-	/**
-	 * ScaledResolution used by the pre-chat and post-chat render callbacks
-	 */
-	private ScaledResolution currentResolution;
-	
-	/**
-	 * Current screen width
-	 */
-	private int screenWidth = 854;
-
-	/**
-	 * Current screen height
-	 */
-	private int screenHeight = 480;
-
-	
-	/**
-	 * List of mods which implement Tickable interface and will receive tick
-	 * events
-	 */
-	private LinkedList<Tickable> tickListeners = new LinkedList<Tickable>();
-	
-	/**
-	 * List of mods which implement the GameLoopListener interface and will
-	 * receive loop events
-	 */
-	private LinkedList<GameLoopListener> loopListeners = new LinkedList<GameLoopListener>();
-	
-	/**
-	 * 
-	 */
-	private LinkedList<InitCompleteListener> initListeners = new LinkedList<InitCompleteListener>();
-	
-	/**
-	 * List of mods which implement RenderListener interface and will receive
-	 * render events events
-	 */
-	private LinkedList<RenderListener> renderListeners = new LinkedList<RenderListener>();
-	
-	/**
-	 * List of mods which implement the PostRenderListener interface and want to
-	 * render entities
-	 */
-	private LinkedList<PostRenderListener> postRenderListeners = new LinkedList<PostRenderListener>();
-	
-	/**
-	 * List of mods which implement HUDRenderListener and want callbacks when HUD is rendered
-	 */
-	private LinkedList<HUDRenderListener> hudRenderListeners = new LinkedList<HUDRenderListener>();
-	
-	/**
-	 * List of mods which implement ChatRenderListener and want to know when
-	 * chat is rendered
-	 */
-	private LinkedList<ChatRenderListener> chatRenderListeners = new LinkedList<ChatRenderListener>();
-	
-	/**
-	 * List of mods which implement ChatListener interface and will receive chat
-	 * events
-	 */
-	private LinkedList<ChatListener> chatListeners = new LinkedList<ChatListener>();
-	
-	/**
-	 * List of mods which implement ChatFilter interface and will receive chat
-	 * filter events
-	 */
-	private LinkedList<ChatFilter> chatFilters = new LinkedList<ChatFilter>();
-	
-	/**
-	 * List of mods which implement PostLoginListener and want to be notified post login
-	 */
-	private LinkedList<PostLoginListener> postLoginListeners = new LinkedList<PostLoginListener>();
-	
-	/**
-	 * List of mods which implement LoginListener interface and will receive
-	 * client login events
-	 */
-	private LinkedList<JoinGameListener> joinGameListeners = new LinkedList<JoinGameListener>();
-	
-	/**
-	 * List of mods which implement LoginListener interface and will receive
-	 * client login events
-	 */
-	private LinkedList<PreJoinGameListener> preJoinGameListeners = new LinkedList<PreJoinGameListener>();
 	
 	/**
 	 * List of mods which can filter server chat
@@ -171,17 +71,6 @@ public class Events implements InterfaceProvider, IResourceManagerReloadListener
 	 * List of mods which monitor server player events
 	 */
 	private LinkedList<ServerPlayerListener> serverPlayerListeners = new LinkedList<ServerPlayerListener>();
-	
-	/**
-	 * List of mods which monitor outbound chat
-	 */
-	private LinkedList<OutboundChatListener> outboundChatListeners = new LinkedList<OutboundChatListener>();
-	
-	/**
-	 * Hash code of the current world. We don't store the world reference here because we don't want
-	 * to mess with world GC by mistake
-	 */
-	private int worldHashCode = 0;
 
 	/**
 	 * Package private ctor
@@ -189,24 +78,24 @@ public class Events implements InterfaceProvider, IResourceManagerReloadListener
 	 * @param loader
 	 * @param minecraft
 	 */
-	Events(LiteLoader loader, Minecraft minecraft, LoaderProperties properties)
+	public Events(LiteLoader loader, GameEngine<TClient, TServer> engine, LoaderProperties properties)
 	{
-		this.loader = loader;
-		this.minecraft = minecraft;
-		
-		try
-		{
-			if (properties.getBooleanProperty(Events.OPTION_GENERATE_MAPPINGS))
-			{
-				this.genProfiler = GenProfiler.class.newInstance();
-			}
-		}
-		catch (Throwable th)
-		{
-//			th.printStackTrace();
-		}
+		this.loader   = loader;
+		this.engine   = engine;
+		this.profiler = engine.getProfiler();
 	}
-	
+
+	/**
+	 * 
+	 */
+	protected void onStartupComplete()
+	{
+		LoadingProgress.setMessage("Initialising CoreProviders...");
+		this.loader.onStartupComplete();
+		
+		LoadingProgress.setMessage("Starting Game...");
+	}
+
 	/**
 	 * @param listener
 	 * @deprecated Use LiteLoader.getInterfaceManager().registerListener() instead
@@ -232,52 +121,13 @@ public class Events implements InterfaceProvider, IResourceManagerReloadListener
 	@Override
 	public void registerInterfaces(InterfaceRegistrationDelegate delegate)
 	{
-		delegate.registerInterface(Tickable.class);
-		delegate.registerInterface(GameLoopListener.class);
-		delegate.registerInterface(InitCompleteListener.class);
-		delegate.registerInterface(RenderListener.class);
-		delegate.registerInterface(PostRenderListener.class);
-		delegate.registerInterface(ChatFilter.class);
-		delegate.registerInterface(ChatListener.class);
-		delegate.registerInterface(ChatRenderListener.class);
-		delegate.registerInterface(HUDRenderListener.class);
-		delegate.registerInterface(PreJoinGameListener.class);
-		delegate.registerInterface(JoinGameListener.class);
 		delegate.registerInterface(ServerChatFilter.class);
 		delegate.registerInterface(ServerCommandProvider.class);
 		delegate.registerInterface(ServerPlayerListener.class);
-		delegate.registerInterface(OutboundChatListener.class);
 		
 		delegate.registerInterface(CommonPluginChannelListener.class);
 	}
 	
-	/**
-	 * Initialise hooks
-	 */
-	@Override
-	public void initProvider()
-	{
-		if (this.genProfiler != null)
-		{
-			try
-			{
-				LiteLoaderLogger.info("Event manager is registering the mapping generator hook");
-				
-				// Tick hook
-				if (!this.profilerHooked)
-				{
-					this.profilerHooked = true;
-					PrivateFields.minecraftProfiler.setFinal(this.minecraft, this.genProfiler);
-				}
-			}
-			catch (Exception ex)
-			{
-				LiteLoaderLogger.warning(ex, "Error creating hook");
-				ex.printStackTrace();
-			}
-		}	
-	}
-
 	/**
 	 * Add a listener to the relevant listener lists
 	 * 
@@ -288,142 +138,6 @@ public class Events implements InterfaceProvider, IResourceManagerReloadListener
 		if (!(listener instanceof PluginChannelListener) && !(listener instanceof ServerPluginChannelListener))
 		{
 			LiteLoaderLogger.warning("Interface error for mod '%1s'. Implementing CommonPluginChannelListener has no effect! Use PluginChannelListener or ServerPluginChannelListener instead", listener.getName());
-		}
-	}
-
-	/**
-	 * @param tickable
-	 */
-	public void addTickListener(Tickable tickable)
-	{
-		if (!this.tickListeners.contains(tickable))
-		{
-			this.tickListeners.add(tickable);
-		}
-	}
-	
-	/**
-	 * @param loopListener
-	 */
-	public void addLoopListener(GameLoopListener loopListener)
-	{
-		if (!this.loopListeners.contains(loopListener))
-		{
-			this.loopListeners.add(loopListener);
-		}
-	}
-	
-	/**
-	 * @param initCompleteListener
-	 */
-	public void addInitListener(InitCompleteListener initCompleteListener)
-	{
-		if (!this.initListeners.contains(initCompleteListener))
-		{
-			this.initListeners.add(initCompleteListener);
-		}
-	}
-	
-	/**
-	 * @param renderListener
-	 */
-	public void addRenderListener(RenderListener renderListener)
-	{
-		if (!this.renderListeners.contains(renderListener))
-		{
-			this.renderListeners.add(renderListener);
-		}
-	}
-	
-	/**
-	 * @param postRenderListener
-	 */
-	public void addPostRenderListener(PostRenderListener postRenderListener)
-	{
-		if (!this.postRenderListeners.contains(postRenderListener))
-		{
-			this.postRenderListeners.add(postRenderListener);
-		}
-	}
-	
-	/**
-	 * @param chatFilter
-	 */
-	public void addChatFilter(ChatFilter chatFilter)
-	{
-		if (!this.chatFilters.contains(chatFilter))
-		{
-			this.chatFilters.add(chatFilter);
-		}
-	}
-	
-	/**
-	 * @param chatListener
-	 */
-	public void addChatListener(ChatListener chatListener)
-	{
-		if (chatListener instanceof ChatFilter)
-		{
-			LiteLoaderLogger.warning("Interface error initialising mod '%1s'. A mod implementing ChatFilter and ChatListener is not supported! Remove one of these interfaces", chatListener.getName());
-		}
-		else if (!this.chatListeners.contains(chatListener))
-		{
-			this.chatListeners.add(chatListener);
-		}
-	}
-	
-	/**
-	 * @param chatRenderListener
-	 */
-	public void addChatRenderListener(ChatRenderListener chatRenderListener)
-	{
-		if (!this.chatRenderListeners.contains(chatRenderListener))
-		{
-			this.chatRenderListeners.add(chatRenderListener);
-		}
-	}
-	
-	/**
-	 * @param hudRenderListener
-	 */
-	public void addHUDRenderListener(HUDRenderListener hudRenderListener)
-	{
-		if (!this.hudRenderListeners.contains(hudRenderListener))
-		{
-			this.hudRenderListeners.add(hudRenderListener);
-		}
-	}
-	
-	/**
-	 * @param postLoginListener
-	 */
-	public void addPreJoinGameListener(PostLoginListener postLoginListener)
-	{
-		if (!this.postLoginListeners.contains(postLoginListener))
-		{
-			this.postLoginListeners.add(postLoginListener);
-		}
-	}
-	
-	/**
-	 * @param joinGameListener
-	 */
-	public void addPreJoinGameListener(PreJoinGameListener joinGameListener)
-	{
-		if (!this.preJoinGameListeners.contains(joinGameListener))
-		{
-			this.preJoinGameListeners.add(joinGameListener);
-		}
-	}
-	
-	/**
-	 * @param joinGameListener
-	 */
-	public void addJoinGameListener(JoinGameListener joinGameListener)
-	{
-		if (!this.joinGameListeners.contains(joinGameListener))
-		{
-			this.joinGameListeners.add(joinGameListener);
 		}
 	}
 
@@ -459,321 +173,11 @@ public class Events implements InterfaceProvider, IResourceManagerReloadListener
 			this.serverPlayerListeners.add(serverPlayerListener);
 		}
 	}
-
-	/**
-	 * @param outboundChatListener
-	 */
-	public void addOutboundChatListener(OutboundChatListener outboundChatListener)
-	{
-		if (!this.outboundChatListeners.contains(outboundChatListener))
-		{
-			this.outboundChatListeners.add(outboundChatListener);
-		}
-	}
 	
 	@Override
 	public void onResourceManagerReload(IResourceManager resourceManager)
 	{
-		LoadingBar.setMessage("Reloading Resources...");
-	}
-
-	/**
-	 * Late initialisation callback
-	 */
-	public void onStartupComplete()
-	{
-		this.loader.refreshResources(false);
-		
-		if (!this.lateInitDone)
-		{
-			this.lateInitDone = true;
-			
-			for (InitCompleteListener initMod : this.initListeners)
-			{
-				try
-				{
-					LoadingBar.setMessage("Calling late init for mod %s...", initMod.getName());
-					LiteLoaderLogger.info("Calling late init for mod %s", initMod.getName());
-					initMod.onInitCompleted(this.minecraft, this.loader);
-				}
-				catch (Throwable th)
-				{
-					LiteLoaderLogger.warning(th, "Error initialising mod %s", initMod.getName());
-				}
-			}
-		}
-
-		LoadingBar.setMessage("Initialising CoreProviders...");
-		this.loader.onStartupComplete();
-		
-		LoadingBar.setMessage("Starting Game...");
-	}
-	
-	/**
-	 * Callback from the tick hook, pre render
-	 */
-	public void onRender()
-	{
-		this.currentResolution = new ScaledResolution(this.minecraft.gameSettings, this.minecraft.displayWidth, this.minecraft.displayHeight);
-		this.screenWidth = this.currentResolution.getScaledWidth();
-		this.screenHeight = this.currentResolution.getScaledHeight();
-		
-		for (RenderListener renderListener : this.renderListeners)
-			renderListener.onRender();
-	}
-	
-	/**
-	 * Callback from the tick hook, post render entities
-	 */
-	public void postRenderEntities()
-	{
-		float partialTicks = (this.minecraftTimer != null) ? this.minecraftTimer.elapsedPartialTicks : 0.0F;
-		
-		for (PostRenderListener renderListener : this.postRenderListeners)
-			renderListener.onPostRenderEntities(partialTicks);
-	}
-	
-	/**
-	 * Callback from the tick hook, post render
-	 */
-	public void postRender()
-	{
-		float partialTicks = (this.minecraftTimer != null) ? this.minecraftTimer.elapsedPartialTicks : 0.0F;
-		
-		for (PostRenderListener renderListener : this.postRenderListeners)
-			renderListener.onPostRender(partialTicks);
-	}
-	
-	/**
-	 * Called immediately before the current GUI is rendered
-	 */
-	public void preRenderGUI(int ref)
-	{
-		if (!this.minecraft.skipRenderWorld && ref == (this.minecraft.theWorld == null ? 1 : 2))
-		{
-			for (RenderListener renderListener : this.renderListeners)
-				renderListener.onRenderGui(this.minecraft.currentScreen);
-		}
-	}
-	
-	/**
-	 * Called immediately after the world/camera transform is initialised
-	 */
-	public void onSetupCameraTransform()
-	{
-		for (RenderListener renderListener : this.renderListeners)
-			renderListener.onSetupCameraTransform();
-	}
-	
-	/**
-	 * Called immediately before the chat log is rendered
-	 */
-	public void onRenderChat()
-	{
-		GuiNewChat chat = this.minecraft.ingameGUI.getChatGUI();
-		
-		for (ChatRenderListener chatRenderListener : this.chatRenderListeners)
-			chatRenderListener.onPreRenderChat(this.screenWidth, this.screenHeight, chat);
-	}
-	
-	/**
-	 * Called immediately after the chat log is rendered
-	 */
-	public void postRenderChat()
-	{
-		GuiNewChat chat = this.minecraft.ingameGUI.getChatGUI();
-		
-		for (ChatRenderListener chatRenderListener : this.chatRenderListeners)
-			chatRenderListener.onPostRenderChat(this.screenWidth, this.screenHeight, chat);
-	}
-	
-	/**
-	 * Callback when about to render the HUD
-	 */
-	public void onRenderHUD()
-	{
-		if (!this.minecraft.gameSettings.hideGUI || this.minecraft.currentScreen != null)
-		{
-			for (HUDRenderListener hudRenderListener : this.hudRenderListeners)
-				hudRenderListener.onPreRenderHUD(this.screenWidth, this.screenHeight);
-		}
-	}
-	
-	/**
-	 * Callback when the HUD has just been rendered
-	 */
-	public void postRenderHUD()
-	{
-		if (!this.minecraft.gameSettings.hideGUI || this.minecraft.currentScreen != null)
-		{
-			for (HUDRenderListener hudRenderListener : this.hudRenderListeners)
-				hudRenderListener.onPostRenderHUD(this.screenWidth, this.screenHeight);
-		}
-	}
-	
-	/**
-	 * Callback from the tick hook, called every frame when the timer is updated
-	 */
-	public void onTimerUpdate()
-	{
-		for (GameLoopListener loopListener : this.loopListeners)
-			loopListener.onRunGameLoop(this.minecraft);
-	}
-	
-	/**
-	 * Callback from the tick hook, ticks all tickable mods
-	 * 
-	 * @param clock True if this is a new tick (otherwise it's just a new frame)
-	 */
-	public void onTick(boolean clock)
-	{
-		this.minecraft.mcProfiler.startSection("litemods");
-		float partialTicks = 0.0F;
-		
-		// Try to get the minecraft timer object and determine the value of the
-		// partialTicks
-		if (clock || this.minecraftTimer == null)
-		{
-			this.minecraftTimer = ((IMinecraft)this.minecraft).getTimer();
-		}
-		
-		// Hooray, we got the timer reference
-		if (this.minecraftTimer != null)
-		{
-			partialTicks = this.minecraftTimer.renderPartialTicks;
-			clock = this.minecraftTimer.elapsedTicks > 0;
-		}
-		
-		// Flag indicates whether we are in game at the moment
-		boolean inGame = this.minecraft.renderViewEntity != null && this.minecraft.renderViewEntity.worldObj != null;
-		
-		this.minecraft.mcProfiler.startSection("loader");
-		this.loader.onTick(clock, partialTicks, inGame);
-
-		int mouseX = Mouse.getX() * this.screenWidth / this.minecraft.displayWidth;
-		int mouseY = this.screenHeight - Mouse.getY() * this.screenHeight / this.minecraft.displayHeight - 1;
-		this.minecraft.mcProfiler.endStartSection("postrender");
-		this.loader.onPostRender(mouseX, mouseY, partialTicks);
-		this.minecraft.mcProfiler.endSection();
-		
-		// Iterate tickable mods
-		for (Tickable tickable : this.tickListeners)
-		{
-			this.minecraft.mcProfiler.startSection(tickable.getClass().getSimpleName().toLowerCase());
-			tickable.onTick(this.minecraft, partialTicks, inGame, clock);
-			this.minecraft.mcProfiler.endSection();
-		}
-		
-		// Detected world change
-		if (this.minecraft.theWorld != null)
-		{
-			if (this.minecraft.theWorld.hashCode() != this.worldHashCode)
-			{
-				this.worldHashCode = this.minecraft.theWorld.hashCode();
-				this.loader.onWorldChanged(this.minecraft.theWorld);
-			}
-		}
-		else
-		{
-			this.worldHashCode = 0;
-			this.loader.onWorldChanged(null);
-		}
-		
-		this.minecraft.mcProfiler.endSection();
-	}
-	
-	/**
-	 * Callback from the chat hook
-	 * 
-	 * @param chatPacket
-	 * @return
-	 */
-	public boolean onChat(S02PacketChat chatPacket)
-	{
-		if (chatPacket.func_148915_c() == null)
-			return true;
-		
-		IChatComponent chat = chatPacket.func_148915_c();
-		String message = chat.getFormattedText();
-		
-		// Chat filters get a stab at the chat first, if any filter returns
-		// false the chat is discarded
-		for (ChatFilter chatFilter : this.chatFilters)
-		{
-			if (chatFilter.onChat(chatPacket, chat, message))
-			{
-				chat = chatPacket.func_148915_c();
-				message = chat.getFormattedText();
-			}
-			else
-			{
-				return false;
-			}
-		}
-		
-		// Chat listeners get the chat if no filter removed it
-		for (ChatListener chatListener : this.chatListeners)
-			chatListener.onChat(chat, message);
-		
-		return true;
-	}
-
-	/**
-	 * @param packet
-	 * @param message
-	 */
-	public void onSendChatMessage(C01PacketChatMessage packet, String message)
-	{
-		for (OutboundChatListener outboundChatListener : this.outboundChatListeners)
-		{
-			outboundChatListener.onSendChatMessage(packet, message);
-		}
-	}
-
-	/**
-	 * @param netHandler
-	 * @param loginPacket
-	 */
-	public void onPostLogin(INetHandlerLoginClient netHandler, S02PacketLoginSuccess loginPacket)
-	{
-		LiteLoader.getClientPluginChannels().onPostLogin(netHandler, loginPacket);
-
-		for (PostLoginListener loginListener : this.postLoginListeners)
-			loginListener.onPostLogin(netHandler, loginPacket);
-	}
-	
-	/**
-	 * Pre join game callback from the login hook
-	 * 
-	 * @param netHandler
-	 * @param hookLogin
-	 * @return
-	 */
-	public boolean onPreJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
-	{
-		boolean cancelled = false;
-		
-		for (PreJoinGameListener joinGameListener : this.preJoinGameListeners)
-		{
-			cancelled |= !joinGameListener.onPreJoinGame(netHandler, loginPacket);
-		}
-		
-		return !cancelled;
-	}
-	
-	/**
-	 * Callback from the join game hook
-	 * 
-	 * @param netHandler
-	 * @param loginPacket
-	 */
-	public void onJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
-	{
-		this.loader.onJoinGame(netHandler, loginPacket);
-		LiteLoader.getClientPluginChannels().onJoinGame(netHandler, loginPacket);
-		
-		for (JoinGameListener joinGameListener : this.joinGameListeners)
-			joinGameListener.onJoinGame(netHandler, loginPacket);
+		LoadingProgress.setMessage("Reloading Resources...");
 	}
 	
 	/**
@@ -804,7 +208,7 @@ public class Events implements InterfaceProvider, IResourceManagerReloadListener
 	 * @param worldName
 	 * @param worldSettings
 	 */
-	public void onStartIntegratedServer(IntegratedServer instance, String folderName, String worldName, WorldSettings worldSettings)
+	public void onStartServer(MinecraftServer instance, String folderName, String worldName, WorldSettings worldSettings)
 	{
 		ICommandManager commandManager = instance.getCommandManager();
 		
@@ -869,5 +273,44 @@ public class Events implements InterfaceProvider, IResourceManagerReloadListener
 	{
 		for (ServerPlayerListener serverPlayerListener : this.serverPlayerListeners)
 			serverPlayerListener.onPlayerLogout(player);
+	}
+
+	protected void onTick(boolean clock, float partialTicks, boolean inGame)
+	{
+		this.loader.onTick(clock, partialTicks, inGame);
+	}
+
+	protected void onPostRender(int mouseX, int mouseY, float partialTicks)
+	{
+		this.loader.onPostRender(mouseX, mouseY, partialTicks);		
+	}
+
+	protected void onWorldChanged(World world)
+	{
+		this.loader.onWorldChanged(world);
+	}
+
+	protected void onJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
+	{
+		this.loader.onJoinGame(netHandler, loginPacket);
+	}
+
+	/**
+	 * @deprecated use LiteLoader.getInterfaceManager().registerListener(listener); instead
+	 * @param chatFilter
+	 */
+	@Deprecated
+	public void addChatFilter(Object chatFilter)
+	{
+		
+	}
+
+	/**
+	 * @deprecated use LiteLoader.getInterfaceManager().registerListener(listener); instead
+	 * @param tickListener
+	 */
+	@Deprecated
+	public void addTickListener(Object tickListener)
+	{
 	}
 }

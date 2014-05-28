@@ -12,6 +12,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.Launch;
 
+import com.mumfrey.liteloader.client.util.PrivateFields;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.core.runtime.Obf;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;

@@ -14,10 +14,12 @@ public class Obf
 {
 	// Non-obfuscated references, here for convenience
 	// -----------------------------------------------------------------------------------------
-	public static final Obf        InjectedCallbackProxy = new Obf("com.mumfrey.liteloader.core.transformers.InjectedCallbackProxy"    );
-	public static final Obf                   LoadingBar = new Obf("com.mumfrey.liteloader.gui.startup.LoadingBar"                     );
+	public static final Obf          CallbackProxyClient = new Obf("com.mumfrey.liteloader.client.CallbackProxyClient"                 );
+	public static final Obf          CallbackProxyServer = new Obf("com.mumfrey.liteloader.server.CallbackProxyServer"                 );
+	public static final Obf                   LoadingBar = new Obf("com.mumfrey.liteloader.client.gui.startup.LoadingBar"              );
 	public static final Obf                  GameProfile = new Obf("com.mojang.authlib.GameProfile"                                    );
 	public static final Obf                MinecraftMain = new Obf("net.minecraft.client.main.Main"                                    );
+	public static final Obf              MinecraftServer = new Obf("net.minecraft.server.MinecraftServer"                              );
 	public static final Obf                  constructor = new Obf("<init>"                                                            );
 
 	// Classes
@@ -39,6 +41,7 @@ public class Obf
 	public static final Obf   ServerConfigurationManager = new Obf("net.minecraft.server.management.ServerConfigurationManager", "ld"  );
 	public static final Obf               EntityPlayerMP = new Obf("net.minecraft.entity.player.EntityPlayerMP",                 "mm"  );
 	public static final Obf               NetworkManager = new Obf("net.minecraft.network.NetworkManager",                       "ef"  );
+	public static final Obf              DedicatedServer = new Obf("net.minecraft.server.dedicated.DedicatedServer",             "lj"  );
 
 	// Fields
 	// -----------------------------------------------------------------------------------------
@@ -64,6 +67,8 @@ public class Obf
 	public static final Obf               playerLoggedIn = new Obf("func_72377_c",                                               "c"   );
 	public static final Obf              playerLoggedOut = new Obf("func_72367_e",                                               "e"   );
 	public static final Obf                    startGame = new Obf("func_71384_a",                                               "Z"   );
+	public static final Obf                  startServer = new Obf("func_71197_b",                                               "e"   );
+	public static final Obf            startServerThread = new Obf("func_71256_s",                                               "w"   );
 
 	public static final int MCP = 0;
 	public static final int SRG = 1;

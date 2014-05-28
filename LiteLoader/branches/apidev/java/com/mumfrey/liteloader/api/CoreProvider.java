@@ -1,10 +1,10 @@
 package com.mumfrey.liteloader.api;
 
-import com.mumfrey.liteloader.core.LiteLoaderMods;
-
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.INetHandler;
-import net.minecraft.network.play.server.S01PacketJoinGame;
+import net.minecraft.network.Packet;
+
+import com.mumfrey.liteloader.common.GameEngine;
+import com.mumfrey.liteloader.core.LiteLoaderMods;
 
 /**
  * LiteLoader Extensible API - API Core Provider
@@ -27,9 +27,9 @@ public interface CoreProvider extends TickObserver, WorldObserver, ShutdownObser
 	 * is the first point at which the Minecraft game instance should be referenced. Be aware that certain game
 	 * classes (such as the EntityRenderer) are NOT initialised at this point.
 	 * 
-	 * @param minecraft
+	 * @param engine
 	 */
-	public abstract void onPostInit(Minecraft minecraft);
+	public abstract void onPostInit(GameEngine<?, ?> engine);
 	
 	/**
 	 * Once the mods are initialised and the interfaces have been allocated, this callback is invoked to allow
@@ -47,10 +47,10 @@ public interface CoreProvider extends TickObserver, WorldObserver, ShutdownObser
 	public abstract void onStartupComplete();
 
 	/**
-	 * Called immediately on joining a single or multi-player world when the JoinGame packet is received.
+	 * Called immediately on joining a single or multi-player world when the JoinGame packet is received. Only called on the client.
 	 * 
 	 * @param netHandler
 	 * @param loginPacket
 	 */
-	public abstract void onJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket);
+	public abstract void onJoinGame(INetHandler netHandler, Packet loginPacket);
 }

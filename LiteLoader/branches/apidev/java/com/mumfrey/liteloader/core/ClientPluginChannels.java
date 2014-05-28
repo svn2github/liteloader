@@ -1,21 +1,11 @@
 package com.mumfrey.liteloader.core;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.network.NetHandlerLoginClient;
 import net.minecraft.network.INetHandler;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.login.INetHandlerLoginClient;
-import net.minecraft.network.login.server.S02PacketLoginSuccess;
-import net.minecraft.network.play.INetHandlerPlayClient;
-import net.minecraft.network.play.client.C17PacketCustomPayload;
-import net.minecraft.network.play.server.S01PacketJoinGame;
 import net.minecraft.network.play.server.S3FPacketCustomPayload;
 
 import com.mumfrey.liteloader.PluginChannelListener;
 import com.mumfrey.liteloader.api.Listener;
-import com.mumfrey.liteloader.core.exceptions.UnregisteredChannelException;
 import com.mumfrey.liteloader.permissions.PermissionsManagerClient;
-import com.mumfrey.liteloader.util.PrivateFields;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
@@ -23,20 +13,18 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
  * 
  * @author Adam Mummery-Smith
  */
-public class ClientPluginChannels extends PluginChannels<PluginChannelListener>
+public abstract class ClientPluginChannels extends PluginChannels<PluginChannelListener>
 {
 	private static ClientPluginChannels instance;
 	
-	ClientPluginChannels()
+	protected ClientPluginChannels()
 	{
-		super();
-		
 		ClientPluginChannels.instance = this;
 	}
-	
-	static ClientPluginChannels getInstance()
+
+	protected static ClientPluginChannels getInstance()
 	{
-		return instance;
+		return ClientPluginChannels.instance;
 	}
 	
 	/* (non-Javadoc)
@@ -71,56 +59,38 @@ public class ClientPluginChannels extends PluginChannels<PluginChannelListener>
 	}
 
 	/**
-	 * @param netHandler
-	 * @param loginPacket
-	 */
-	void onPostLogin(INetHandlerLoginClient netHandler, S02PacketLoginSuccess loginPacket)
-	{
-		this.clearPluginChannels(netHandler);
-	}
-
-	/**
-	 * @param netHandler
-	 * @param loginPacket
-	 */
-	void onJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
-	{
-		this.sendRegisteredPluginChannels(netHandler);
-	}
-	
-	/**
 	 * Callback for the plugin channel hook
 	 * 
 	 * @param customPayload
 	 */
-	public void onPluginChannelMessage(S3FPacketCustomPayload customPayload)
+	public abstract void onPluginChannelMessage(S3FPacketCustomPayload customPayload);
+
+	/**
+	 * @param channel
+	 * @param data
+	 */
+	protected void onPluginChannelMessage(String channel, byte[] data)
 	{
-		if (customPayload != null && customPayload.func_149169_c() != null) // getChannel
+		if (PluginChannels.CHANNEL_REGISTER.equals(channel))
 		{
-			String channel = customPayload.func_149169_c(); // getChannel
-			byte[] data = customPayload.func_149168_d(); // getData
-			
-			if (PluginChannels.CHANNEL_REGISTER.equals(channel))
+			this.onRegisterPacketReceived(data);
+		}
+		else if (this.pluginChannels.containsKey(channel))
+		{
+			try
 			{
-				this.onRegisterPacketReceived(data);
-			}
-			else if (this.pluginChannels.containsKey(channel))
-			{
-				try
+				PermissionsManagerClient permissionsManager = LiteLoader.getClientPermissionsManager();
+				if (permissionsManager != null)
 				{
-					PermissionsManagerClient permissionsManager = LiteLoader.getPermissionsManager();
-					if (permissionsManager != null)
-					{
-						permissionsManager.onCustomPayload(channel, data.length, data);
-					}
+					permissionsManager.onCustomPayload(channel, data.length, data);
 				}
-				catch (Exception ex) {}
-				
-				this.onModPacketReceived(channel, data, data.length);
 			}
+			catch (Exception ex) {}
+			
+			this.onModPacketReceived(channel, data, data.length);
 		}
 	}
-
+	
 	/**
 	 * @param channel
 	 * @param data
@@ -153,11 +123,11 @@ public class ClientPluginChannels extends PluginChannels<PluginChannelListener>
 			}
 		}
 	}
-	
+
 	protected void sendRegisteredPluginChannels(INetHandler netHandler)
 	{
 		// Add the permissions manager channels
-		this.addPluginChannelsFor(LiteLoader.getPermissionsManager());
+		this.addPluginChannelsFor(LiteLoader.getClientPermissionsManager());
 		
 		try
 		{
@@ -177,40 +147,8 @@ public class ClientPluginChannels extends PluginChannels<PluginChannelListener>
 	 * @param netHandler
 	 * @param registrationData
 	 */
-	protected void sendRegistrationData(INetHandler netHandler, byte[] registrationData)
-	{
-		if (netHandler instanceof INetHandlerLoginClient)
-		{
-			NetworkManager networkManager = PrivateFields.netManager.get(((NetHandlerLoginClient)netHandler));
-			networkManager.scheduleOutboundPacket(new C17PacketCustomPayload(CHANNEL_REGISTER, registrationData));
-		}
-		else if (netHandler instanceof INetHandlerPlayClient)
-		{
-			ClientPluginChannels.dispatch(new C17PacketCustomPayload(CHANNEL_REGISTER, registrationData));
-		}
-	}
+	protected abstract void sendRegistrationData(INetHandler netHandler, byte[] registrationData);
 
-	/**
-	 * @param channel
-	 * @param data
-	 */
-	static boolean dispatch(C17PacketCustomPayload payload)
-	{
-		try
-		{
-			Minecraft minecraft = Minecraft.getMinecraft();
-			
-			if (minecraft.thePlayer != null && minecraft.thePlayer.sendQueue != null)
-			{
-				minecraft.thePlayer.sendQueue.addToSendQueue(payload);
-				return true;
-			}
-		}
-		catch (Exception ex) {}
-		
-		return false;
-	}
-	
 	/**
 	 * Send a message to the server on a plugin channel
 	 * 
@@ -219,16 +157,19 @@ public class ClientPluginChannels extends PluginChannels<PluginChannelListener>
 	 */
 	public static boolean sendMessage(String channel, byte[] data, ChannelPolicy policy)
 	{
-		if (!policy.allows(ClientPluginChannels.getInstance(), channel))
+		if (ClientPluginChannels.instance != null)
 		{
-			if (policy.isSilent()) return false;
-			throw new UnregisteredChannelException(channel);
+			return ClientPluginChannels.instance.send(channel, data, policy);
 		}
 		
-		if (channel == null || channel.length() > 16 || CHANNEL_REGISTER.equals(channel) || CHANNEL_UNREGISTER.equals(channel))
-			throw new RuntimeException("Invalid channel name specified"); 
-		
-		C17PacketCustomPayload payload = new C17PacketCustomPayload(channel, data);
-		return ClientPluginChannels.dispatch(payload);
+		return false;
 	}
+
+	/**
+	 * Send a message to the server on a plugin channel
+	 * 
+	 * @param channel Channel to send, must not be a reserved channel name
+	 * @param data
+	 */
+	protected abstract boolean send(String channel, byte[] data, ChannelPolicy policy);
 }

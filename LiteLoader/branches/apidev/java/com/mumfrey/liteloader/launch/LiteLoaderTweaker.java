@@ -17,13 +17,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 
-import com.google.common.base.Throwables;
-import com.google.gson.Gson;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
-import com.mumfrey.liteloader.util.SortableValue;
-import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
-
 import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.NonOptionArgumentSpec;
 import joptsimple.OptionParser;
@@ -31,6 +24,13 @@ import joptsimple.OptionSet;
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
+
+import com.google.common.base.Throwables;
+import com.google.gson.Gson;
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonSyntaxException;
+import com.mumfrey.liteloader.util.SortableValue;
+import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
  * LiteLoader tweak class
@@ -41,6 +41,10 @@ public class LiteLoaderTweaker implements ITweaker
 {
 	public static final String VERSION = "1.7.2";
 	
+	protected static final int ENV_TYPE_CLIENT = 0;
+
+	protected static final int ENV_TYPE_DEDICATEDSERVER = 1;
+
 	/**
 	 * Loader startup state
 	 * 
@@ -204,7 +208,7 @@ public class LiteLoaderTweaker implements ITweaker
 	
 	private static final String bootstrapClassName = "com.mumfrey.liteloader.core.LiteLoaderBootstrap";
 	
-	private static final String genTransformerClassName = "com.mumfrey.liteloader.core.gen.GenProfilerTransformer";
+	private static final String genTransformerClassName = "com.mumfrey.liteloader.client.gen.GenProfilerTransformer";
 
 	@Override
 	public void acceptOptions(List<String> args, File gameDirectory, File assetsDirectory, String profile)
@@ -213,9 +217,11 @@ public class LiteLoaderTweaker implements ITweaker
 		
 		this.initArgs(args, gameDirectory, assetsDirectory);
 		
-		List<String> modsToLoad = (this.parsedOptions.has(this.modsOption)) ? this.modsOption.values(this.parsedOptions) : null;
-		List<String> apisToLoad = (this.parsedOptions.has(this.apisOption)) ? this.apisOption.values(this.parsedOptions) : null;
-
+		List<String> modsToLoad = this.getModFilterList();
+		List<String> apisToLoad = this.getAPIsToLoad();
+		
+		this.registerCoreAPIs(apisToLoad);
+		
 		if (this.parsedOptions.has(this.jarOption))
 		{
 			this.initJarUsing(this.jarOption.value(this.parsedOptions));
@@ -237,7 +243,35 @@ public class LiteLoaderTweaker implements ITweaker
 		
 		this.preInit(modsToLoad);
 	}
+
+	/**
+	 * @return
+	 */
+	private List<String> getModFilterList()
+	{
+		return (this.parsedOptions.has(this.modsOption)) ? this.modsOption.values(this.parsedOptions) : null;
+	}
+
+	/**
+	 * @return
+	 */
+	private List<String> getAPIsToLoad()
+	{
+		List<String> apisToLoad = new ArrayList<String>();
+		this.registerCoreAPIs(apisToLoad);
+		if (this.parsedOptions.has(this.apisOption))
+		{
+			apisToLoad.addAll(this.apisOption.values(this.parsedOptions));
+		}
+		
+		return apisToLoad;
+	}
 	
+	protected void registerCoreAPIs(List<String> apisToLoad)
+	{
+		apisToLoad.add(0, "com.mumfrey.liteloader.client.api.LiteLoaderCoreAPIClient");
+	}
+
 	/**
 	 * 
 	 */
@@ -401,6 +435,8 @@ public class LiteLoaderTweaker implements ITweaker
 	public void injectIntoClassLoader(LaunchClassLoader classLoader)
 	{
 		classLoader.addClassLoaderExclusion("com.mumfrey.liteloader.core.runtime.");
+		classLoader.addClassLoaderExclusion("com.mumfrey.liteloader.client.transformers.");
+		classLoader.addClassLoaderExclusion("com.mumfrey.liteloader.server.transformers.");
 
 		LiteLoaderTweaker.instance.transformerManager.injectUpstreamTransformers(classLoader);
 
@@ -544,7 +580,7 @@ public class LiteLoaderTweaker implements ITweaker
 		return false;
 	}
 
-	private LoaderBootstrap spawnBootstrap(String bootstrapClassName, ClassLoader classLoader, File gameDirectory, File assetsDirectory, String profile, List<String> apisToLoad)
+	protected LoaderBootstrap spawnBootstrap(String bootstrapClassName, ClassLoader classLoader, File gameDirectory, File assetsDirectory, String profile, List<String> apisToLoad)
 	{
 		if (!StartupState.CONSTRUCT.isInState())
 		{
@@ -555,10 +591,10 @@ public class LiteLoaderTweaker implements ITweaker
 		{
 			@SuppressWarnings("unchecked")
 			Class<? extends LoaderBootstrap> bootstrapClass = (Class<? extends LoaderBootstrap>)Class.forName(bootstrapClassName, false, classLoader);
-			Constructor<? extends LoaderBootstrap> bootstrapCtor = bootstrapClass.getDeclaredConstructor(File.class, File.class, String.class, List.class);
+			Constructor<? extends LoaderBootstrap> bootstrapCtor = bootstrapClass.getDeclaredConstructor(Integer.TYPE, File.class, File.class, String.class, List.class);
 			bootstrapCtor.setAccessible(true);
 			
-			return bootstrapCtor.newInstance(gameDirectory, assetsDirectory, profile, apisToLoad);
+			return bootstrapCtor.newInstance(this.getEnvironmentTypeId(), gameDirectory, assetsDirectory, profile, apisToLoad);
 		}
 		catch (Throwable th)
 		{
@@ -566,6 +602,11 @@ public class LiteLoaderTweaker implements ITweaker
 		}
 		
 		return null;
+	}
+
+	protected int getEnvironmentTypeId()
+	{
+		return LiteLoaderTweaker.ENV_TYPE_CLIENT;
 	}
 
 	/**
@@ -681,7 +722,7 @@ public class LiteLoaderTweaker implements ITweaker
 		return false;
 	}
 
-	public static boolean injectLoadingBarInsns()
+	public static boolean loadingBarEnabled()
 	{
 		return LiteLoaderTweaker.instance.properties != null ? LiteLoaderTweaker.instance.properties.getBooleanProperty("loadingbar") : false; 
 	}

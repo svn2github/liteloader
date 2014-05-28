@@ -36,8 +36,14 @@ public class ComponentRegistry
 	
 	public void enumerate()
 	{
-		this.enumerate(ControllerEnvironment.getDefaultEnvironment());
-		LiteLoaderLogger.info("JInput Component Registry initialised, found %d controller(s) %d component(s)", ControllerEnvironment.getDefaultEnvironment().getControllers().length, components.size());
+		try
+		{
+			this.enumerate(ControllerEnvironment.getDefaultEnvironment());
+			LiteLoaderLogger.info("JInput Component Registry initialised, found %d controller(s) %d component(s)", ControllerEnvironment.getDefaultEnvironment().getControllers().length, components.size());
+		}
+		catch (Throwable th)
+		{
+		}
 	}
 	
 	public void enumerate(ControllerEnvironment environment)

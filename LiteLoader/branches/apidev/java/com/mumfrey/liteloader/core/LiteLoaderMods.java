@@ -13,7 +13,7 @@ import javax.activity.InvalidActivityException;
 import net.minecraft.client.resources.IResourcePack;
 
 import com.mumfrey.liteloader.LiteMod;
-import com.mumfrey.liteloader.gui.startup.LoadingBar;
+import com.mumfrey.liteloader.common.LoadingProgress;
 import com.mumfrey.liteloader.interfaces.LoaderEnumerator;
 import com.mumfrey.liteloader.interfaces.Loadable;
 import com.mumfrey.liteloader.interfaces.LoadableMod;
@@ -380,11 +380,11 @@ public class LiteLoaderMods
 	 */
 	void loadMods()
 	{
-		LoadingBar.incTotalLiteLoaderProgress(this.enumerator.getModsToLoad().size());
+		LoadingProgress.incTotalLiteLoaderProgress(this.enumerator.getModsToLoad().size());
 		
 		for (Class<? extends LiteMod> mod : this.enumerator.getModsToLoad())
 		{
-			LoadingBar.incLiteLoaderProgress("Loading mod from %s...", mod.getName());
+			LoadingProgress.incLiteLoaderProgress("Loading mod from %s...", mod.getName());
 			LoadableMod<?> container = this.enumerator.getContainer(mod);
 
 			try
@@ -454,7 +454,7 @@ public class LiteLoaderMods
 		this.allMods.add(mod);
 		this.initMods.add(mod);
 		
-		LoadingBar.incTotalLiteLoaderProgress(1);
+		LoadingProgress.incTotalLiteLoaderProgress(1);
 	}
 
 	/**
@@ -505,7 +505,7 @@ public class LiteLoaderMods
 	private void initMod(LiteMod mod)
 	{
 		LiteLoaderLogger.info("Initialising mod %s version %s", mod.getName(), mod.getVersion());
-		LoadingBar.incLiteLoaderProgress("Initialising mod %s version %s...", mod.getName(), mod.getVersion());
+		LoadingProgress.incLiteLoaderProgress("Initialising mod %s version %s...", mod.getName(), mod.getVersion());
 		
 		this.onPreInitMod(mod);
 		

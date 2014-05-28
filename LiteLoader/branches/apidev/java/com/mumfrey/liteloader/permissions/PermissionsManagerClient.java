@@ -10,13 +10,13 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import net.eq2online.permissions.ReplicatedPermissionsContainer;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.INetHandler;
 import net.minecraft.network.play.server.S01PacketJoinGame;
 
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.Permissible;
 import com.mumfrey.liteloader.PluginChannelListener;
+import com.mumfrey.liteloader.common.GameEngine;
 import com.mumfrey.liteloader.core.ClientPluginChannels;
 import com.mumfrey.liteloader.core.PluginChannels.ChannelPolicy;
 
@@ -42,7 +42,7 @@ public class PermissionsManagerClient implements PermissionsManager, PluginChann
 	/**
 	 * Minecraft instance 
 	 */
-	private Minecraft minecraft;
+	private GameEngine<?, ?> engine;
 	
 	/**
 	 * List of registered client mods supporting permissions
@@ -176,7 +176,7 @@ public class PermissionsManagerClient implements PermissionsManager, PluginChann
 	}
 
 	/* (non-Javadoc)
-	 * @see com.mumfrey.liteloader.permissions.PermissionsManager#onLogin(net.minecraft.network.INetHandler, net.minecraft.network.play.server.S01PacketJoinGame)
+	 * @see com.mumfrey.liteloader.JoinGameListener#onJoinGame(net.minecraft.network.INetHandler, net.minecraft.network.play.server.S01PacketJoinGame)
 	 */
 	@Override
 	public void onJoinGame(INetHandler netHandler, S01PacketJoinGame joinGamePacket)
@@ -184,7 +184,7 @@ public class PermissionsManagerClient implements PermissionsManager, PluginChann
 		this.clearServerPermissions();
 		this.scheduleRefresh();
 	}
-
+	
 	/**
 	 * Schedule a permissions refresh
 	 */
@@ -226,7 +226,7 @@ public class PermissionsManagerClient implements PermissionsManager, PluginChann
 	{
 		String modName = mod.getPermissibleModName();
 		
-		if (this.minecraft != null && this.minecraft.thePlayer != null && this.minecraft.theWorld != null && this.minecraft.theWorld.isClientWorld)
+		if (this.engine != null && this.engine.isClient() && this.engine.isInGame())
 		{
 			if (!this.registeredClientMods.containsValue(mod))
 			{
@@ -257,9 +257,9 @@ public class PermissionsManagerClient implements PermissionsManager, PluginChann
 	 * @see com.mumfrey.liteloader.permissions.PermissionsManager#onTick(net.minecraft.client.Minecraft, float, boolean)
 	 */
 	@Override
-	public void onTick(Minecraft minecraft, float partialTicks, boolean inGame)
+	public void onTick(GameEngine<?, ?> engine, float partialTicks, boolean inGame)
 	{
-		this.minecraft = minecraft;
+		this.engine = engine;
 		this.lastTickTime = System.currentTimeMillis();
 		
 		if (this.pendingRefreshTicks > 0)
@@ -308,7 +308,7 @@ public class PermissionsManagerClient implements PermissionsManager, PluginChann
 	@Override
 	public void onCustomPayload(String channel, int length, byte[] data)
 	{
-		if (channel.equals(ReplicatedPermissionsContainer.CHANNEL) && !Minecraft.getMinecraft().isSingleplayer())
+		if (channel.equals(ReplicatedPermissionsContainer.CHANNEL) && !this.engine.isSinglePlayer())
 		{
 			ServerPermissions modPermissions = null;
 			try
