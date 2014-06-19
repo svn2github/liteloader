@@ -1,10 +1,9 @@
 package com.mumfrey.liteloader.core.api;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -18,9 +17,11 @@ import java.util.regex.Matcher;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import net.minecraft.client.resources.I18n;
 import joptsimple.internal.Strings;
+import net.minecraft.client.resources.I18n;
 
+import com.google.common.base.Charsets;
+import com.google.common.io.ByteStreams;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.mumfrey.liteloader.api.manager.APIProvider;
@@ -565,23 +566,38 @@ public class LoadableModFile extends LoadableFile implements LoadableMod<File>
 	 */
 	public static String zipEntryToString(ZipFile zip, ZipEntry entry) throws IOException
 	{
-		BufferedReader reader = null; 
-		StringBuilder sb = new StringBuilder();
+		InputStream stream = null; 
+		Charset charset = Charsets.UTF_8;
+		int bomOffset = 0;
+		byte[] bytes;
 		
 		try
 		{
-			InputStream stream = zip.getInputStream(entry);
-			reader = new BufferedReader(new InputStreamReader(stream));
-
-			String versionFileLine;
-			while ((versionFileLine = reader.readLine()) != null)
-				sb.append(versionFileLine);
+			stream = zip.getInputStream(entry);
+			bytes = ByteStreams.toByteArray(stream);
 		}
 		finally
 		{
-			if (reader != null) reader.close();
+			if (stream != null) stream.close();
 		}
 		
-		return sb.toString();
+		if (bytes == null || bytes.length == 0) return "";
+		
+		// Handle unicode by looking for BOM
+		if (bytes.length > 1)
+		{
+			if (bytes[0] == (byte)0xFF && bytes[1] == (byte)0xFE)
+			{
+				charset = Charsets.UTF_16LE;
+				bomOffset = 2;
+			}
+			else if (bytes[0] == (byte)0xFE && bytes[1] == (byte)0xFF)
+			{
+				charset = Charsets.UTF_16BE;
+				bomOffset = 2;
+			}
+		}
+		
+		return new String(bytes, bomOffset, bytes.length - bomOffset, charset);
 	}
 }
