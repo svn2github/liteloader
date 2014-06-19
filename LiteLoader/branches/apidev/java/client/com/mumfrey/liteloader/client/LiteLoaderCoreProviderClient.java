@@ -2,7 +2,7 @@ package com.mumfrey.liteloader.client;
 
 import net.minecraft.client.resources.SimpleReloadableResourceManager;
 import net.minecraft.network.INetHandler;
-import net.minecraft.network.Packet;
+import net.minecraft.network.play.server.S01PacketJoinGame;
 import net.minecraft.world.World;
 
 import com.mumfrey.liteloader.api.CoreProvider;
@@ -76,7 +76,7 @@ public class LiteLoaderCoreProviderClient implements CoreProvider
 	}
 	
 	@Override
-	public void onJoinGame(INetHandler netHandler, Packet loginPacket)
+	public void onJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
 	}
 	

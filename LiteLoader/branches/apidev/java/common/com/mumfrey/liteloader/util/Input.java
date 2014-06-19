@@ -18,7 +18,7 @@ import net.java.games.input.Event;
 import net.java.games.input.EventQueue;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.network.INetHandler;
-import net.minecraft.network.Packet;
+import net.minecraft.network.play.server.S01PacketJoinGame;
 import net.minecraft.profiler.Profiler;
 import net.minecraft.world.World;
 
@@ -124,7 +124,7 @@ public final class Input implements CoreProvider
 	}
 	
 	@Override
-	public void onJoinGame(INetHandler netHandler, Packet loginPacket)
+	public void onJoinGame(INetHandler netHandler, S01PacketJoinGame loginPacket)
 	{
 	}
 	
