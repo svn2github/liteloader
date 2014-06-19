@@ -84,12 +84,30 @@ public abstract class EventInjectionTransformer extends ClassTransformer
 	 */
 	protected abstract void addEvents();
 	
-	protected final void addEvent(String eventName, MethodInfo targetMethod, InjectionPoint injectionPoint)
+	/**
+	 * Register a new event to be injected, the event instance will be created if it does not already exist 
+	 * 
+	 * @param eventName Name of the event to use/create. Beware that IllegalArgumentException if the event was already defined with incompatible parameters
+	 * @param targetMethod Method descriptor to identify the method to inject into
+	 * @param injectionPoint Delegate which finds the location(s) in the target method to inject into
+	 * 
+	 * @return the event - for fluent interface
+	 */
+	protected final Event addEvent(String eventName, MethodInfo targetMethod, InjectionPoint injectionPoint)
 	{
-		this.addEvent(Event.getOrCreate(eventName), targetMethod, injectionPoint);
+		return this.addEvent(Event.getOrCreate(eventName), targetMethod, injectionPoint);
 	}
 	
-	protected final void addEvent(Event event, MethodInfo targetMethod, InjectionPoint injectionPoint)
+	/**
+	 * Register an event to be injected
+	 * 
+	 * @param event Event to inject
+	 * @param targetMethod Method descriptor to identify the method to inject into
+	 * @param injectionPoint Delegate which finds the location(s) in the target method to inject into
+	 * 
+	 * @return the event - for fluent interface
+	 */
+	protected final Event addEvent(Event event, MethodInfo targetMethod, InjectionPoint injectionPoint)
 	{
 		if (event == null)
 			throw new IllegalArgumentException("Event cannot be null!");
@@ -100,6 +118,8 @@ public abstract class EventInjectionTransformer extends ClassTransformer
 		this.addEvent(event, targetMethod.owner, targetMethod.sig, injectionPoint);
 		this.addEvent(event, targetMethod.owner, targetMethod.sigSrg, injectionPoint);
 		this.addEvent(event, targetMethod.ownerObf, targetMethod.sigObf, injectionPoint);
+		
+		return event;
 	}
 	
 	private void addEvent(Event event, String className, String signature, InjectionPoint injectionPoint)
@@ -205,7 +225,7 @@ public abstract class EventInjectionTransformer extends ClassTransformer
 						cancellable |= event.isCancellable();
 					
 					Event head = events.iterator().next();
-					MethodNode handler = head.inject(classNode.name, method, insn, cancellable, this.globalEventID);
+					MethodNode handler = head.inject(insn, cancellable, this.globalEventID);
 					
 					for (Event event : events)
 						event.addToHandler(handler);

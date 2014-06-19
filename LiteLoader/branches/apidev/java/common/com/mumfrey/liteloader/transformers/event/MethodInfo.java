@@ -1,5 +1,7 @@
 package com.mumfrey.liteloader.transformers.event;
 
+import joptsimple.internal.Strings;
+
 import com.mumfrey.liteloader.core.runtime.Obf;
 import com.mumfrey.liteloader.transformers.Callback;
 
@@ -11,6 +13,8 @@ import com.mumfrey.liteloader.transformers.Callback;
  */
 public class MethodInfo
 {
+	public static final String INFLECT = Strings.EMPTY; 
+	
 	// Owning class
 	final String owner;
 	final String ownerRef;
@@ -30,36 +34,117 @@ public class MethodInfo
 	final String sigSrg;
 	final String sigObf;
 	
+	/**
+	 * Create a MethodInfo for the specified class with a method name inflected by context
+	 * 
+	 * @param owner Literal owner class name
+	 */
+	public MethodInfo(String owner)
+	{
+		this(owner, owner, MethodInfo.INFLECT, MethodInfo.INFLECT, MethodInfo.INFLECT, null, null);
+	}
+	
+	/**
+	 * Create a MethodInfo for the specified class with a method name inflected by context
+	 * 
+	 * @param owner Owner name descriptor
+	 */
+	public MethodInfo(Obf owner)
+	{
+		this(owner.name, owner.obf, MethodInfo.INFLECT, MethodInfo.INFLECT, MethodInfo.INFLECT, null, null);
+	}
+	
+	/**
+	 * Create a MethodInfo for the specified class and method names (literal)
+	 * 
+	 * @param owner Literal owner class name
+	 * @param method Literal method name
+	 */
 	public MethodInfo(String owner, String method)
 	{
 		this(owner, owner, method, method, method, null, null);
 	}
 	
+	/**
+	 * Create a MethodInfo for the specified class and literal method name
+	 * 
+	 * @param owner Owner name descriptor
+	 * @param method Literal method name
+	 */
 	public MethodInfo(Obf owner, String method)
 	{
 		this(owner.name, owner.obf, method, method, method, null, null);
 	}
 	
+	/**
+	 * Create a MethodInfo for the specified class, literal method name and literal descriptor
+	 * 
+	 * @param owner Owner name descriptor
+	 * @param method Literal method name
+	 * @param descriptor Literal descriptor (useful for methods which only accept primitive types and therefore have a fixed descriptor)
+	 */
 	public MethodInfo(Obf owner, String method, String descriptor)
 	{
 		this(owner.name, owner.obf, method, method, method, descriptor, descriptor);
 	}
 	
+	/**
+	 * Create a MethodInfo for the specified literal class, literal method and literal descriptor
+	 * 
+	 * @param owner Literal class name
+	 * @param method Literal method name
+	 * @param descriptor Literal descriptor (useful for methods which only accept primitive types and therefore have a fixed descriptor)
+	 */
 	public MethodInfo(String owner, String method, String descriptor)
 	{
 		this(owner, owner, method, method, method, descriptor, descriptor);
 	}
 	
+	/**
+	 * Create a MethodInfo for the specified class and method, with a literal descriptor
+	 * 
+	 * @param owner Owner class name descriptor
+	 * @param method Method name descriptor
+	 * @param descriptor Literal descriptor (useful for methods which only accept primitive types and therefore have a fixed descriptor)
+	 */
 	public MethodInfo(Obf owner, Obf method, String descriptor)
 	{
 		this(owner.name, owner.obf, method.name, method.srg, method.obf, descriptor, descriptor);
 	}
 	
+	/**
+	 * Create a MethodInfo for the specified class and literal method and compute the descriptor using the supplied arguments, both the
+	 * returnType and args values can be one of four types:
+	 *   
+	 *    + Obf instances   - are converted to the appropriate class name for the obf type internally
+	 *    + Strings         - are added directly to the descriptor
+	 *    + Type instances  - are expanded to their bytecode literal
+	 *    + Class instances - are expanded to their bytecode descriptor via Type.getDescriptor 
+	 * 
+	 * @param owner Owner name descriptor
+	 * @param method Literal method name
+	 * @param returnType Return type for the method (use Void.TYPE for void methods)
+	 * @param args (optional) list of method arguments as Obf/String/Type/Class instances
+	 */
 	public MethodInfo(Obf owner, String method, Object returnType, Object... args)
 	{
 		this(owner.name, owner.obf, method, method, method, Callback.generateDescriptor(Obf.MCP, returnType, args), Callback.generateDescriptor(Obf.OBF, returnType, args));
 	}
 	
+	/**
+	 * Create a MethodInfo for the specified class and method names and compute the descriptor using the supplied arguments, both the
+	 * returnType and args values can be one of four types:
+	 *   
+	 *    + Obf instances   - are converted to the appropriate class name for the obf type internally
+	 *    + Strings         - are added directly to the descriptor
+	 *    + Type instances  - are expanded to their bytecode literal
+	 *    + Class instances - are expanded to their bytecode descriptor via Type.getDescriptor 
+	 * 
+	 * @param owner Owner name descriptor
+	 * @param method Method name descriptor
+	 * @param returnType Return type for the method (use Void.TYPE for void methods)
+	 * @param args (optional) list of method arguments as Obf/String/Type/Class instances
+	 */
 	public MethodInfo(Obf owner, Obf method, Object returnType, Object... args)
 	{
 		this(owner.name, owner.obf, method.name, method.srg, method.obf, Callback.generateDescriptor(Obf.MCP, returnType, args), Callback.generateDescriptor(Obf.OBF, returnType, args));
@@ -89,46 +174,108 @@ public class MethodInfo
 		this.sigObf   = MethodInfo.generateSignature(this.nameObf, this.descObf);
 	}
 
+	/**
+	 * Get the method's owning class
+	 */
 	public String getOwner()
 	{
 		return this.owner;
 	}
 
+	/**
+	 * Get the method's owning class's obfuscated name (if it has one, otherwise returns the same as getOwner())
+	 */
 	public String getOwnerObf()
 	{
 		return this.ownerObf;
 	}
 
+	/**
+	 * Get all owner variants in an array
+	 */
+	public String[] getOwners()
+	{
+		return new String[] { this.ownerObf, this.owner, this.owner }; 
+	}
+
+	/**
+	 * Get the method's name
+	 */
 	public String getName()
 	{
 		return this.name;
 	}
 
+	/**
+	 * Get the method name or inflects it using the supplied context if this MethodInfo was created with inflection enabled
+	 */
+	public String getOrInflectName(String context)
+	{
+		return this.name == MethodInfo.INFLECT ? context : this.name;
+	}
+	
+	/**
+	 * Get the Searge name of the method (if it has one, otherwise returns the base name)
+	 */
 	public String getNameSrg()
 	{
 		return this.nameSrg;
 	}
 
+	/**
+	 * Get the obfuscated name of the method (if it has one, otherwise returns the base name)
+	 */
 	public String getNameObf()
 	{
 		return this.nameObf;
 	}
 
+	/**
+	 * Get all name variants in an array
+	 */
+	public String[] getNames()
+	{
+		return new String[] { this.nameObf, this.nameSrg, this.name }; 
+	}
+
+	/**
+	 * Get the method descriptor
+	 */
 	public String getDesc()
 	{
 		return this.desc;
 	}
 
+	/**
+	 * Get the method descriptor with obfuscated parameter types (if available, otherwise returns the same as getDesc())
+	 */
 	public String getDescObf()
 	{
 		return this.descObf;
 	}
+
+	/**
+	 * Get all descriptors in an array
+	 */
+	public String[] getDescriptors()
+	{
+		return this.desc == null ? null : new String[] { this.descObf, this.desc, this.desc }; 
+	}
 	
+	/**
+	 * Returns true if this MethodInfo has a descriptor
+	 */
 	public boolean hasDesc()
 	{
 		return this.desc != null;
 	}
 
+	/**
+	 * Get the signature (combined method name and descriptor) for the method represented by this methodInfo
+	 * 
+	 * @param type Obfuscation type to use 
+	 * @return
+	 */
 	public String getSignature(int type)
 	{
 		if (type == Obf.OBF) return this.sigObf;

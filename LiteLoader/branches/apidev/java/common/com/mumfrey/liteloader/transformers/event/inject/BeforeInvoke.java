@@ -9,6 +9,7 @@ import org.objectweb.asm.tree.MethodInsnNode;
 
 import com.mumfrey.liteloader.transformers.event.Event;
 import com.mumfrey.liteloader.transformers.event.InjectionPoint;
+import com.mumfrey.liteloader.transformers.event.MethodInfo;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
@@ -149,6 +150,30 @@ public class BeforeInvoke extends InjectionPoint
 		this.methodNames = methodNames;
 		this.methodOwners = methodOwners;
 		this.methodSignatures = methodSignatures;
+		this.ordinal = ordinal;
+	}
+	
+	/**
+	 * Match the invokation described by the supplied MethodInfo
+	 * 
+	 * @param method
+	 */
+	public BeforeInvoke(MethodInfo method)
+	{
+		this(method, -1);
+	}
+	
+	/**
+	 * Match the invokation described by the supplied MethodInfo at the specified ordinal
+	 * 
+	 * @param method
+	 * @param ordinal
+	 */
+	public BeforeInvoke(MethodInfo method, int ordinal)
+	{
+		this.methodNames = method.getNames();
+		this.methodOwners = method.getOwners();
+		this.methodSignatures = method.getDescriptors();
 		this.ordinal = ordinal;
 	}
 	

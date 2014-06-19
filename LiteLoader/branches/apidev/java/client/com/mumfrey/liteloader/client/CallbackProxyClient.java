@@ -256,7 +256,7 @@ public class CallbackProxyClient
 		}
 	}
 
-	public static void runGameLoop(EventInfo<Minecraft> e)
+	public static void rungameloop(EventInfo<Minecraft> e)
 	{
 //		System.err.println(e);
 	}

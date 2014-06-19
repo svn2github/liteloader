@@ -16,8 +16,6 @@ public class LiteLoaderEventInjectionTransformer extends EventInjectionTransform
 		MethodInfo target = new MethodInfo(Obf.Minecraft, Obf.runGameLoop, Void.TYPE);
 		InjectionPoint point = new MethodHead();
 		
-		this.addEvent(runGameLoop, target, point);
-		
-		runGameLoop.addListener(new MethodInfo(Obf.CallbackProxyClient, "runGameLoop"));
+		this.addEvent(runGameLoop, target, point).addListener(new MethodInfo(Obf.CallbackProxyClient));
 	}
 }

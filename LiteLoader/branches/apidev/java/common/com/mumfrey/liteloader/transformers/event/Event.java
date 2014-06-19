@@ -67,7 +67,7 @@ public class Event implements Comparable<Event>
 	 * recalculating things like the return type and descriptor for each invokation, this means we need to calculate these
 	 * things at most once for each method this event is injecting into.
 	 */
-	protected MethodNode attchedMethod;
+	protected MethodNode method;
 	
 	/**
 	 * Descriptor for this event in the context of the attached method 
@@ -163,99 +163,79 @@ public class Event implements Comparable<Event>
 		return new Event(name, cancellable, priority);
 	}
 
+	/**
+	 * Get the name of the event (all lowercase)
+	 */
 	public String getName()
 	{
 		return this.name;
 	}
 	
+	/**
+	 * Get whether this event is cancellable or not
+	 */
 	public boolean isCancellable()
 	{
 		return this.cancellable;
 	}
 	
+	/**
+	 * Get the event priority
+	 */
 	public int getPriority()
 	{
 		return this.priority;
 	}
 	
+	/**
+	 * Get whether this event is currently attached to a method
+	 */
 	public boolean isAttached()
 	{
-		return this.attchedMethod != null;
+		return this.method != null;
 	}
 	
 	/**
-	 * @param method
+	 * Attaches this event to a particular method, this occurs before injection in order to allow the event to
+	 * configure its internal state appropriately for the method's signature. Since a single event may be injected
+	 * into multiple target methods, and may also be injected at multiple points in the same method, this saves
+	 * us recalculating this information for every injection, and instead just calculate once per method.
+	 * 
+	 * @param method Method to attach to
 	 */
 	void attach(final MethodNode method)
 	{
-		if (this.attchedMethod != null)
+		if (this.method != null)
 		{
-			throw new IllegalStateException("Attempted to attach the event " + this.name + " to " + method.name + " but the event was already attached to " + this.attchedMethod.name + "!");
+			throw new IllegalStateException("Attempted to attach the event " + this.name + " to " + method.name + " but the event was already attached to " + this.method.name + "!");
 		}
 		
-		this.attchedMethod   = method;
-		this.methodReturnType      = Type.getReturnType(method.desc);
-		this.methodMAXS      = method.maxStack;
-		this.methodIsStatic  = (method.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC;
-		this.eventInfoClass  = EventInfo.getEventInfoClassName(this.methodReturnType).replace('.', '/');
-		this.eventDescriptor = String.format("(L%s;%s)V", this.eventInfoClass, method.desc.substring(1, method.desc.indexOf(')')));
+		this.method    = method;
+		this.methodReturnType = Type.getReturnType(method.desc);
+		this.methodMAXS       = method.maxStack;
+		this.methodIsStatic   = (method.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC;
+		this.eventInfoClass   = EventInfo.getEventInfoClassName(this.methodReturnType).replace('.', '/');
+		this.eventDescriptor  = String.format("(L%s;%s)V", this.eventInfoClass, method.desc.substring(1, method.desc.indexOf(')')));
 	}
 	
+	/**
+	 * Detach from the attached method, called once injection is completed for a particular method
+	 */
 	void detach()
 	{
-		this.attchedMethod = null;
+		this.method = null;
 	}
 	
-	public void addToHandler(MethodNode handler)
+	/**
+	 * Pre-flight check
+	 * 
+	 * @param injectionPoint
+	 * @param cancellable
+	 * @param globalEventID
+	 */
+	protected void validate(final AbstractInsnNode injectionPoint, boolean cancellable, final int globalEventID)
 	{
-		LiteLoaderLogger.debug("Adding event %s to handler %s", this.name, handler.name);
-		
-		List<Event> handlerEvents = Event.handlerMethods.get(handler);
-		if (handlerEvents != null)
-		{
-			handlerEvents.add(this);
-		}
-	}
-	
-	final MethodNode inject(final String className, final MethodNode method, final AbstractInsnNode injectionPoint, boolean cancellable, final int globalEventID)
-	{
-		this.validate(className, method, injectionPoint, cancellable, globalEventID);
-		
-		MethodNode handler = new MethodNode(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC, Event.getHandlerName(globalEventID), this.eventDescriptor, null, null);
-		Event.handlerMethods.put(handler, new ArrayList<Event>());
-		
-		LiteLoaderLogger.debug("Event %s is spawning handler %s", this.name, handler.name);
-		
-		Type[] argumentTypes = Type.getArgumentTypes(method.desc);
-		int ctorMAXS = 0, invokeMAXS = argumentTypes.length;
-		int eventInfoVar = method.maxLocals++;
-		
-		InsnList insns = new InsnList();
-		insns.add(new TypeInsnNode(Opcodes.NEW, this.eventInfoClass)); ctorMAXS++;
-		insns.add(new InsnNode(Opcodes.DUP)); ctorMAXS++; invokeMAXS++;
-		insns.add(new LdcInsnNode(this.name)); ctorMAXS++;
-		insns.add(this.methodIsStatic ? new InsnNode(Opcodes.ACONST_NULL) : new VarInsnNode(Opcodes.ALOAD, 0)); ctorMAXS++;
-		insns.add(new InsnNode(cancellable ? Opcodes.ICONST_1 : Opcodes.ICONST_0)); ctorMAXS++;
-		insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, this.eventInfoClass, Obf.constructor.name, EventInfo.getConstructorDescriptor()));
-		insns.add(new VarInsnNode(Opcodes.ASTORE, eventInfoVar));
-		insns.add(new VarInsnNode(Opcodes.ALOAD, eventInfoVar));
-		Event.pushArgs(argumentTypes, insns, this.methodIsStatic);
-		insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, Obf.EventProxy.ref, handler.name, handler.desc));
-		
-		if (cancellable)
-		{
-			this.injectCancellationCode(insns, injectionPoint, eventInfoVar);
-		}
-		
-		method.instructions.insertBefore(injectionPoint, insns);
-		method.maxStack = Math.max(method.maxStack, Math.max(this.methodMAXS + ctorMAXS, this.methodMAXS + invokeMAXS));
-		
-		return handler;
-	}
-
-	protected void validate(final String className, final MethodNode method, final AbstractInsnNode injectionPoint, boolean cancellable, final int globalEventID)
-	{
-		if (this.attchedMethod == null)
+		if (this.method == null)
 		{
 			throw new IllegalStateException("Attempted to inject the event " + this.name + " but the event is not attached!");
 		}
@@ -265,7 +245,69 @@ public class Event implements Comparable<Event>
 			throw new IllegalStateException("Attempted to inject the event " + this.name + " but the event proxy was already generated!");
 		}
 	}
+
+	/**
+	 * Inject bytecode for this event into the currently attached method. When multiple events want to be injected
+	 * into the same method at the same point only the first event is injected, subsequent events are simply added to
+	 * the same handler delegate in the EventProxy class. 
+	 *  
+	 * @param injectionPoint Point to inject code, new instructions will be injected directly ahead of the specifed insn
+	 * @param cancellable Cancellable flag, if true then the cancellation code (conditional return) will be injected as well
+	 * @param globalEventID Global event ID, used to map a callback to the relevant event handler delegate method in EventProxy
+	 * 
+	 * @return MethodNode for the event handler delegate
+	 */
+	final MethodNode inject(final AbstractInsnNode injectionPoint, boolean cancellable, final int globalEventID)
+	{
+		// Pre-flight checks
+		this.validate(injectionPoint, cancellable, globalEventID);
+		
+		// Create the handler delegate method
+		MethodNode handler = new MethodNode(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC, Event.getHandlerName(globalEventID), this.eventDescriptor, null, null);
+		Event.handlerMethods.put(handler, new ArrayList<Event>());
+		
+		LiteLoaderLogger.debug("Event %s is spawning handler %s", this.name, handler.name);
+
+		Type[] argumentTypes = Type.getArgumentTypes(this.method.desc);
+		int ctorMAXS = 0, invokeMAXS = argumentTypes.length;
+		int eventInfoVar = this.method.maxLocals++;
+		
+		InsnList insns = new InsnList();
+		
+		// Instance the EventInfo for this event
+		insns.add(new TypeInsnNode(Opcodes.NEW, this.eventInfoClass)); ctorMAXS++;
+		insns.add(new InsnNode(Opcodes.DUP)); ctorMAXS++; invokeMAXS++;
+		insns.add(new LdcInsnNode(this.name)); ctorMAXS++;
+		insns.add(this.methodIsStatic ? new InsnNode(Opcodes.ACONST_NULL) : new VarInsnNode(Opcodes.ALOAD, 0)); ctorMAXS++;
+		insns.add(new InsnNode(cancellable ? Opcodes.ICONST_1 : Opcodes.ICONST_0)); ctorMAXS++;
+		insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, this.eventInfoClass, Obf.constructor.name, EventInfo.getConstructorDescriptor()));
+		insns.add(new VarInsnNode(Opcodes.ASTORE, eventInfoVar));
+		
+		// Call the event handler method in the proxy
+		insns.add(new VarInsnNode(Opcodes.ALOAD, eventInfoVar));
+		Event.pushArgs(argumentTypes, insns, this.methodIsStatic);
+		insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, Obf.EventProxy.ref, handler.name, handler.desc));
+		
+		if (cancellable)
+		{
+			// Inject the if (e.isCancelled()) return e.getReturnValue();
+			this.injectCancellationCode(insns, injectionPoint, eventInfoVar);
+		}
+		
+		// Inject our generated code into the method
+		this.method.instructions.insertBefore(injectionPoint, insns);
+		this.method.maxStack = Math.max(this.method.maxStack, Math.max(this.methodMAXS + ctorMAXS, this.methodMAXS + invokeMAXS));
+		
+		return handler;
+	}
 	
+	/**
+	 * if (e.isCancelled()) return e.getReturnValue();
+	 * 
+	 * @param insns
+	 * @param injectionPoint
+	 * @param eventInfoVar
+	 */
 	protected void injectCancellationCode(final InsnList insns, final AbstractInsnNode injectionPoint, int eventInfoVar)
 	{
 		insns.add(new VarInsnNode(Opcodes.ALOAD, eventInfoVar));
@@ -274,19 +316,29 @@ public class Event implements Comparable<Event>
 		LabelNode notCancelled = new LabelNode();
 		insns.add(new JumpInsnNode(Opcodes.IFEQ, notCancelled));
 		
+		// If this is a void method, just injects a RETURN opcode, otherwise we need to get the return value from the EventInfo
 		this.injectReturnCode(insns, injectionPoint, eventInfoVar);
 		
 		insns.add(notCancelled);
 	}
 
+	/**
+	 * Inject the appropriate return code for the method type
+	 * 
+	 * @param insns
+	 * @param injectionPoint
+	 * @param eventInfoVar
+	 */
 	protected void injectReturnCode(final InsnList insns, final AbstractInsnNode injectionPoint, int eventInfoVar)
 	{
 		if (this.methodReturnType.equals(Type.VOID_TYPE))
 		{
+			// Void method, so just return void
 			insns.add(new InsnNode(Opcodes.RETURN));
 		}
 		else
 		{
+			// Non-void method, so work out which accessor to call to get the return value, and return it
 			insns.add(new VarInsnNode(Opcodes.ALOAD, eventInfoVar));
 			String accessor = ReturnEventInfo.getReturnAccessor(this.methodReturnType);
 			String descriptor = ReturnEventInfo.getReturnDescriptor(this.methodReturnType);
@@ -300,11 +352,28 @@ public class Event implements Comparable<Event>
 	}
 	
 	/**
+	 * Add this event to the specified handler 
+	 * 
+	 * @param handler
+	 */
+	void addToHandler(MethodNode handler)
+	{
+		LiteLoaderLogger.debug("Adding event %s to handler %s", this.name, handler.name);
+		
+		List<Event> handlerEvents = Event.handlerMethods.get(handler);
+		if (handlerEvents != null)
+		{
+			handlerEvents.add(this);
+		}
+	}
+
+	/**
 	 * Add a listener for this event, the listener
 	 * 
 	 * @param listener
+	 * @return fluent interface
 	 */
-	public void addListener(MethodInfo listener)
+	public Event addListener(MethodInfo listener)
 	{
 		if (listener.hasDesc())
 		{
@@ -312,8 +381,16 @@ public class Event implements Comparable<Event>
 		}
 		
 		this.listeners.add(listener);
+		
+		return this;
 	}
 	
+	/**
+	 * Get an event by name (case insensitive)
+	 * 
+	 * @param eventName
+	 * @return
+	 */
 	static Event getEvent(String eventName)
 	{
 		for (Event event : Event.events)
@@ -323,30 +400,52 @@ public class Event implements Comparable<Event>
 		return null;
 	}
 
+	/**
+	 * Get all of the listeners for an event by name
+	 * 
+	 * @param eventName
+	 * @return
+	 */
 	static Set<MethodInfo> getEventListeners(String eventName)
 	{
 		return Event.getEventListeners(Event.getEvent(eventName));
 	}
 	
+	/**
+	 * Get all of an event's listeners
+	 * 
+	 * @param event
+	 * @return
+	 */
 	static Set<MethodInfo> getEventListeners(Event event)
 	{
 		return event == null ? null : Collections.unmodifiableSet(event.listeners);
 	}
 	
+	/**
+	 * Populates the event proxy class with delegating methods for all injected events 
+	 * 
+	 * @param classNode
+	 * @return
+	 */
 	static ClassNode populateProxy(final ClassNode classNode)
 	{
 		Event.generatedProxy = true;
 		
 		int handlerCount = 0;
 		int invokeCount = 0;
-		int lineNumber = 210;
+		int lineNumber = 210; // From EventProxy.java, this really is only to try and make stack traces a bit easier to read
 		
+		// Loop through all handlers and inject a method for each one
 		for (Entry<MethodNode, List<Event>> handler : Event.handlerMethods.entrySet())
 		{
 			MethodNode handlerMethod = handler.getKey();
 			List<Event> handlerEvents = handler.getValue();
+			
+			// Args is used to inject appropriate LOAD opcodes to put the method arguments on the stack for each handler invokation
 			Type[] args = Type.getArgumentTypes(handlerMethod.desc);
 			
+			// Add our generated method to the the class
 			classNode.methods.add(handlerMethod);
 			handlerCount++;
 			
@@ -365,7 +464,7 @@ public class Event implements Comparable<Event>
 					handlerMethod.tryCatchBlocks.add(new TryCatchBlockNode(tryCatchStart, tryCatchEnd, tryCatchHandler1, "java/lang/NoSuchMethodError"));
 					handlerMethod.tryCatchBlocks.add(new TryCatchBlockNode(tryCatchStart, tryCatchEnd, tryCatchHandler2, "java/lang/NoClassDefFoundError"));
 					
-					insns.add(tryCatchStart);
+					insns.add(tryCatchStart); // try {
 					
 					for (MethodInfo listener : listeners)
 					{
@@ -376,23 +475,23 @@ public class Event implements Comparable<Event>
 						insns.add(new LineNumberNode(++lineNumber, lineNumberLabel));
 						
 						Event.pushArgs(args, insns, true);
-						insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, listener.ownerRef, listener.name, handlerMethod.desc));
+						insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, listener.ownerRef, listener.getOrInflectName(event.name), handlerMethod.desc));
 					}
 					
-					insns.add(tryCatchEnd);
+					insns.add(tryCatchEnd); // }
 					insns.add(new JumpInsnNode(Opcodes.GOTO, tryCatchExit));
 					
-					insns.add(tryCatchHandler1);
+					insns.add(tryCatchHandler1); // catch (NoSuchMethodError err) {
 					insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
 					insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, Obf.EventProxy.ref, "onMissingHandler", "(Ljava/lang/Error;Lcom/mumfrey/liteloader/transformers/event/EventInfo;)V"));
 					insns.add(new JumpInsnNode(Opcodes.GOTO, tryCatchExit));
 					
-					insns.add(tryCatchHandler2);
+					insns.add(tryCatchHandler2); // } catch (NoClassDefFoundError err) {
 					insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
 					insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, Obf.EventProxy.ref, "onMissingClass", "(Ljava/lang/Error;Lcom/mumfrey/liteloader/transformers/event/EventInfo;)V"));
 					insns.add(new JumpInsnNode(Opcodes.GOTO, tryCatchExit));
 					
-					insns.add(tryCatchExit);
+					insns.add(tryCatchExit); // }
 				}
 			}
 		

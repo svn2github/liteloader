@@ -6,25 +6,24 @@
 //import org.objectweb.asm.tree.InsnNode;
 //import org.objectweb.asm.tree.JumpInsnNode;
 //import org.objectweb.asm.tree.MethodInsnNode;
-//import org.objectweb.asm.tree.MethodNode;
 //import org.objectweb.asm.tree.VarInsnNode;
 //
 //public class Jump extends Event
 //{
-//	Jump(String name, int priority, boolean cancellable)
+//	Jump(String name, boolean cancellable, int priority)
 //	{
-//		super(name, priority, cancellable);
+//		super(name, cancellable, priority);
 //	}
 //	
 //	@Override
-//	protected void validate(String className, MethodNode method, AbstractInsnNode injectionPoint, boolean cancellable, int globalEventID)
+//	protected void validate(AbstractInsnNode injectionPoint, boolean cancellable, int globalEventID)
 //	{
 //		if (!(injectionPoint instanceof JumpInsnNode))
 //		{
 //			throw new IllegalArgumentException("Attempted to inject a JUMP event where no JUMP is present");
 //		}
 //
-//		super.validate(className, method, injectionPoint, cancellable, globalEventID);
+//		super.validate(injectionPoint, cancellable, globalEventID);
 //	}
 //	
 //	@Override
