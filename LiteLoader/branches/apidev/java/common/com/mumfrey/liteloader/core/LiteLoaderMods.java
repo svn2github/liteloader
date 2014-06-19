@@ -13,6 +13,7 @@ import javax.activity.InvalidActivityException;
 import net.minecraft.client.resources.IResourcePack;
 
 import com.mumfrey.liteloader.LiteMod;
+import com.mumfrey.liteloader.api.ModLoadObserver;
 import com.mumfrey.liteloader.common.LoadingProgress;
 import com.mumfrey.liteloader.interfaces.LoaderEnumerator;
 import com.mumfrey.liteloader.interfaces.Loadable;
@@ -57,6 +58,11 @@ public class LiteLoaderMods
 	private final ConfigManager configManager;
 	
 	/**
+	 * Mod load observers
+	 */
+	private List<ModLoadObserver> observers;
+
+	/**
 	 * List of loaded mods, for crash reporting
 	 */
 	private String loadedModsList = "none";
@@ -90,8 +96,9 @@ public class LiteLoaderMods
 		this.configManager    = configManager;
 	}
 
-	void init()
+	void init(List<ModLoadObserver> observers)
 	{
+		this.observers = observers;
 		this.disabledMods.addAll(this.enumerator.getDisabledContainers());
 	}
 
@@ -394,7 +401,7 @@ public class LiteLoaderMods
 				{
 					if (!this.enumerator.checkDependencies(container))
 					{
-						this.onModLoadFailed(container, identifier, "the mod was missing a required dependency");
+						this.onModLoadFailed(container, identifier, "the mod was missing a required dependency", null);
 						continue;
 					}
 					
@@ -402,12 +409,12 @@ public class LiteLoaderMods
 				}
 				else
 				{
-					this.onModLoadFailed(container, identifier, "excluded by filter");
+					this.onModLoadFailed(container, identifier, "excluded by filter", null);
 				}
 			}
 			catch (Throwable th)
 			{
-				this.onModLoadFailed(container, mod.getName(), "an error occurred");
+				this.onModLoadFailed(container, mod.getName(), "an error occurred", th);
 			}
 		}
 	}
@@ -426,6 +433,7 @@ public class LiteLoaderMods
 		LiteMod newMod = mod.newInstance();
 		
 		this.onModLoaded(newMod);
+		
 		String modName = newMod.getName();
 		if (modName == null && identifier != null) modName = identifier;
 		LiteLoaderLogger.info("Successfully added mod %s version %s", modName, newMod.getVersion());
@@ -451,6 +459,11 @@ public class LiteLoaderMods
 	 */
 	void onModLoaded(LiteMod mod)
 	{
+		for (ModLoadObserver observer : this.observers)
+		{
+			observer.onModLoaded(mod);
+		}
+
 		this.allMods.add(mod);
 		this.initMods.add(mod);
 		
@@ -461,14 +474,20 @@ public class LiteLoaderMods
 	 * @param container
 	 * @param identifier
 	 * @param reason
+	 * @param th TODO
 	 */
-	void onModLoadFailed(LoadableMod<?> container, String identifier, String reason)
+	void onModLoadFailed(LoadableMod<?> container, String identifier, String reason, Throwable th)
 	{
 		LiteLoaderLogger.warning("Not loading mod %s, %s", identifier, reason);
 		
 		if (container != LoadableMod.NONE && !this.disabledMods.contains(container))
 		{
 			this.disabledMods.add(container);
+		}
+		
+		for (ModLoadObserver observer : this.observers)
+		{
+			observer.onModLoadFailed(container, identifier, reason, th);
 		}
 	}
 
@@ -520,6 +539,11 @@ public class LiteLoaderMods
 	 */
 	private void onPreInitMod(LiteMod mod)
 	{
+		for (ModLoadObserver observer : this.observers)
+		{
+			observer.onPreInitMod(mod);
+		}
+		
 		// register mod config panel if configurable
 		this.configManager.registerMod(mod);
 		
@@ -541,6 +565,11 @@ public class LiteLoaderMods
 	 */
 	private void onPostInitMod(LiteMod mod)
 	{
+		for (ModLoadObserver observer : this.observers)
+		{
+			observer.onPostInitMod(mod);
+		}
+
 		// add the mod to all relevant listener queues
 		LiteLoader.getInterfaceManager().offer(mod);
 
@@ -560,13 +589,21 @@ public class LiteLoaderMods
 		
 		if (LiteLoaderVersion.CURRENT.getLoaderRevision() > lastModVersion.getLoaderRevision())
 		{
+			File newConfigPath = LiteLoader.getConfigFolder();
+			File oldConfigPath = this.environment.inflectVersionedConfigPath(lastModVersion);
+
 			LiteLoaderLogger.info("Performing config upgrade for mod %s. Upgrading %s to %s...", mod.getName(), lastModVersion, LiteLoaderVersion.CURRENT);
 			
+			for (ModLoadObserver observer : this.observers)
+			{
+				observer.onMigrateModConfig(mod, newConfigPath, oldConfigPath);
+			}
+
 			// Migrate versioned config if any is present
-			this.configManager.migrateModConfig(mod, LiteLoader.getConfigFolder(), this.environment.inflectVersionedConfigPath(lastModVersion));
+			this.configManager.migrateModConfig(mod, newConfigPath, oldConfigPath);
 			
 			// Let the mod upgrade
-			mod.upgradeSettings(LiteLoaderVersion.CURRENT.getMinecraftVersion(), LiteLoader.getConfigFolder(), this.environment.inflectVersionedConfigPath(lastModVersion));
+			mod.upgradeSettings(LiteLoaderVersion.CURRENT.getMinecraftVersion(), newConfigPath, oldConfigPath);
 			
 			this.properties.storeLastKnownModRevision(modKey);
 			LiteLoaderLogger.info("Config upgrade succeeded for mod %s", mod.getName());

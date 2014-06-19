@@ -22,6 +22,7 @@ import org.apache.logging.log4j.Logger;
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.api.CoreProvider;
 import com.mumfrey.liteloader.api.LiteAPI;
+import com.mumfrey.liteloader.api.ModLoadObserver;
 import com.mumfrey.liteloader.api.PostRenderObserver;
 import com.mumfrey.liteloader.api.ShutdownObserver;
 import com.mumfrey.liteloader.api.TickObserver;
@@ -248,7 +249,7 @@ public final class LiteLoader
 			}
 			
 			this.enumerator.onInit();
-			this.mods.init();
+			this.mods.init(this.apiAdapter.getAllObservers(ModLoadObserver.class));
 		}
 		catch (Throwable th)
 		{
