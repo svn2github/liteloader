@@ -4,10 +4,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import net.minecraft.launchwrapper.IClassTransformer;
-
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.InsnList;
@@ -29,7 +25,7 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
  *
  * @author Adam Mummery-Smith
  */
-public abstract class PacketTransformer implements IClassTransformer
+public abstract class PacketTransformer extends ClassTransformer
 {
 	private static final Set<String> transformedPackets = new HashSet<String>();
 	private static int transformerOrder = 0;
@@ -136,9 +132,7 @@ public abstract class PacketTransformer implements IClassTransformer
 	 */
 	private byte[] transformClass(String className, byte[] basicClass)
 	{
-		ClassReader classReader = new ClassReader(basicClass);
-		ClassNode classNode = new ClassNode();
-		classReader.accept(classNode, ClassReader.EXPAND_FRAMES);
+		ClassNode classNode = this.readClass(basicClass, true);
 		
 		// Try and transform obfuscated first
 		if (!this.tryTransformMethod(className, classNode, Obf.processPacket.obf, Obf.INetHandler.obf))
@@ -154,9 +148,7 @@ public abstract class PacketTransformer implements IClassTransformer
 			}
 		}
 		
-		ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
-		classNode.accept(writer);
-		return writer.toByteArray();
+		return this.writeClass(classNode);
 	}
 
 	/**

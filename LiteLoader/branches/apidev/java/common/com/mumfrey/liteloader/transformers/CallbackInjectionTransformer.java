@@ -5,8 +5,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -23,14 +21,12 @@ import com.mumfrey.liteloader.core.runtime.Obf;
 import com.mumfrey.liteloader.transformers.Callback.CallbackType;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
-import net.minecraft.launchwrapper.IClassTransformer;
-
 /**
  * Transformer which injects callbacks by searching for profiler invokations and RETURN opcodes
  * 
  * @author Adam Mummery-Smith
  */
-public abstract class CallbackInjectionTransformer implements IClassTransformer
+public abstract class CallbackInjectionTransformer extends ClassTransformer
 {
 	/**
 	 * Mappings for profiler method invokations
@@ -130,7 +126,7 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 	 */
 	private byte[] injectCallbacks(byte[] basicClass, Map<String, Callback> profilerMappings, Map<String, Callback> mappings)
 	{
-		ClassNode classNode = this.readClass(basicClass);
+		ClassNode classNode = this.readClass(basicClass, true);
 		String className = classNode.name.replace('/', '.');
 		String classType = Type.getObjectType(classNode.name).toString();
 
@@ -355,103 +351,5 @@ public abstract class CallbackInjectionTransformer implements IClassTransformer
 	private static String generateSignature(String className, String methodName, String methodSignature, Callback.CallbackType callbackType)
 	{
 		return String.format("%s::%s%s@%s", className.replace('.', '/'), methodName, methodSignature, callbackType.getSignature());
-	}
-	
-	/**
-	 * @param basicClass
-	 * @return
-	 */
-	protected final ClassNode readClass(byte[] basicClass)
-	{
-		ClassReader classReader = new ClassReader(basicClass);
-		ClassNode classNode = new ClassNode();
-		classReader.accept(classNode, ClassReader.EXPAND_FRAMES);
-		return classNode;
-	}
-
-	/**
-	 * @param classNode
-	 * @return
-	 */
-	protected final byte[] writeClass(ClassNode classNode)
-	{
-		ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
-		classNode.accept(writer);
-		return writer.toByteArray();
-	}
-	
-	/**
-	 * @param returnType
-	 * @param args
-	 * @return
-	 */
-	public static String generateDescriptor(Type returnType, Object... args)
-	{
-		return CallbackInjectionTransformer.generateDescriptor(Obf.MCP, returnType, args);
-	}
-	
-	/**
-	 * @param returnType
-	 * @param args
-	 * @return
-	 */
-	public static String generateDescriptor(Obf returnType, Object... args)
-	{
-		return CallbackInjectionTransformer.generateDescriptor(Obf.MCP, returnType, args);
-	}
-	
-	/**
-	 * @param returnType
-	 * @param args
-	 * @return
-	 */
-	public static String generateDescriptor(String returnType, Object... args)
-	{
-		return CallbackInjectionTransformer.generateDescriptor(Obf.MCP, returnType, args);
-	}
-	
-	/**
-	 * @param obfType
-	 * @param returnType
-	 * @param args
-	 * @return
-	 */
-	public static String generateDescriptor(int obfType, Object returnType, Object... args)
-	{
-		StringBuilder sb = new StringBuilder().append('(');;
-
-		for (Object arg : args)
-		{
-			sb.append(CallbackInjectionTransformer.toDescriptor(obfType, arg));
-		}
-		
-		return sb.append(')').append(returnType != null ? CallbackInjectionTransformer.toDescriptor(obfType, returnType) : "V").toString();
-	}
-
-	/**
-	 * @param obfType
-	 * @param sb
-	 * @param arg
-	 */
-	private static String toDescriptor(int obfType, Object arg)
-	{
-		if (arg instanceof Obf)
-		{
-			return ((Obf)arg).getDescriptor(obfType);
-		}
-		else if (arg instanceof String)
-		{
-			return (String)arg;
-		}
-		else if (arg instanceof Type)
-		{
-			return arg.toString();
-		}
-		else if (arg instanceof Class)
-		{
-			return Type.getDescriptor((Class<?>)arg).toString();
-		}
-		
-		return arg == null ? "" : arg.toString();
 	}
 }

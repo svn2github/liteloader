@@ -9,6 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import net.minecraft.launchwrapper.IClassTransformer;
+import net.minecraft.launchwrapper.Launch;
+
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
@@ -25,9 +28,6 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
-
-import net.minecraft.launchwrapper.IClassTransformer;
-import net.minecraft.launchwrapper.Launch;
 
 /**
  * This transformer applies one class to another as an "overlay". This works by merging down and replacing all
@@ -66,7 +66,7 @@ import net.minecraft.launchwrapper.Launch;
  * 
  * @author Adam Mummery-Smith
  */
-public abstract class ClassOverlayTransformer implements IClassTransformer
+public abstract class ClassOverlayTransformer extends ClassTransformer
 {
 	/**
 	 * Global list of overlaid classes, used to transform references in other classes
@@ -205,7 +205,7 @@ public abstract class ClassOverlayTransformer implements IClassTransformer
 	private byte[] applyOverlay(String transformedName, byte[] classBytes)
 	{
 		ClassNode overlayClass = this.loadOverlayClass(transformedName, true);
-		ClassNode targetClass = this.readClass(classBytes);
+		ClassNode targetClass = this.readClass(classBytes, true);
 		
 		LiteLoaderLogger.info("Applying overlay %s to %s", this.overlayClassName, transformedName);
 		
@@ -648,7 +648,7 @@ public abstract class ClassOverlayTransformer implements IClassTransformer
 			throw new InvalidOverlayException("An error was encountered whilst loading the overlay class", ex);
 		}
 		
-		return this.readClass(overlayBytes);
+		return this.readClass(overlayBytes, false);
 	}
 
 	/**
@@ -671,28 +671,5 @@ public abstract class ClassOverlayTransformer implements IClassTransformer
 		}
 		
 		return basicClass;
-	}
-
-	/**
-	 * @param basicClass
-	 * @return
-	 */
-	private ClassNode readClass(byte[] basicClass)
-	{
-		ClassReader classReader = new ClassReader(basicClass);
-		ClassNode classNode = new ClassNode();
-		classReader.accept(classNode, ClassReader.EXPAND_FRAMES);
-		return classNode;
-	}
-
-	/**
-	 * @param classNode
-	 * @return
-	 */
-	private byte[] writeClass(ClassNode classNode)
-	{
-		ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
-		classNode.accept(writer);
-		return writer.toByteArray();
 	}
 }

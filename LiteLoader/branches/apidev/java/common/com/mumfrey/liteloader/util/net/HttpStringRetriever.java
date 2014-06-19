@@ -183,9 +183,10 @@ public class HttpStringRetriever extends Thread
 			if (this.httpResponseCode >= 200 && this.httpResponseCode < 300)
 			{
 				InputStream httpStream = httpClient.getInputStream();
+				BufferedReader reader = null;
 				try
 				{
-					BufferedReader reader = new BufferedReader(new InputStreamReader(httpStream));
+					reader = new BufferedReader(new InputStreamReader(httpStream));
 					
 					String readLine;
 					while ((readLine = reader.readLine()) != null)
@@ -198,6 +199,7 @@ public class HttpStringRetriever extends Thread
 				}
 				finally
 				{
+					IOUtils.closeQuietly(reader);
 					IOUtils.closeQuietly(httpStream);
 				}
 			}

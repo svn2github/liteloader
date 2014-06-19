@@ -3,6 +3,8 @@ package com.mumfrey.liteloader.transformers;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.objectweb.asm.Type;
+
 import com.mumfrey.liteloader.core.runtime.Obf;
 
 /**
@@ -270,5 +272,80 @@ public class Callback
 	public int hashCode()
 	{
 		return super.hashCode();
+	}
+	
+	/**
+	 * @param returnType
+	 * @param args
+	 * @return
+	 */
+	public static String generateDescriptor(Type returnType, Object... args)
+	{
+		return Callback.generateDescriptor(Obf.MCP, returnType, args);
+	}
+	
+	/**
+	 * @param returnType
+	 * @param args
+	 * @return
+	 */
+	public static String generateDescriptor(Obf returnType, Object... args)
+	{
+		return Callback.generateDescriptor(Obf.MCP, returnType, args);
+	}
+	
+	/**
+	 * @param returnType
+	 * @param args
+	 * @return
+	 */
+	public static String generateDescriptor(String returnType, Object... args)
+	{
+		return Callback.generateDescriptor(Obf.MCP, returnType, args);
+	}
+	
+	/**
+	 * @param obfType
+	 * @param returnType
+	 * @param args
+	 * @return
+	 */
+	public static String generateDescriptor(int obfType, Object returnType, Object... args)
+	{
+		StringBuilder sb = new StringBuilder().append('(');;
+
+		for (Object arg : args)
+		{
+			sb.append(Callback.toDescriptor(obfType, arg));
+		}
+		
+		return sb.append(')').append(returnType != null ? Callback.toDescriptor(obfType, returnType) : "V").toString();
+	}
+
+	/**
+	 * @param obfType
+	 * @param sb
+	 * @param arg
+	 */
+	private static String toDescriptor(int obfType, Object arg)
+	{
+		if (arg instanceof Obf)
+		{
+			return ((Obf)arg).getDescriptor(obfType);
+		}
+		else if (arg instanceof String)
+		{
+			return (String)arg;
+		}
+		else if (arg instanceof Type)
+		{
+			return arg.toString();
+		}
+		else if (arg instanceof Class)
+		{
+			return Type.getDescriptor((Class<?>)arg).toString();
+		}
+		
+		return arg == null ? "" : arg.toString();
 	}
 }

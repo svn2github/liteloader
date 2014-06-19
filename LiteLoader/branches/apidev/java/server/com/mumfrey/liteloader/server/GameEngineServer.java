@@ -1,17 +1,15 @@
 package com.mumfrey.liteloader.server;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import net.minecraft.client.resources.IResourceManager;
 import net.minecraft.client.resources.IResourcePack;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.profiler.Profiler;
 import net.minecraft.server.MinecraftServer;
 
 import com.mumfrey.liteloader.common.GameEngine;
-import com.mumfrey.liteloader.common.LoadingProgress;
+import com.mumfrey.liteloader.launch.LoaderEnvironment;
+import com.mumfrey.liteloader.server.resources.ServerResourceManager;
 
 /**
  *
@@ -19,6 +17,8 @@ import com.mumfrey.liteloader.common.LoadingProgress;
  */
 public class GameEngineServer implements GameEngine<DummyClient, MinecraftServer>
 {
+	private final LoaderEnvironment environment;
+	
 	/**
 	 * 
 	 */
@@ -29,17 +29,12 @@ public class GameEngineServer implements GameEngine<DummyClient, MinecraftServer
 	 */
 	private final DummyClient client = new DummyClient();
 
-	private IResourceManager resourceManager;
-
-	/**
-	 * Registered resource packs 
-	 */
-	private final Map<String, IResourcePack> registeredResourcePacks = new HashMap<String, IResourcePack>();
-
-	/**
-	 * True while initialising mods if we need to do a resource manager reload once the process is completed
-	 */
-	private boolean pendingResourceReload;
+	private ServerResourceManager resourceManager;
+	
+	public GameEngineServer(LoaderEnvironment environment)
+	{
+		this.environment = environment;
+	}
 
 	@Override
 	public Profiler getProfiler()
@@ -50,12 +45,7 @@ public class GameEngineServer implements GameEngine<DummyClient, MinecraftServer
 	@Override
 	public void refreshResources(boolean force)
 	{
-		if (this.pendingResourceReload || force)
-		{
-			LoadingProgress.setMessage("Reloading Resources...");
-			this.pendingResourceReload = false;
-//			this.engine.refreshResources();
-		}
+		this.getResourceManager().refreshResources(force);
 	}
 
 	@Override
@@ -101,8 +91,13 @@ public class GameEngineServer implements GameEngine<DummyClient, MinecraftServer
 	}
 	
 	@Override
-	public IResourceManager getResourceManager()
+	public ServerResourceManager getResourceManager()
 	{
+		if (this.resourceManager == null)
+		{
+			this.resourceManager = new ServerResourceManager(this.environment);
+		}
+		
 		return this.resourceManager;
 	}
 
@@ -112,14 +107,7 @@ public class GameEngineServer implements GameEngine<DummyClient, MinecraftServer
 	@Override
 	public boolean registerResourcePack(IResourcePack resourcePack)
 	{
-		if (!this.registeredResourcePacks.containsKey(resourcePack.getPackName()))
-		{
-			this.pendingResourceReload = true;
-			this.registeredResourcePacks.put(resourcePack.getPackName(), resourcePack);
-			return true;
-		}
-		
-		return false;
+		return this.getResourceManager().registerResourcePack(resourcePack);
 	}
 	
 	/* (non-Javadoc)
@@ -128,13 +116,6 @@ public class GameEngineServer implements GameEngine<DummyClient, MinecraftServer
 	@Override
 	public boolean unRegisterResourcePack(IResourcePack resourcePack)
 	{
-		if (this.registeredResourcePacks.containsValue(resourcePack))
-		{
-			this.pendingResourceReload = true;
-			this.registeredResourcePacks.remove(resourcePack.getPackName());
-			return true;
-		}
-		
 		return false;
 	}
 	

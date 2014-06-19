@@ -20,7 +20,7 @@ import com.mumfrey.liteloader.server.ServerEvents;
 
 class ObjectFactoryServer implements ObjectFactory<DummyClient, MinecraftServer>
 {
-//	private LoaderEnvironment environment;
+	private LoaderEnvironment environment;
 	
 	private LoaderProperties properties;
 	
@@ -32,7 +32,7 @@ class ObjectFactoryServer implements ObjectFactory<DummyClient, MinecraftServer>
 
 	ObjectFactoryServer(LoaderEnvironment environment, LoaderProperties properties)
 	{
-//		this.environment = environment;
+		this.environment = environment;
 		this.properties = properties;
 	}
 	
@@ -52,7 +52,7 @@ class ObjectFactoryServer implements ObjectFactory<DummyClient, MinecraftServer>
 	{
 		if (this.engine == null)
 		{
-			this.engine = new GameEngineServer();
+			this.engine = new GameEngineServer(this.environment);
 		}	
 		
 		return this.engine;

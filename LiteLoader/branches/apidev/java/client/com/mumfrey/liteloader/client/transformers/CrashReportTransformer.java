@@ -2,10 +2,6 @@ package com.mumfrey.liteloader.client.transformers;
 
 import java.util.ListIterator;
 
-import net.minecraft.launchwrapper.IClassTransformer;
-
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -15,8 +11,9 @@ import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
 import com.mumfrey.liteloader.core.runtime.Obf;
+import com.mumfrey.liteloader.transformers.ClassTransformer;
 
-public class CrashReportTransformer implements IClassTransformer
+public class CrashReportTransformer extends ClassTransformer
 {
 	@Override
 	public byte[] transform(String name, String transformedName, byte[] basicClass)
@@ -41,9 +38,7 @@ public class CrashReportTransformer implements IClassTransformer
 	 */
 	private byte[] transformCallableJVMFlags(byte[] basicClass)
 	{
-		ClassReader classReader = new ClassReader(basicClass);
-		ClassNode classNode = new ClassNode();
-		classReader.accept(classNode, ClassReader.EXPAND_FRAMES);
+		ClassNode classNode = this.readClass(basicClass, true);
 		
 		for (MethodNode method : classNode.methods)
 		{
@@ -53,9 +48,7 @@ public class CrashReportTransformer implements IClassTransformer
 			}
 		}
 		
-		ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
-		classNode.accept(writer);
-		return writer.toByteArray();
+		return this.writeClass(classNode);
 	}
 
 	/**

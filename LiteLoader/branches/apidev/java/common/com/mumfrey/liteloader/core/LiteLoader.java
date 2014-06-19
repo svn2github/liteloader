@@ -10,6 +10,7 @@ import javax.activity.InvalidActivityException;
 
 import net.minecraft.client.resources.IResourcePack;
 import net.minecraft.crash.CrashReport;
+import net.minecraft.crash.CrashReportCategory;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 import net.minecraft.network.INetHandler;
 import net.minecraft.network.play.server.S01PacketJoinGame;
@@ -30,6 +31,7 @@ import com.mumfrey.liteloader.api.manager.APIProvider;
 import com.mumfrey.liteloader.common.GameEngine;
 import com.mumfrey.liteloader.common.LoadingProgress;
 import com.mumfrey.liteloader.core.api.LiteLoaderCoreAPI;
+import com.mumfrey.liteloader.core.event.EventProxy;
 import com.mumfrey.liteloader.crashreport.CallableLaunchWrapper;
 import com.mumfrey.liteloader.crashreport.CallableLiteLoaderBrand;
 import com.mumfrey.liteloader.crashreport.CallableLiteLoaderMods;
@@ -1032,11 +1034,17 @@ public final class LiteLoader
 	{
 		if (objCrashReport instanceof CrashReport)
 		{
-			CrashReport crashReport = (CrashReport)objCrashReport;
-			crashReport.getCategory().addCrashSectionCallable("Mod Pack",        new CallableLiteLoaderBrand(crashReport));
-			crashReport.getCategory().addCrashSectionCallable("LiteLoader Mods", new CallableLiteLoaderMods(crashReport));
-			crashReport.getCategory().addCrashSectionCallable("LaunchWrapper",   new CallableLaunchWrapper(crashReport));
+			EventProxy.populateCrashReport((CrashReport)objCrashReport);
+			LiteLoader.populateCrashReport((CrashReport)objCrashReport);
 		}
+	}
+
+	private static void populateCrashReport(CrashReport crashReport)
+	{
+		CrashReportCategory category = crashReport.getCategory(); // crashReport.makeCategoryDepth("Mod System Details", 1);
+		category.addCrashSectionCallable("Mod Pack",        new CallableLiteLoaderBrand(crashReport));
+		category.addCrashSectionCallable("LiteLoader Mods", new CallableLiteLoaderMods(crashReport));
+		category.addCrashSectionCallable("LaunchWrapper",   new CallableLaunchWrapper(crashReport));
 	}
 
 	static final void createInstance(LoaderEnvironment environment, LoaderProperties properties, LaunchClassLoader classLoader)

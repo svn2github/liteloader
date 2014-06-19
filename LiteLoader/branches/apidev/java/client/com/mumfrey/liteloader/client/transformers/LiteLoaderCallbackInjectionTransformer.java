@@ -40,11 +40,11 @@ public final class LiteLoaderCallbackInjectionTransformer extends CallbackInject
 		this.addCallback(type, Obf.GuiIngame,      Obf.renderGameOverlay,     "(FZII)V", new Callback(CallbackType.PROFILER_STARTSECTION,    "onRenderChat",           Obf.CallbackProxyClient.ref, "chat",         type));
 		this.addCallback(type, Obf.GuiIngame,      Obf.renderGameOverlay,     "(FZII)V", new Callback(CallbackType.PROFILER_ENDSECTION,      "postRenderChat",         Obf.CallbackProxyClient.ref, "",             type)); // ref 10
 		
-		String integratedServerCtorDescriptor = CallbackInjectionTransformer.generateDescriptor(type, Type.VOID_TYPE, Obf.Minecraft, String.class, String.class, Obf.WorldSettings);
-		String initPlayerConnectionDescriptor = CallbackInjectionTransformer.generateDescriptor(type, Type.VOID_TYPE, Obf.NetworkManager, Obf.EntityPlayerMP);
-		String playerLoggedInOutDescriptor    = CallbackInjectionTransformer.generateDescriptor(type, Type.VOID_TYPE, Obf.EntityPlayerMP);
-		String spawnPlayerDescriptor          = CallbackInjectionTransformer.generateDescriptor(type, Obf.EntityPlayerMP, Obf.GameProfile);
-		String respawnPlayerDescriptor        = CallbackInjectionTransformer.generateDescriptor(type, Obf.EntityPlayerMP, Obf.EntityPlayerMP, Type.INT_TYPE, Type.BOOLEAN_TYPE);
+		String integratedServerCtorDescriptor = Callback.generateDescriptor(type, Type.VOID_TYPE, Obf.Minecraft, String.class, String.class, Obf.WorldSettings);
+		String initPlayerConnectionDescriptor = Callback.generateDescriptor(type, Type.VOID_TYPE, Obf.NetworkManager, Obf.EntityPlayerMP);
+		String playerLoggedInOutDescriptor    = Callback.generateDescriptor(type, Type.VOID_TYPE, Obf.EntityPlayerMP);
+		String spawnPlayerDescriptor          = Callback.generateDescriptor(type, Obf.EntityPlayerMP, Obf.GameProfile);
+		String respawnPlayerDescriptor        = Callback.generateDescriptor(type, Obf.EntityPlayerMP, Obf.EntityPlayerMP, Type.INT_TYPE, Type.BOOLEAN_TYPE);
 		
 		this.addCallback(type, Obf.IntegratedServer,           Obf.constructor,                  integratedServerCtorDescriptor, new Callback(CallbackType.RETURN, "IntegratedServerCtor",         Obf.CallbackProxyClient.ref));
 		this.addCallback(type, Obf.ServerConfigurationManager, Obf.initializeConnectionToPlayer, initPlayerConnectionDescriptor, new Callback(CallbackType.RETURN, "onInitializePlayerConnection", Obf.CallbackProxyClient.ref));

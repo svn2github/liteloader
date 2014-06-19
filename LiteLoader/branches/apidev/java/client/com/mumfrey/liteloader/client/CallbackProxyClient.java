@@ -21,6 +21,7 @@ import com.mojang.authlib.GameProfile;
 import com.mumfrey.liteloader.core.ClientPluginChannels;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.core.ServerPluginChannels;
+import com.mumfrey.liteloader.transformers.event.EventInfo;
 
 /**
  * Proxy class which handles the redirected calls from the injected callbacks and routes them to the
@@ -253,5 +254,10 @@ public class CallbackProxyClient
 		{
 			CallbackProxyClient.events.onSendChatMessage(packet, message);
 		}
+	}
+
+	public static void runGameLoop(EventInfo<Minecraft> e)
+	{
+//		System.err.println(e);
 	}
 }

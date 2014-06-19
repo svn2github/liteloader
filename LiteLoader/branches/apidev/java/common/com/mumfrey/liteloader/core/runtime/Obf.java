@@ -16,6 +16,7 @@ public class Obf
 	// -----------------------------------------------------------------------------------------
 	public static final Obf          CallbackProxyClient = new Obf("com.mumfrey.liteloader.client.CallbackProxyClient"                 );
 	public static final Obf          CallbackProxyServer = new Obf("com.mumfrey.liteloader.server.CallbackProxyServer"                 );
+	public static final Obf                   EventProxy = new Obf("com.mumfrey.liteloader.core.event.EventProxy"                      );
 	public static final Obf                   LoadingBar = new Obf("com.mumfrey.liteloader.client.gui.startup.LoadingBar"              );
 	public static final Obf                  GameProfile = new Obf("com.mojang.authlib.GameProfile"                                    );
 	public static final Obf                MinecraftMain = new Obf("net.minecraft.client.main.Main"                                    );
@@ -100,6 +101,14 @@ public class Obf
 	 * Class, field or method name in obfuscated (original) format
 	 */
 	public final String obf;
+
+	/**
+	 * @param mcpName
+	 */
+	protected Obf(String mcpName)
+	{
+		this(mcpName, mcpName, mcpName);
+	}
 	
 	/**
 	 * @param mcpName
@@ -108,20 +117,22 @@ public class Obf
 	 */
 	protected Obf(String seargeName, String obfName)
 	{
-		this.name = Obf.getDeobfName(seargeName);
+		this(seargeName, obfName, null);
+	}
+
+	/**
+	 * @param seargeName
+	 * @param obfName
+	 * @param mcpName
+	 */
+	protected Obf(String seargeName, String obfName, String mcpName)
+	{
+		this.name = mcpName != null ? mcpName : this.getDeobfuscatedName(seargeName);
 		this.ref = this.name.replace('.', '/');
 		this.srg = seargeName;
 		this.obf = obfName;
 		
 		this.names = new String[] { this.name, this.srg, this.obf };
-	}
-
-	/**
-	 * @param mcpName
-	 */
-	protected Obf(String mcpName)
-	{
-		this(mcpName, mcpName);
 	}
 	
 	/**
@@ -132,12 +143,21 @@ public class Obf
 	{
 		return String.format("L%s;", this.names[type].replace('.', '/'));
 	}
-	
+
 	/**
 	 * @param seargeName
 	 * @return
 	 */
-	private static String getDeobfName(String seargeName)
+	protected String getDeobfuscatedName(String seargeName)
+	{
+		return Obf.getDeobfName(seargeName);
+	}
+
+	/**
+	 * @param seargeName
+	 * @return
+	 */
+	static String getDeobfName(String seargeName)
 	{
 		if (Obf.mcpNames == null)
 		{

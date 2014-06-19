@@ -1,17 +1,14 @@
 package com.mumfrey.liteloader.launch;
 
-import net.minecraft.launchwrapper.IClassTransformer;
-
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 
 import com.mumfrey.liteloader.core.runtime.Obf;
+import com.mumfrey.liteloader.transformers.ClassTransformer;
 
-public class LiteLoaderTransformer implements IClassTransformer
+public class LiteLoaderTransformer extends ClassTransformer
 {
 	private static final String LITELOADER_TWEAKER_CLASS = LiteLoaderTweaker.class.getName().replace('.', '/');
 	
@@ -30,7 +27,7 @@ public class LiteLoaderTransformer implements IClassTransformer
 
 	private byte[] transformMain(byte[] basicClass)
 	{
-		ClassNode classNode = this.readClass(basicClass);
+		ClassNode classNode = this.readClass(basicClass, true);
 
 		for (MethodNode method : classNode.methods)
 		{
@@ -41,28 +38,5 @@ public class LiteLoaderTransformer implements IClassTransformer
 		}
 		
 		return this.writeClass(classNode);
-	}
-
-	/**
-	 * @param basicClass
-	 * @return
-	 */
-	private ClassNode readClass(byte[] basicClass)
-	{
-		ClassReader classReader = new ClassReader(basicClass);
-		ClassNode classNode = new ClassNode();
-		classReader.accept(classNode, ClassReader.EXPAND_FRAMES);
-		return classNode;
-	}
-
-	/**
-	 * @param classNode
-	 * @return
-	 */
-	private byte[] writeClass(ClassNode classNode)
-	{
-		ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
-		classNode.accept(writer);
-		return writer.toByteArray();
 	}
 }
