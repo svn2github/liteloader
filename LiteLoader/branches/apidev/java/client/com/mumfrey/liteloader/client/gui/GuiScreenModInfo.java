@@ -188,7 +188,7 @@ public class GuiScreenModInfo extends GuiScreen
 		
 		for (LiteAPI api : LiteLoader.getAPIs())
 		{
-			BrandingProvider brandingProvider = api.getBrandingProvider();
+			BrandingProvider brandingProvider = LiteLoader.getCustomisationProvider(api, BrandingProvider.class);
 			if (brandingProvider == null) continue;
 			
 			if (brandingProvider.getBrandingColour() != 0 && brandingProvider.getPriority() > brandingColourProviderPriority)

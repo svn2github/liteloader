@@ -21,6 +21,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.api.CoreProvider;
+import com.mumfrey.liteloader.api.CustomisationProvider;
 import com.mumfrey.liteloader.api.LiteAPI;
 import com.mumfrey.liteloader.api.ModLoadObserver;
 import com.mumfrey.liteloader.api.PostRenderObserver;
@@ -390,6 +391,19 @@ public final class LiteLoader
 	public static final LiteAPI getAPI(String identifier)
 	{
 		return LiteLoader.instance.apiProvider.getAPI(identifier);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <C extends CustomisationProvider> C getCustomisationProvider(LiteAPI api, Class<C> providerType)
+	{
+		List<CustomisationProvider> customisationProviders = api.getCustomisationProviders();
+		if (customisationProviders != null)
+		{
+			for (CustomisationProvider provider : customisationProviders)
+				if (providerType.isAssignableFrom(provider.getClass())) return (C)provider;
+		}
+		
+		return null;
 	}
 	
 	/**
@@ -809,7 +823,7 @@ public final class LiteLoader
 		this.engine = this.objectFactory.getGameEngine();
 		
 		// Cache profiler instance
-		this.profiler = this.objectFactory.getProfiler();
+		this.profiler = this.objectFactory.getGameEngine().getProfiler();
 		
 		// Create the event broker
 		this.events = this.objectFactory.getEventBroker();

@@ -24,7 +24,7 @@ import net.minecraft.util.ResourceLocation;
  * 
  * @author Adam Mummery-Smith
  */
-public interface BrandingProvider
+public interface BrandingProvider extends CustomisationProvider
 {
 	/**
 	 * Get the priority of this provider, higher numbers take precedence. Some brandings can only be set

@@ -1,6 +1,5 @@
 package com.mumfrey.liteloader.server.api;
 
-import net.minecraft.profiler.Profiler;
 import net.minecraft.server.MinecraftServer;
 
 import com.mumfrey.liteloader.common.GameEngine;
@@ -58,12 +57,6 @@ class ObjectFactoryServer implements ObjectFactory<DummyClient, MinecraftServer>
 		return this.engine;
 	}
 	
-	@Override
-	public Profiler getProfiler()
-	{
-		return this.getGameEngine().getProfiler();
-	}
-
 	@Override
 	public ModPanelManager<Object> getModPanelManager()
 	{

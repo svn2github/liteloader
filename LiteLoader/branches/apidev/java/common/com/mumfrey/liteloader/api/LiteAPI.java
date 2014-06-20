@@ -88,7 +88,7 @@ public interface LiteAPI
 	public abstract List<Observer> getObservers();
 
 	/**
-	 * Get the branding provider for this API, can return null 
+	 * Get the customisation providers for this API, can return null 
 	 */
-	public abstract BrandingProvider getBrandingProvider();
+	public abstract List<CustomisationProvider> getCustomisationProviders();
 }

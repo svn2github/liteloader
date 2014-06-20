@@ -2,7 +2,6 @@ package com.mumfrey.liteloader.client.api;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.profiler.Profiler;
 import net.minecraft.server.integrated.IntegratedServer;
 
 import com.mumfrey.liteloader.client.ClientEvents;
@@ -69,12 +68,6 @@ class ObjectFactoryClient implements ObjectFactory<Minecraft, IntegratedServer>
 		}	
 		
 		return this.engine;
-	}
-	
-	@Override
-	public Profiler getProfiler()
-	{
-		return this.getGameEngine().getProfiler();
 	}
 	
 	@Override

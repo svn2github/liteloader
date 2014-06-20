@@ -63,7 +63,7 @@ public class GuiAboutPanel extends ModInfoScreenPanel implements ScrollPanelCont
 		
 		for (LiteAPI api : LiteLoader.getAPIs())
 		{
-			BrandingProvider brandingProvider = api.getBrandingProvider();
+			BrandingProvider brandingProvider = LiteLoader.getCustomisationProvider(api, BrandingProvider.class);
 			if (brandingProvider != null)
 			{
 				sortedBrandingProviders.add(new SortableValue<BrandingProvider>(Integer.MAX_VALUE - brandingProvider.getPriority(), 0, brandingProvider));

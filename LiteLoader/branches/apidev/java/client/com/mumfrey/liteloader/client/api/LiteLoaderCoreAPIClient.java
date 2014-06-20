@@ -6,8 +6,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.server.integrated.IntegratedServer;
 
 import com.google.common.collect.ImmutableList;
-import com.mumfrey.liteloader.api.BrandingProvider;
 import com.mumfrey.liteloader.api.CoreProvider;
+import com.mumfrey.liteloader.api.CustomisationProvider;
 import com.mumfrey.liteloader.api.InterfaceProvider;
 import com.mumfrey.liteloader.api.Observer;
 import com.mumfrey.liteloader.client.LiteLoaderCoreProviderClient;
@@ -73,14 +73,16 @@ public class LiteLoaderCoreAPIClient extends LiteLoaderCoreAPI
 		return LiteLoaderCoreAPIClient.defaultPacketTransformers;
 	}
 	
-
 	/* (non-Javadoc)
-	 * @see com.mumfrey.liteloader.api.LiteAPI#getBrandingProvider()
+	 * @see com.mumfrey.liteloader.api.LiteAPI#getCustomisationProviders()
 	 */
 	@Override
-	public BrandingProvider getBrandingProvider()
+	public List<CustomisationProvider> getCustomisationProviders()
 	{
-		return new LiteLoaderBrandingProvider();
+		return ImmutableList.<CustomisationProvider>of
+		(
+			new LiteLoaderBrandingProvider()
+		);
 	}
 
 	/* (non-Javadoc)
