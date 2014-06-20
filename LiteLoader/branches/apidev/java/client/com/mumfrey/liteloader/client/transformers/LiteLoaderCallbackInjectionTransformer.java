@@ -52,7 +52,7 @@ public final class LiteLoaderCallbackInjectionTransformer extends CallbackInject
 		this.addCallback(type, Obf.ServerConfigurationManager, Obf.playerLoggedOut,              playerLoggedInOutDescriptor,    new Callback(CallbackType.RETURN, "onPlayerLogout",               Obf.CallbackProxyClient.ref));
 		this.addCallback(type, Obf.ServerConfigurationManager, Obf.spawnPlayer,                  spawnPlayerDescriptor,          new Callback(CallbackType.RETURN, "onSpawnPlayer",                Obf.CallbackProxyClient.ref));
 		this.addCallback(type, Obf.ServerConfigurationManager, Obf.respawnPlayer,                respawnPlayerDescriptor,        new Callback(CallbackType.RETURN, "onRespawnPlayer",              Obf.CallbackProxyClient.ref));
-		this.addCallback(type, Obf.C01PacketChatMessage,       Obf.constructor,                  "(Ljava/lang/String;)V",        new Callback(CallbackType.RETURN, "onOutboundChat",               Obf.CallbackProxyClient.ref));
+//		this.addCallback(type, Obf.C01PacketChatMessage,       Obf.constructor,                  "(Ljava/lang/String;)V",        new Callback(CallbackType.RETURN, "onOutboundChat",               Obf.CallbackProxyClient.ref));
 		this.addCallback(type, Obf.Minecraft,                  Obf.startGame,                    "()V",                          new Callback(CallbackType.RETURN, "onStartupComplete",            Obf.CallbackProxyClient.ref));
 	}
 	

@@ -1,6 +1,7 @@
 package com.mumfrey.liteloader.client;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.EntityClientPlayerMP;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.INetHandler;
 import net.minecraft.network.NetworkManager;
@@ -255,9 +256,10 @@ public class CallbackProxyClient
 			CallbackProxyClient.events.onSendChatMessage(packet, message);
 		}
 	}
-
-	public static void rungameloop(EventInfo<Minecraft> e)
+	
+	public static void onOutboundChat(EventInfo<EntityClientPlayerMP> e, String message)
 	{
-//		System.err.println(e);
+		System.err.println(e);
+		CallbackProxyClient.events.onSendChatMessage(e, message);
 	}
 }

@@ -12,10 +12,10 @@ public class LiteLoaderEventInjectionTransformer extends EventInjectionTransform
 	@Override
 	protected void addEvents()
 	{
-		Event runGameLoop = Event.getOrCreate("runGameLoop", true);
-		MethodInfo target = new MethodInfo(Obf.Minecraft, Obf.runGameLoop, Void.TYPE);
-		InjectionPoint point = new MethodHead();
+		InjectionPoint head = new MethodHead();
 		
-		this.addEvent(runGameLoop, target, point).addListener(new MethodInfo(Obf.CallbackProxyClient));
+		Event sendChatMessage = Event.getOrCreate("sendChatMessage", true);
+		MethodInfo sendChatMessageTarget = new MethodInfo(Obf.EntityClientPlayerMP, Obf.sendChatMessage, Void.TYPE, String.class);
+		this.addEvent(sendChatMessage, sendChatMessageTarget, head).addListener(new MethodInfo(Obf.CallbackProxyClient, "onOutboundChat"));
 	}
 }

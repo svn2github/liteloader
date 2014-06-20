@@ -3,6 +3,7 @@ package com.mumfrey.liteloader.client;
 import java.util.LinkedList;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.EntityClientPlayerMP;
 import net.minecraft.client.gui.GuiNewChat;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.network.INetHandler;
@@ -28,6 +29,7 @@ import com.mumfrey.liteloader.core.Events;
 import com.mumfrey.liteloader.core.InterfaceRegistrationDelegate;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.launch.LoaderProperties;
+import com.mumfrey.liteloader.transformers.event.EventInfo;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 public class ClientEvents extends Events<Minecraft, IntegratedServer>
@@ -144,6 +146,11 @@ public class ClientEvents extends Events<Minecraft, IntegratedServer>
 	 * List of mods which monitor outbound chat
 	 */
 	private LinkedList<OutboundChatListener> outboundChatListeners = new LinkedList<OutboundChatListener>();
+	
+	/**
+	 * List of mods which filter outbound chat
+	 */
+	private LinkedList<OutboundChatFilter> outboundChatFilters = new LinkedList<OutboundChatFilter>();
 
 	/**
 	 * Hash code of the current world. We don't store the world reference here because we don't want
@@ -195,6 +202,7 @@ public class ClientEvents extends Events<Minecraft, IntegratedServer>
 		delegate.registerInterface(PreJoinGameListener.class);
 		delegate.registerInterface(JoinGameListener.class);
 		delegate.registerInterface(OutboundChatListener.class);
+		delegate.registerInterface(OutboundChatFilter.class);
 	}
 	
 	/**
@@ -396,6 +404,17 @@ public class ClientEvents extends Events<Minecraft, IntegratedServer>
 		if (!this.outboundChatListeners.contains(outboundChatListener))
 		{
 			this.outboundChatListeners.add(outboundChatListener);
+		}
+	}
+	
+	/**
+	 * @param outboundChatFilter
+	 */
+	public void addOutboundChatFiler(OutboundChatFilter outboundChatFilter)
+	{
+		if (!this.outboundChatFilters.contains(outboundChatFilter))
+		{
+			this.outboundChatFilters.add(outboundChatFilter);
 		}
 	}
 
@@ -653,6 +672,18 @@ public class ClientEvents extends Events<Minecraft, IntegratedServer>
 		for (OutboundChatListener outboundChatListener : this.outboundChatListeners)
 		{
 			outboundChatListener.onSendChatMessage(packet, message);
+		}
+	}
+	
+	/**
+	 * @param message
+	 */
+	void onSendChatMessage(EventInfo<EntityClientPlayerMP> e, String message)
+	{
+		for (OutboundChatFilter outboundChatFilter : this.outboundChatFilters)
+		{
+			if (!outboundChatFilter.onSendChatMessage(message))
+				e.cancel();
 		}
 	}
 

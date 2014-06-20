@@ -43,6 +43,7 @@ public class Obf
 	public static final Obf               EntityPlayerMP = new Obf("net.minecraft.entity.player.EntityPlayerMP",                 "mm"  );
 	public static final Obf               NetworkManager = new Obf("net.minecraft.network.NetworkManager",                       "ef"  );
 	public static final Obf              DedicatedServer = new Obf("net.minecraft.server.dedicated.DedicatedServer",             "lj"  );
+	public static final Obf         EntityClientPlayerMP = new Obf("net.minecraft.client.entity.EntityClientPlayerMP",           "bje" );
 
 	// Fields
 	// -----------------------------------------------------------------------------------------
@@ -70,6 +71,7 @@ public class Obf
 	public static final Obf                    startGame = new Obf("func_71384_a",                                               "Z"   );
 	public static final Obf                  startServer = new Obf("func_71197_b",                                               "e"   );
 	public static final Obf            startServerThread = new Obf("func_71256_s",                                               "w"   );
+	public static final Obf              sendChatMessage = new Obf("func_71165_d",                                               "a"   );
 
 	public static final int MCP = 0;
 	public static final int SRG = 1;
