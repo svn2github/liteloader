@@ -61,4 +61,19 @@ public interface LoaderProperties
 	 * Write the properties to disk
 	 */
 	public abstract void writeProperties();
+
+	// General properties
+	public static final String OPTION_SOUND_MANAGER_FIX = "soundManagerFix";
+	public static final String OPTION_GENERATE_MAPPINGS = "genMappings";
+	public static final String OPTION_MOD_INFO_SCREEN   = "modInfoScreen";
+	public static final String OPTION_NO_HIDE_TAB       = "tabAlwaysExpanded";
+	public static final String OPTION_BRAND             = "brand";
+	public static final String OPTION_LOADING_BAR       = "loadingbar";
+
+	// Enumerator properties
+	public static final String OPTION_SEARCH_MODS       = "search.mods";
+	public static final String OPTION_SEARCH_JAR        = "search.jar";
+	public static final String OPTION_SEARCH_CLASSPATH  = "search.classpath";
+	public static final String OPTION_SEARCH_ZIPFILES   = "search.zipfiles";
+	public static final String OPTION_SEARCH_JARFILES   = "search.jarfiles";
 }

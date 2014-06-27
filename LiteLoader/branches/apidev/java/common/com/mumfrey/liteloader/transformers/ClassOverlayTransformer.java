@@ -199,10 +199,8 @@ public abstract class ClassOverlayTransformer extends ClassTransformer
 	 * @param transformedName
 	 * @param classBytes
 	 * @return
-	 * 
-	 * TODO Make this protected
 	 */
-	private byte[] applyOverlay(String transformedName, byte[] classBytes)
+	protected byte[] applyOverlay(String transformedName, byte[] classBytes)
 	{
 		ClassNode overlayClass = this.loadOverlayClass(transformedName, true);
 		ClassNode targetClass = this.readClass(classBytes, true);
@@ -238,10 +236,8 @@ public abstract class ClassOverlayTransformer extends ClassTransformer
 	 * 
 	 * @param targetClass
 	 * @param overlayClass
-	 * 
-	 * TODO Make this protected
 	 */
-	private void verifyClasses(ClassNode targetClass, ClassNode overlayClass)
+	protected void verifyClasses(ClassNode targetClass, ClassNode overlayClass)
 	{
 		if (targetClass.superName == null || overlayClass.superName == null || !targetClass.superName.equals(overlayClass.superName))
 		{

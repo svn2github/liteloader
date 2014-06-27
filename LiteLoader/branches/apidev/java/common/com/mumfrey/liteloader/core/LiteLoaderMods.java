@@ -21,6 +21,7 @@ import com.mumfrey.liteloader.interfaces.LoadableMod;
 import com.mumfrey.liteloader.launch.LoaderEnvironment;
 import com.mumfrey.liteloader.launch.LoaderProperties;
 import com.mumfrey.liteloader.modconfig.ConfigManager;
+import com.mumfrey.liteloader.modconfig.ConfigStrategy;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
@@ -474,7 +475,7 @@ public class LiteLoaderMods
 	 * @param container
 	 * @param identifier
 	 * @param reason
-	 * @param th TODO
+	 * @param th
 	 */
 	void onModLoadFailed(LoadableMod<?> container, String identifier, String reason, Throwable th)
 	{
@@ -585,9 +586,12 @@ public class LiteLoaderMods
 	private void handleModVersionUpgrade(LiteMod mod)
 	{
 		String modKey = this.getModNameForConfig(mod.getClass(), mod.getName());
-		LiteLoaderVersion lastModVersion = LiteLoaderVersion.getVersionFromRevision(this.properties.getLastKnownModRevision(modKey));
 		
-		if (LiteLoaderVersion.CURRENT.getLoaderRevision() > lastModVersion.getLoaderRevision())
+		int currentRevision = LiteLoaderVersion.CURRENT.getLoaderRevision();
+		int lastKnownRevision = this.properties.getLastKnownModRevision(modKey);
+		
+		LiteLoaderVersion lastModVersion = LiteLoaderVersion.getVersionFromRevision(lastKnownRevision);
+		if (currentRevision > lastModVersion.getLoaderRevision())
 		{
 			File newConfigPath = LiteLoader.getConfigFolder();
 			File oldConfigPath = this.environment.inflectVersionedConfigPath(lastModVersion);
@@ -607,6 +611,10 @@ public class LiteLoaderMods
 			
 			this.properties.storeLastKnownModRevision(modKey);
 			LiteLoaderLogger.info("Config upgrade succeeded for mod %s", mod.getName());
+		}
+		else if (currentRevision < lastKnownRevision && ConfigManager.getConfigStrategy(mod) == ConfigStrategy.Unversioned)
+		{
+			LiteLoaderLogger.warning("Mod %s has config from unknown loader revision %d. This may cause unexpected behaviour.", mod.getName(), lastKnownRevision);
 		}
 	}
 	

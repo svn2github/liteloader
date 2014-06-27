@@ -19,8 +19,6 @@ import com.mumfrey.liteloader.resources.InternalResourcePack;
  */
 public class LiteLoaderCoreProviderClient implements CoreProvider
 {
-	private static final String OPTION_SOUND_MANAGER_FIX = "soundManagerFix";
-	
 	/**
 	 * Loader Properties adapter 
 	 */
@@ -44,7 +42,7 @@ public class LiteLoaderCoreProviderClient implements CoreProvider
 	@Override
 	public void onInit()
 	{
-		this.inhibitSoundManagerReload = this.properties.getAndStoreBooleanProperty(LiteLoaderCoreProviderClient.OPTION_SOUND_MANAGER_FIX, true);
+		this.inhibitSoundManagerReload = this.properties.getAndStoreBooleanProperty(LoaderProperties.OPTION_SOUND_MANAGER_FIX, true);
 	}
 	
 	@Override

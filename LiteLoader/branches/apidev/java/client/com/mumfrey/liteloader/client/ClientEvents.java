@@ -34,8 +34,6 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 public class ClientEvents extends Events<Minecraft, IntegratedServer>
 {	
-	private static final String OPTION_GENERATE_MAPPINGS = "genMappings";
-
 	private static ClientEvents instance;
 
 	/**
@@ -72,6 +70,11 @@ public class ClientEvents extends Events<Minecraft, IntegratedServer>
 	 * Current screen height
 	 */
 	private int screenHeight = 480;
+	
+	/**
+	 * 
+	 */
+	private boolean wasFullScreen = false;
 	
 	/**
 	 * List of mods which implement Tickable interface and will receive tick
@@ -153,6 +156,11 @@ public class ClientEvents extends Events<Minecraft, IntegratedServer>
 	private LinkedList<OutboundChatFilter> outboundChatFilters = new LinkedList<OutboundChatFilter>();
 
 	/**
+	 * List of mods which monitor changes in the viewport
+	 */
+	private LinkedList<ViewportListener> viewportListeners = new LinkedList<ViewportListener>();
+
+	/**
 	 * Hash code of the current world. We don't store the world reference here because we don't want
 	 * to mess with world GC by mistake
 	 */
@@ -168,7 +176,7 @@ public class ClientEvents extends Events<Minecraft, IntegratedServer>
 		this.engineClient = (GameEngineClient)engine;
 		try
 		{
-			if (properties.getBooleanProperty(ClientEvents.OPTION_GENERATE_MAPPINGS))
+			if (properties.getBooleanProperty(LoaderProperties.OPTION_GENERATE_MAPPINGS))
 			{
 				this.genProfiler = GenProfiler.class.newInstance();
 			}
@@ -203,6 +211,7 @@ public class ClientEvents extends Events<Minecraft, IntegratedServer>
 		delegate.registerInterface(JoinGameListener.class);
 		delegate.registerInterface(OutboundChatListener.class);
 		delegate.registerInterface(OutboundChatFilter.class);
+		delegate.registerInterface(ViewportListener.class);
 	}
 	
 	/**
@@ -417,6 +426,17 @@ public class ClientEvents extends Events<Minecraft, IntegratedServer>
 			this.outboundChatFilters.add(outboundChatFilter);
 		}
 	}
+	
+	/**
+	 * @param viewportListener
+	 */
+	public void addViewportListener(ViewportListener viewportListener)
+	{
+		if (!this.viewportListeners.contains(viewportListener))
+		{
+			this.viewportListeners.add(viewportListener);
+		}
+	}
 
 	/**
 	 * Late initialisation callback
@@ -444,8 +464,28 @@ public class ClientEvents extends Events<Minecraft, IntegratedServer>
 				}
 			}
 		}
+		
+		this.onResize(this.engineClient.getClient());
 
 		super.onStartupComplete();
+	}
+
+	public void onResize(Minecraft minecraft)
+	{
+		this.currentResolution = this.engineClient.getScaledResolution();
+		this.screenWidth = this.currentResolution.getScaledWidth();
+		this.screenHeight = this.currentResolution.getScaledHeight();
+		
+		if (this.wasFullScreen != minecraft.isFullScreen())
+		{
+			for (ViewportListener viewportListener : this.viewportListeners)
+				viewportListener.onFullScreenToggled(minecraft.isFullScreen());
+		}
+		
+		this.wasFullScreen = minecraft.isFullScreen();
+		
+		for (ViewportListener viewportListener : this.viewportListeners)
+			viewportListener.onViewportResized(this.currentResolution, minecraft.displayWidth, minecraft.displayHeight);
 	}
 	
 	/**
@@ -453,10 +493,6 @@ public class ClientEvents extends Events<Minecraft, IntegratedServer>
 	 */
 	void onRender()
 	{
-		this.currentResolution = this.engineClient.getScaledResolution();
-		this.screenWidth = this.currentResolution.getScaledWidth();
-		this.screenHeight = this.currentResolution.getScaledHeight();
-		
 		for (RenderListener renderListener : this.renderListeners)
 			renderListener.onRender();
 	}

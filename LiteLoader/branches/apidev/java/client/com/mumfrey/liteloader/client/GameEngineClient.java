@@ -87,7 +87,7 @@ public class GameEngineClient implements GameEngine<Minecraft, IntegratedServer>
 	@Override
 	public boolean isInGame()
 	{
-		return this.engine.thePlayer != null && this.engine.theWorld != null && this.engine.theWorld.isClientWorld;
+		return this.engine.thePlayer != null && this.engine.theWorld != null && this.engine.theWorld.isRemote;
 	}
 	
 	/* (non-Javadoc)
@@ -133,7 +133,7 @@ public class GameEngineClient implements GameEngine<Minecraft, IntegratedServer>
 
 	public ScaledResolution getScaledResolution()
 	{
-		return new ScaledResolution(this.engine.gameSettings, this.engine.displayWidth, this.engine.displayHeight);
+		return new ScaledResolution(this.engine, this.engine.displayWidth, this.engine.displayHeight);
 	}
 
 	public GuiNewChat getChatGUI()

@@ -8,8 +8,13 @@ gui.about.poweredbyversion=v%s§r powered by LiteLoader v%s
 
 gui.about.checkupdates=§nCheck for updates
 
-gui.about.showtabmessage=Show LiteLoader tab
-gui.about.keystrokehint= §e(use §9CTRL§e+§9SHIFT§e+§9TAB§e)
+gui.settings.showtab.label=Show LiteLoader Panel Tab
+gui.settings.showtab.help1=If you disable this option, use CTRL+SHIFT+TAB
+gui.settings.showtab.help2=to open the LiteLoader panel
+gui.settings.notabhide.label=LiteLoader Tab Always Expanded
+gui.settings.notabhide.help1=Only applies if the above option is also checked
+
+gui.about.taboptions=§nLiteLoader Panel Options
 
 gui.about.authors=Authors
 

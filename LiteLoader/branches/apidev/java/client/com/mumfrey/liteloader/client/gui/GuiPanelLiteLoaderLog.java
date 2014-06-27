@@ -28,14 +28,14 @@ import com.mumfrey.liteloader.util.net.PastebinUpload;
  *
  * @author Adam Mummery-Smith
  */
-public class GuiLiteLoaderLog extends ModInfoScreenPanel implements ScrollPanelContent
+class GuiPanelLiteLoaderLog extends GuiPanel implements ScrollPanelContent
 {
 	private static boolean useNativeRes = false;
 	
 	/**
 	 * Scroll pane
 	 */
-	private GuiScrollPane scrollPane;
+	private GuiScrollPanel scrollPane;
 	
 	private List<String> logEntries = new ArrayList<String>();
 	
@@ -55,7 +55,7 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel implements ScrollPanelC
 
 	private boolean closeDialog;
 
-	private GuiScreenModInfo parent;
+	private GuiLiteLoaderPanel parent;
 	
 	/**
 	 * @param parent
@@ -63,11 +63,11 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel implements ScrollPanelC
 	 * @param panel
 	 * @param mod
 	 */
-	GuiLiteLoaderLog(Minecraft minecraft, GuiScreenModInfo parent)
+	GuiPanelLiteLoaderLog(Minecraft minecraft, GuiLiteLoaderPanel parent)
 	{
 		super(minecraft);
 		this.parent = parent;
-		this.scrollPane = new GuiScrollPane(minecraft, this, MARGIN, TOP, this.width - (MARGIN * 2), this.height - TOP - BOTTOM);
+		this.scrollPane = new GuiScrollPanel(minecraft, this, MARGIN, TOP, this.width - (MARGIN * 2), this.height - TOP - BOTTOM);
 	}
 
 	private void updateLog()
@@ -79,7 +79,7 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel implements ScrollPanelC
 	}
 	
 	@Override
-	public int getScrollPaneContentHeight(GuiScrollPane source)
+	public int getScrollPanelContentHeight(GuiScrollPanel source)
 	{
 		return (int)(this.logEntries.size() * 10 / (this.chkScale.checked ? this.guiScale : 1.0F));
 	}
@@ -99,9 +99,9 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel implements ScrollPanelC
 		this.controls.add(this.btnUpload = new GuiButton(1, this.width - 145 - MARGIN, this.height - BOTTOM + 9, 80, 20, I18n.format("gui.log.postlog")));
 		this.controls.add(this.chkScale = new GuiCheckbox(2, MARGIN, this.height - BOTTOM + 15, I18n.format("gui.log.scalecheckbox")));
 		
-		this.chkScale.checked = GuiLiteLoaderLog.useNativeRes;
+		this.chkScale.checked = GuiPanelLiteLoaderLog.useNativeRes;
 		
-		ScaledResolution res = new ScaledResolution(this.mc.gameSettings, this.mc.displayWidth, this.mc.displayHeight);
+		ScaledResolution res = new ScaledResolution(this.mc, this.mc.displayWidth, this.mc.displayHeight);
 		this.guiScale = res.getScaleFactor();
 		
 		this.scrollPane.setSizeAndPosition(MARGIN, TOP, this.width - (MARGIN * 2), this.height - TOP - BOTTOM);
@@ -215,7 +215,7 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel implements ScrollPanelC
 	}
 	
 	@Override
-	public void drawScrollPaneContent(GuiScrollPane source, int mouseX, int mouseY, float partialTicks, int scrollAmount, int visibleHeight)
+	public void drawScrollPanelContent(GuiScrollPanel source, int mouseX, int mouseY, float partialTicks, int scrollAmount, int visibleHeight)
 	{
 		int yPos = 0;
 		int height = this.innerHeight;
@@ -240,7 +240,7 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel implements ScrollPanelC
 	}
 	
 	@Override
-	public void scrollPaneMousePressed(GuiScrollPane source, int mouseX, int mouseY, int mouseButton)
+	public void scrollPanelMousePressed(GuiScrollPanel source, int mouseX, int mouseY, int mouseButton)
 	{
 	}
 
@@ -282,7 +282,7 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel implements ScrollPanelC
 		if (control.id == 2 && this.chkScale != null)
 		{
 			this.chkScale.checked = !this.chkScale.checked;
-			GuiLiteLoaderLog.useNativeRes = this.chkScale.checked;
+			GuiPanelLiteLoaderLog.useNativeRes = this.chkScale.checked;
 			this.updateLog();
 		}
 		
@@ -298,7 +298,7 @@ public class GuiLiteLoaderLog extends ModInfoScreenPanel implements ScrollPanelC
 	}
 	
 	@Override
-	public void scrollPaneActionPerformed(GuiScrollPane source, GuiButton control)
+	public void scrollPanelActionPerformed(GuiScrollPanel source, GuiButton control)
 	{
 	}
 

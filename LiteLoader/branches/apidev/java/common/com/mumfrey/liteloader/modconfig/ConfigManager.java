@@ -212,4 +212,19 @@ public class ConfigManager
 			writer.sync();
 		}
 	}
+	
+	/**
+	 * @param exposable
+	 * @return
+	 */
+	public static ConfigStrategy getConfigStrategy(Exposable exposable)
+	{
+		ExposableOptions options = exposable.getClass().<ExposableOptions>getAnnotation(ExposableOptions.class);
+		if (options != null)
+		{
+			return options.strategy();
+		}
+		
+		return ConfigStrategy.Unversioned;
+	}
 }

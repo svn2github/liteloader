@@ -239,7 +239,7 @@ public class GuiModListEntry extends Gui
 	/**
 	 * @param providesTweak
 	 * @param providesTransformer
-	 * @param usingAPI TODO
+	 * @param usingAPI
 	 */
 	protected void initIcons(boolean providesTweak, boolean providesTransformer, boolean usingAPI)
 	{
@@ -324,7 +324,7 @@ public class GuiModListEntry extends Gui
 
 		if (mouseX >= xPosition && mouseX <= xPosition + 12 && mouseY >= yPosition && mouseY <= yPosition + 12)
 		{
-			GuiScreenModInfo.drawTooltip(this.fontRenderer, icon.getIconName(), mouseX, mouseY, 4096, 4096, GuiModListEntry.WHITE, GuiModListEntry.BLEND_HALF & GuiModListEntry.BLACK);
+			GuiLiteLoaderPanel.drawTooltip(this.fontRenderer, icon.getIconName(), mouseX, mouseY, 4096, 4096, GuiModListEntry.WHITE, GuiModListEntry.BLEND_HALF & GuiModListEntry.BLACK);
 		}
 		
 		return xPosition - 14;
@@ -369,7 +369,7 @@ public class GuiModListEntry extends Gui
 		
 		this.mouseOverScrollBar = this.isMouseOver(mouseX, mouseY, xPosition + width - 5, yPos, 5, scrollHeight);
 
-		GuiScreenModInfo.glEnableClipping(-1, -1, yPos, bottom - 3);
+		GuiLiteLoaderPanel.glEnableClipping(-1, -1, yPos, bottom - 3);
 		this.fontRenderer.drawSplitString(this.description, xPosition + 5, yPos - this.scrollBar.getValue(), width - 11, GuiModListEntry.DESCRIPTION_COLOUR);
 	}
 
@@ -430,7 +430,7 @@ public class GuiModListEntry extends Gui
 	 * @param missingDependencies
 	 * @param enabled
 	 * @param external
-	 * @param selected TODO
+	 * @param selected
 	 * @return
 	 */
 	protected int getTitleColour(boolean selected)
@@ -443,7 +443,7 @@ public class GuiModListEntry extends Gui
 
 	/**
 	 * @param external
-	 * @param selected TODO
+	 * @param selected
 	 * @return
 	 */
 	protected int getStatusColour(boolean selected)
@@ -554,7 +554,7 @@ public class GuiModListEntry extends Gui
 	{
 		if (this.mouseOverInfo)
 		{
-			this.scrollBar.offsetValue(-mouseWheelDelta);
+			this.scrollBar.offsetValue(-mouseWheelDelta / 8);
 			return true;
 		}
 		

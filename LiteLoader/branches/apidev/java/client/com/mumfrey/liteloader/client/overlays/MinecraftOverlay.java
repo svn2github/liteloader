@@ -7,7 +7,6 @@ import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.resources.IResourcePack;
 import net.minecraft.profiler.Profiler;
 import net.minecraft.util.Timer;
@@ -26,15 +25,14 @@ public abstract class MinecraftOverlay implements IMinecraft
 	@SuppressWarnings("unused")
 	private static Minecraft __TARGET;
 	
-	// TODO Obfuscation 1.7.2
+	// TODO Obfuscation 1.7.10
 	// Fields
 	@Obfuscated({"field_71428_T", "Q"}) private Timer timer;
-	@Obfuscated({"field_71424_I", "A"}) private Profiler mcProfiler;
-	@Obfuscated({"field_71425_J", "B"}) private boolean running;
+	@Obfuscated({"field_71424_I", "z"}) private Profiler mcProfiler;
+	@Obfuscated({"field_71425_J", "A"}) private boolean running;
 	@Obfuscated({"field_110449_ao", "ap"}) private List<?> defaultResourcePacks = Lists.newArrayList();
 	@Obfuscated({"field_71475_ae", "af"}) private String serverName;
 	@Obfuscated({"field_71477_af", "ag"}) private int serverPort;
-	@Obfuscated({"field_71422_O", "K"}) private ServerData currentServerData;
 	
 	// Methods
 	@Obfuscated({"func_71370_a", "a"}) @Stub abstract void resize(int width, int height);
@@ -100,14 +98,5 @@ public abstract class MinecraftOverlay implements IMinecraft
 	public int getServerPort()
 	{
 		return this.serverPort;
-	}
-	
-	/* (non-Javadoc)
-	 * @see com.mumfrey.liteloader.client.overlays.IMinecraft#getCurrentServerData()
-	 */
-	@Override
-	public ServerData getCurrentServerData()
-	{
-		return this.currentServerData;
 	}
 }

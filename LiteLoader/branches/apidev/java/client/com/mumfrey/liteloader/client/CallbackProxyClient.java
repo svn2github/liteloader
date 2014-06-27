@@ -259,7 +259,11 @@ public class CallbackProxyClient
 	
 	public static void onOutboundChat(EventInfo<EntityClientPlayerMP> e, String message)
 	{
-		System.err.println(e);
 		CallbackProxyClient.events.onSendChatMessage(e, message);
 	}
+
+    public static void onResize(EventInfo<Minecraft> e)
+    {
+    	CallbackProxyClient.events.onResize(e.getSource());
+    }
 }

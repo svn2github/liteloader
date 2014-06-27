@@ -33,9 +33,6 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
  */
 public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule
 {
-	private static final String OPTION_SEARCH_ZIPFILES  = "search.zipfiles";
-	private static final String OPTION_SEARCH_JARFILES  = "search.jarfiles";
-
 	/**
 	 * Ordered sets used to sort mods by version/revision  
 	 */
@@ -70,8 +67,8 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule
 	public void init(LoaderEnvironment environment, LoaderProperties properties)
 	{
 		this.loadTweaks = properties.loadTweaksEnabled();
-		this.readZipFiles = properties.getAndStoreBooleanProperty(OPTION_SEARCH_ZIPFILES, false);
-		this.readJarFiles = properties.getAndStoreBooleanProperty(OPTION_SEARCH_JARFILES, true);
+		this.readZipFiles = properties.getAndStoreBooleanProperty(LoaderProperties.OPTION_SEARCH_ZIPFILES, false);
+		this.readJarFiles = properties.getAndStoreBooleanProperty(LoaderProperties.OPTION_SEARCH_JARFILES, true);
 		
 		this.coreAPI.writeDiscoverySettings();
 	}
@@ -82,8 +79,8 @@ public class EnumeratorModuleFolder implements FilenameFilter, EnumeratorModule
 	@Override
 	public void writeSettings(LoaderEnvironment environment, LoaderProperties properties)
 	{
-		properties.setBooleanProperty(OPTION_SEARCH_ZIPFILES, this.readZipFiles);
-		properties.setBooleanProperty(OPTION_SEARCH_JARFILES, this.readJarFiles);
+		properties.setBooleanProperty(LoaderProperties.OPTION_SEARCH_ZIPFILES, this.readZipFiles);
+		properties.setBooleanProperty(LoaderProperties.OPTION_SEARCH_JARFILES, this.readJarFiles);
 	}
 	
 	@Override

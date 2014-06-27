@@ -8,10 +8,10 @@ import net.minecraft.client.gui.GuiScreen;
 
 import org.lwjgl.input.Keyboard;
 
-import com.mumfrey.liteloader.client.gui.GuiScreenModInfo;
+import com.mumfrey.liteloader.client.gui.GuiLiteLoaderPanel;
 import com.mumfrey.liteloader.common.GameEngine;
 import com.mumfrey.liteloader.core.LiteLoaderMods;
-import com.mumfrey.liteloader.interfaces.ModPanelManager;
+import com.mumfrey.liteloader.interfaces.PanelManager;
 import com.mumfrey.liteloader.launch.LoaderEnvironment;
 import com.mumfrey.liteloader.launch.LoaderProperties;
 import com.mumfrey.liteloader.modconfig.ConfigManager;
@@ -21,9 +21,10 @@ import com.mumfrey.liteloader.modconfig.ConfigManager;
  * 
  * @author Adam Mummery-Smith
  */
-public class LiteLoaderModPanelManager implements ModPanelManager<GuiScreen>
+public class LiteLoaderPanelManager implements PanelManager<GuiScreen>
 {
 	private static final String OPTION_MOD_INFO_SCREEN = "modInfoScreen";
+	private static final String OPTION_NO_HIDE_TAB = "tabAlwaysExpanded"; 
 
 	private final LoaderEnvironment environment;
 	
@@ -44,6 +45,11 @@ public class LiteLoaderModPanelManager implements ModPanelManager<GuiScreen>
 	private boolean displayModInfoScreenTab = true;
 	
 	/**
+	 * Don't hide t
+	 */
+	private boolean tabAlwaysExpanded = false;
+	
+	/**
 	 * Override for the "mod info" tab setting, so that mods which want to handle the mod info themselves
 	 * can temporarily disable the function without having to change the underlying property
 	 */
@@ -53,22 +59,21 @@ public class LiteLoaderModPanelManager implements ModPanelManager<GuiScreen>
 	 * Active "mod info" screen, drawn as an overlay when in the main menu and made the active screen if
 	 * the user clicks the tab
 	 */
-	private GuiScreenModInfo modInfoScreen;
+	private GuiLiteLoaderPanel panelHost;
 	
 	/**
 	 * @param environment
 	 * @param properties
-	 * @param mods
-	 * @param configManager
 	 */
 	@SuppressWarnings("unchecked")
-	public LiteLoaderModPanelManager(GameEngine<?, ?> engine, LoaderEnvironment environment, LoaderProperties properties)
+	public LiteLoaderPanelManager(GameEngine<?, ?> engine, LoaderEnvironment environment, LoaderProperties properties)
 	{
 		this.environment = environment;
 		this.properties  = properties;
 		this.minecraft   = ((GameEngine<Minecraft, ?>)engine).getClient();
 		
-		this.displayModInfoScreenTab = this.properties.getAndStoreBooleanProperty(LiteLoaderModPanelManager.OPTION_MOD_INFO_SCREEN, true);
+		this.displayModInfoScreenTab = this.properties.getAndStoreBooleanProperty(LiteLoaderPanelManager.OPTION_MOD_INFO_SCREEN, true);
+		this.tabAlwaysExpanded = this.properties.getAndStoreBooleanProperty(LiteLoaderPanelManager.OPTION_NO_HIDE_TAB, false);
 	}
 	
 	@Override
@@ -84,9 +89,9 @@ public class LiteLoaderModPanelManager implements ModPanelManager<GuiScreen>
 	@Override
 	public void onTick(boolean clock, float partialTicks, boolean inGame)
 	{
-		if (clock && this.modInfoScreen != null && this.minecraft.currentScreen != this.modInfoScreen)
+		if (clock && this.panelHost != null && this.minecraft.currentScreen != this.panelHost)
 		{
-			this.modInfoScreen.updateScreen();
+			this.panelHost.updateScreen();
 		}
 	}
 
@@ -100,26 +105,26 @@ public class LiteLoaderModPanelManager implements ModPanelManager<GuiScreen>
 		
 		boolean tabHidden = this.hideModInfoScreenTab && this.minecraft.currentScreen instanceof GuiMainMenu;
 		
-		if (this.tabSupportedOnScreen(this.minecraft.currentScreen) && ((this.displayModInfoScreenTab && !tabHidden) || (this.modInfoScreen != null && this.modInfoScreen.isTweeningOrOpen())))
+		if (this.isPanelSupportedOnScreen(this.minecraft.currentScreen) && ((this.displayModInfoScreenTab && !tabHidden) || (this.panelHost != null && this.panelHost.isOpen())))
 		{
 			// If we're at the main menu, prepare the overlay
-			if (this.modInfoScreen == null || this.modInfoScreen.getScreen() != this.minecraft.currentScreen)
+			if (this.panelHost == null || this.panelHost.getScreen() != this.minecraft.currentScreen)
 			{
-				this.modInfoScreen = new GuiScreenModInfo(this.minecraft, this.minecraft.currentScreen, this.mods, this.environment, this.configManager, !tabHidden);
+				this.panelHost = new GuiLiteLoaderPanel(this.minecraft, this.minecraft.currentScreen, this.mods, this.environment, this.configManager, !tabHidden);
 			}
 
 			this.minecraft.entityRenderer.setupOverlayRendering();
-			this.modInfoScreen.drawScreen(mouseX, mouseY, partialTicks);
+			this.panelHost.drawScreen(mouseX, mouseY, partialTicks, this.tabAlwaysExpanded);
 		}
-		else if (this.minecraft.currentScreen != this.modInfoScreen && this.modInfoScreen != null)
+		else if (this.minecraft.currentScreen != this.panelHost && this.panelHost != null)
 		{
 			// If we're in any other screen, kill the overlay
-			this.modInfoScreen.release();
-			this.modInfoScreen = null;
+			this.panelHost.release();
+			this.panelHost = null;
 		}
-		else if (this.tabSupportedOnScreen(this.minecraft.currentScreen) && Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) && Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) && Keyboard.isKeyDown(Keyboard.KEY_TAB))
+		else if (this.isPanelSupportedOnScreen(this.minecraft.currentScreen) && Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) && Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) && Keyboard.isKeyDown(Keyboard.KEY_TAB))
 		{
-			this.displayModInfoScreen(this.minecraft.currentScreen);
+			this.displayLiteLoaderPanel(this.minecraft.currentScreen);
 		}
 	}
 	
@@ -139,7 +144,7 @@ public class LiteLoaderModPanelManager implements ModPanelManager<GuiScreen>
 	public void setTabVisible(boolean show)
 	{
 		this.displayModInfoScreenTab = show;
-		this.properties.setBooleanProperty(LiteLoaderModPanelManager.OPTION_MOD_INFO_SCREEN, show);
+		this.properties.setBooleanProperty(LiteLoaderPanelManager.OPTION_MOD_INFO_SCREEN, show);
 		this.properties.writeProperties();
 	}
 	
@@ -152,22 +157,36 @@ public class LiteLoaderModPanelManager implements ModPanelManager<GuiScreen>
 		return this.displayModInfoScreenTab;
 	}
 	
+	@Override
+	public void setTabAlwaysExpanded(boolean expand)
+	{
+		this.tabAlwaysExpanded = expand;
+		this.properties.setBooleanProperty(LiteLoaderPanelManager.OPTION_NO_HIDE_TAB, expand);
+		this.properties.writeProperties();
+	}
+	
+	@Override
+	public boolean isTabAlwaysExpanded()
+	{
+		return this.tabAlwaysExpanded;
+	}
+	
 	/**
-	 * Display the "mod info" overlay over the specified GUI
+	 * Display the liteloader panel over the specified GUI
 	 * 
 	 * @param parentScreen
 	 */
 	@Override
-	public void displayModInfoScreen(GuiScreen parentScreen)
+	public void displayLiteLoaderPanel(GuiScreen parentScreen)
 	{
-		if (this.tabSupportedOnScreen(parentScreen))
+		if (this.isPanelSupportedOnScreen(parentScreen))
 		{
-			this.modInfoScreen = new GuiScreenModInfo(this.minecraft, parentScreen, this.mods, this.environment, this.configManager, !this.hideModInfoScreenTab);
-			this.minecraft.displayGuiScreen(this.modInfoScreen);
+			this.panelHost = new GuiLiteLoaderPanel(this.minecraft, parentScreen, this.mods, this.environment, this.configManager, !this.hideModInfoScreenTab);
+			this.minecraft.displayGuiScreen(this.panelHost);
 		}
 	}
 
-	private boolean tabSupportedOnScreen(GuiScreen guiScreen)
+	private boolean isPanelSupportedOnScreen(GuiScreen guiScreen)
 	{
 		return (
 			guiScreen instanceof GuiMainMenu ||

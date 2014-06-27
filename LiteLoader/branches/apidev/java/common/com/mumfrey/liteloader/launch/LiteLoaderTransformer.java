@@ -2,6 +2,7 @@ package com.mumfrey.liteloader.launch;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 
@@ -21,6 +22,10 @@ public class LiteLoaderTransformer extends ClassTransformer
 		{
 			return this.transformMain(basicClass);
 		}
+		else if (Obf.Blocks.obf.equals(transformedName) || Obf.Blocks.name.equals(transformedName) || Obf.Items.obf.equals(transformedName) || Obf.Items.name.equals(transformedName))
+		{
+			return this.stripFinalModifiers(basicClass);
+		}
 		
 		return basicClass;
 	}
@@ -33,8 +38,20 @@ public class LiteLoaderTransformer extends ClassTransformer
 		{
 			if ("main".equals(method.name))
 			{
-				method.instructions.insert(new MethodInsnNode(Opcodes.INVOKESTATIC, LiteLoaderTransformer.LITELOADER_TWEAKER_CLASS, LiteLoaderTransformer.METHOD_PRE_BEGIN_GAME, "()V"));
+				method.instructions.insert(new MethodInsnNode(Opcodes.INVOKESTATIC, LiteLoaderTransformer.LITELOADER_TWEAKER_CLASS, LiteLoaderTransformer.METHOD_PRE_BEGIN_GAME, "()V", false));
 			}
+		}
+		
+		return this.writeClass(classNode);
+	}
+
+	private byte[] stripFinalModifiers(byte[] basicClass)
+	{
+		ClassNode classNode = this.readClass(basicClass, true);
+
+		for (FieldNode field : classNode.fields)
+		{
+			field.access = field.access & ~Opcodes.ACC_FINAL;
 		}
 		
 		return this.writeClass(classNode);

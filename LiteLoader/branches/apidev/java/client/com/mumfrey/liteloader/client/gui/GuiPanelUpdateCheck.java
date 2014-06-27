@@ -16,7 +16,7 @@ import net.minecraft.client.resources.I18n;
  *
  * @author Adam Mummery-Smith
  */
-public class GuiCheckUpdatePanel extends ModInfoScreenPanel
+class GuiPanelUpdateCheck extends GuiPanel
 {
 	/**
 	 * URI to open if a new version is available
@@ -43,7 +43,7 @@ public class GuiCheckUpdatePanel extends ModInfoScreenPanel
 	 */
 	private int throb;
 
-	public GuiCheckUpdatePanel(Minecraft minecraft, UpdateSite updateSite, String updateName)
+	public GuiPanelUpdateCheck(Minecraft minecraft, UpdateSite updateSite, String updateName)
 	{
 		super(minecraft);
 		
@@ -121,7 +121,7 @@ public class GuiCheckUpdatePanel extends ModInfoScreenPanel
 		if (control.id == 1) this.updateSite.beginUpdateCheck();
 		if (control.id == 2)
 		{
-			this.openURI(GuiCheckUpdatePanel.DOWNLOAD_URI);
+			this.openURI(GuiPanelUpdateCheck.DOWNLOAD_URI);
 			this.btnDownload.enabled = false;
 		}
 	}

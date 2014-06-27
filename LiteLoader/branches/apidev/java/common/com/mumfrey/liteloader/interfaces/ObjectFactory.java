@@ -23,7 +23,7 @@ public interface ObjectFactory<TClient, TServer extends MinecraftServer>
 	
 	public abstract GameEngine<TClient, TServer> getGameEngine();
 	
-	public abstract ModPanelManager<?> getModPanelManager();
+	public abstract PanelManager<?> getModPanelManager();
 	
 	public abstract ClientPluginChannels getClientPluginChannels();
 	

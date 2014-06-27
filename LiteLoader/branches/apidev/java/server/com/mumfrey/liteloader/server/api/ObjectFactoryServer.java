@@ -7,7 +7,7 @@ import com.mumfrey.liteloader.core.ClientPluginChannels;
 import com.mumfrey.liteloader.core.Events;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.core.ServerPluginChannels;
-import com.mumfrey.liteloader.interfaces.ModPanelManager;
+import com.mumfrey.liteloader.interfaces.PanelManager;
 import com.mumfrey.liteloader.interfaces.ObjectFactory;
 import com.mumfrey.liteloader.launch.LoaderEnvironment;
 import com.mumfrey.liteloader.launch.LoaderProperties;
@@ -58,7 +58,7 @@ class ObjectFactoryServer implements ObjectFactory<DummyClient, MinecraftServer>
 	}
 	
 	@Override
-	public ModPanelManager<Object> getModPanelManager()
+	public PanelManager<Object> getModPanelManager()
 	{
 		return null;
 	}

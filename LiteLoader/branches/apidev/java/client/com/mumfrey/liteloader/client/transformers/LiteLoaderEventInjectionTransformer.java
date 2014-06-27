@@ -17,5 +17,9 @@ public class LiteLoaderEventInjectionTransformer extends EventInjectionTransform
 		Event sendChatMessage = Event.getOrCreate("sendChatMessage", true);
 		MethodInfo sendChatMessageTarget = new MethodInfo(Obf.EntityClientPlayerMP, Obf.sendChatMessage, Void.TYPE, String.class);
 		this.addEvent(sendChatMessage, sendChatMessageTarget, head).addListener(new MethodInfo(Obf.CallbackProxyClient, "onOutboundChat"));
+		
+		Event updateFramebufferSize = Event.getOrCreate("updateFramebufferSize", false);
+		MethodInfo updateFramebufferSizeTarget = new MethodInfo(Obf.Minecraft, Obf.updateFramebufferSize, Void.TYPE);
+		this.addEvent(updateFramebufferSize, updateFramebufferSizeTarget, head).addListener(new MethodInfo(Obf.CallbackProxyClient, "onResize"));
 	}
 }

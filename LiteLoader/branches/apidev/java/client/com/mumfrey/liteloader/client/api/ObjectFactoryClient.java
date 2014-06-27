@@ -7,14 +7,14 @@ import net.minecraft.server.integrated.IntegratedServer;
 import com.mumfrey.liteloader.client.ClientEvents;
 import com.mumfrey.liteloader.client.ClientPluginChannelsClient;
 import com.mumfrey.liteloader.client.GameEngineClient;
-import com.mumfrey.liteloader.client.LiteLoaderModPanelManager;
+import com.mumfrey.liteloader.client.LiteLoaderPanelManager;
 import com.mumfrey.liteloader.client.gui.startup.LoadingBar;
 import com.mumfrey.liteloader.common.GameEngine;
 import com.mumfrey.liteloader.core.ClientPluginChannels;
 import com.mumfrey.liteloader.core.Events;
 import com.mumfrey.liteloader.core.LiteLoader;
 import com.mumfrey.liteloader.core.ServerPluginChannels;
-import com.mumfrey.liteloader.interfaces.ModPanelManager;
+import com.mumfrey.liteloader.interfaces.PanelManager;
 import com.mumfrey.liteloader.interfaces.ObjectFactory;
 import com.mumfrey.liteloader.launch.LoaderEnvironment;
 import com.mumfrey.liteloader.launch.LoaderProperties;
@@ -36,7 +36,7 @@ class ObjectFactoryClient implements ObjectFactory<Minecraft, IntegratedServer>
 
 	private GameEngineClient engine;
 	
-	private ModPanelManager<GuiScreen> modPanelManager;
+	private PanelManager<GuiScreen> modPanelManager;
 	
 	private ClientPluginChannelsClient clientPluginChannels;
 	
@@ -71,11 +71,11 @@ class ObjectFactoryClient implements ObjectFactory<Minecraft, IntegratedServer>
 	}
 	
 	@Override
-	public ModPanelManager<GuiScreen> getModPanelManager()
+	public PanelManager<GuiScreen> getModPanelManager()
 	{
 		if (this.modPanelManager == null)
 		{
-			this.modPanelManager = new LiteLoaderModPanelManager(this.getGameEngine(), this.environment, this.properties);
+			this.modPanelManager = new LiteLoaderPanelManager(this.getGameEngine(), this.environment, this.properties);
 		}
 		
 		return this.modPanelManager;
@@ -112,7 +112,6 @@ class ObjectFactoryClient implements ObjectFactory<Minecraft, IntegratedServer>
 	@Override
 	public PermissionsManagerServer getServerPermissionManager()
 	{
-		// TODO Auto-generated method stub
 		return null;
 	}
 

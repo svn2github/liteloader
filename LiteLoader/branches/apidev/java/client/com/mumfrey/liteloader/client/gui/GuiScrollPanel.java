@@ -1,6 +1,5 @@
 package com.mumfrey.liteloader.client.gui;
 
-import static com.mumfrey.liteloader.client.gui.GuiScreenModInfo.*;
 import static org.lwjgl.opengl.GL11.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
@@ -8,13 +7,13 @@ import net.minecraft.client.gui.GuiButton;
 import org.lwjgl.input.Keyboard;
 
 /**
- * Basic non-interactive scroll pane using OpenGL clipping planes
+ * Basic non-interactive scrollable panel using OpenGL clipping planes
  * 
  * TODO handle interaction
  * 
  * @author Adam Mummery-Smith
  */
-public class GuiScrollPane extends ModInfoScreenPanel
+class GuiScrollPanel extends GuiPanel
 {
 	private ScrollPanelContent content;
 	
@@ -38,7 +37,7 @@ public class GuiScrollPane extends ModInfoScreenPanel
 	 */
 	private int contentHeight;
 	
-	public GuiScrollPane(Minecraft minecraft, ScrollPanelContent content, int left, int top, int width, int height)
+	public GuiScrollPanel(Minecraft minecraft, ScrollPanelContent content, int left, int top, int width, int height)
 	{
 		super(minecraft);
 		
@@ -74,7 +73,7 @@ public class GuiScrollPane extends ModInfoScreenPanel
 
 	public void updateHeight()
 	{
-		this.contentHeight = this.content.getScrollPaneContentHeight(this);
+		this.contentHeight = this.content.getScrollPanelContentHeight(this);
 		this.scrollBar.setMaxValue(this.contentHeight - this.height);
 	}
 	
@@ -118,7 +117,7 @@ public class GuiScrollPane extends ModInfoScreenPanel
 		glPushMatrix();
 		glTranslatef(this.left, this.top - scrollPosition, 0.0F);
 		
-		this.content.drawScrollPaneContent(this, mouseX, mouseY, partialTicks, scrollPosition, this.height);
+		this.content.drawScrollPanelContent(this, mouseX, mouseY, partialTicks, scrollPosition, this.height);
 		
 		super.draw(mouseX - this.left, mouseY + scrollPosition - this.top, partialTicks);
 		
@@ -147,7 +146,7 @@ public class GuiScrollPane extends ModInfoScreenPanel
 		
 		if (mouseX > 0 && mouseX < this.width && mouseY > 0 && mouseY < this.contentHeight)
 		{
-			this.content.scrollPaneMousePressed(this, mouseX, mouseY, mouseButton);
+			this.content.scrollPanelMousePressed(this, mouseX, mouseY, mouseButton);
 		}
 		
 		if (mouseButton == 0)
@@ -200,6 +199,6 @@ public class GuiScrollPane extends ModInfoScreenPanel
 	@Override
 	void actionPerformed(GuiButton control)
 	{
-		this.content.scrollPaneActionPerformed(this, control);
+		this.content.scrollPanelActionPerformed(this, control);
 	}
 }

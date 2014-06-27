@@ -1,6 +1,5 @@
 package com.mumfrey.liteloader.client.gui;
 
-import static com.mumfrey.liteloader.client.gui.GuiScreenModInfo.*;
 import static org.lwjgl.opengl.GL11.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
@@ -16,7 +15,7 @@ import com.mumfrey.liteloader.modconfig.ConfigPanelHost;
  *
  * @author Adam Mummery-Smith
  */
-public class GuiConfigPanelContainer extends ModInfoScreenPanel implements ConfigPanelHost
+class GuiPanelConfigContainer extends GuiPanel implements ConfigPanelHost
 {
 	/**
 	 * Panel we are hosting
@@ -44,7 +43,7 @@ public class GuiConfigPanelContainer extends ModInfoScreenPanel implements Confi
 	 * @param panel
 	 * @param mod
 	 */
-	GuiConfigPanelContainer(Minecraft minecraft, ConfigPanel panel, LiteMod mod)
+	GuiPanelConfigContainer(Minecraft minecraft, ConfigPanel panel, LiteMod mod)
 	{
 		super(minecraft);
 		

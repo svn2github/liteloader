@@ -20,11 +20,7 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
  */
 public abstract class LiteLoaderCoreAPI implements LiteAPI
 {
-	protected static final String OPTION_SEARCH_MODS      = "search.mods";
-	protected static final String OPTION_SEARCH_JAR       = "search.jar";
-	protected static final String OPTION_SEARCH_CLASSPATH = "search.classpath";
-
-	protected static final String PKG_LITELOADER          = "com.mumfrey.liteloader";
+	protected static final String PKG_LITELOADER = "com.mumfrey.liteloader";
 	
 	protected LoaderEnvironment environment;
 	
@@ -94,9 +90,9 @@ public abstract class LiteLoaderCoreAPI implements LiteAPI
 	 */
 	void readDiscoverySettings()
 	{
-		this.searchModsFolder       = this.properties.getAndStoreBooleanProperty(LiteLoaderCoreAPI.OPTION_SEARCH_MODS,      true);
-		this.searchProtectionDomain = this.properties.getAndStoreBooleanProperty(LiteLoaderCoreAPI.OPTION_SEARCH_JAR,       false);
-		this.searchClassPath        = this.properties.getAndStoreBooleanProperty(LiteLoaderCoreAPI.OPTION_SEARCH_CLASSPATH, true);
+		this.searchModsFolder       = this.properties.getAndStoreBooleanProperty(LoaderProperties.OPTION_SEARCH_MODS,      true);
+		this.searchProtectionDomain = this.properties.getAndStoreBooleanProperty(LoaderProperties.OPTION_SEARCH_JAR,       false);
+		this.searchClassPath        = this.properties.getAndStoreBooleanProperty(LoaderProperties.OPTION_SEARCH_CLASSPATH, true);
 		
 		if (!this.searchModsFolder && !this.searchProtectionDomain && !this.searchClassPath)
 		{
@@ -112,9 +108,9 @@ public abstract class LiteLoaderCoreAPI implements LiteAPI
 	 */
 	void writeDiscoverySettings()
 	{
-		this.properties.setBooleanProperty(LiteLoaderCoreAPI.OPTION_SEARCH_MODS,      this.searchModsFolder);
-		this.properties.setBooleanProperty(LiteLoaderCoreAPI.OPTION_SEARCH_JAR,       this.searchProtectionDomain);
-		this.properties.setBooleanProperty(LiteLoaderCoreAPI.OPTION_SEARCH_CLASSPATH, this.searchClassPath);
+		this.properties.setBooleanProperty(LoaderProperties.OPTION_SEARCH_MODS,      this.searchModsFolder);
+		this.properties.setBooleanProperty(LoaderProperties.OPTION_SEARCH_JAR,       this.searchProtectionDomain);
+		this.properties.setBooleanProperty(LoaderProperties.OPTION_SEARCH_CLASSPATH, this.searchClassPath);
 	}
 
 	/* (non-Javadoc)

@@ -33,25 +33,20 @@ import com.mumfrey.liteloader.launch.LoaderProperties;
 import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
 
 /**
- * TODO Update description
+ * LiteLoaderBootstrap is responsible for managing the early part of the LiteLoader startup process, this is
+ * to ensure that NONE of the Minecraft classes which by necessity the Loader references get loaded before the
+ * PREINIT stage has completed. This allows us to load transforming tweakers in the PREINIT stage without all
+ * hell breaking loose because class names have changed between initialisation stages!
  * 
- * LiteLoaderBootstrap is a proxy class which handles the early part of the LiteLoader startup process which
- * used to be handled by the loader itself, this is to ensure that NONE of the Minecraft classes which by
- * necessity the Loader references get loaded before the pre-init stage has completed. This allows us to load
- * transforming tweakers in the pre-init stage without all hell breaking loose because class names have changed
- * between initialisation stages!
- * 
- * This class handles setting up requisite resources like the logger and the enumerator and passes init calls
- * through to the LiteLoader instance at the appropriate points during startup. Because this class is the first
- * part of the loader to get loaded, we also keep central references like the paths and version in here.
+ * This class handles setting up requisite resources like the logger, enumerator and plug-in API modules and
+ * passes init calls through to the LiteLoader instance at the appropriate points during startup. Because this
+ * class is the first part of the loader to get loaded, we also keep central references like the paths, version
+ * and loader properties in here.
  *
  * @author Adam Mummery-Smith
  */
 class LiteLoaderBootstrap implements LoaderBootstrap, LoaderEnvironment, LoaderProperties
 {
-	private static final String OPTION_BRAND = "brand";
-	private static final String OPTION_LOADING_BAR = "loadingbar";
-
 	/**
 	 * Base game directory, passed in from the tweaker
 	 */
@@ -295,7 +290,7 @@ class LiteLoaderBootstrap implements LoaderBootstrap, LoaderEnvironment, LoaderP
 	@Override
 	public void preBeginGame()
 	{
-		LoadingProgress.setEnabled(this.getAndStoreBooleanProperty(LiteLoaderBootstrap.OPTION_LOADING_BAR, true));
+		LoadingProgress.setEnabled(this.getAndStoreBooleanProperty(LoaderProperties.OPTION_LOADING_BAR, true));
 		LiteAPI api = this.getAPIProvider().getAPI("liteloader");
 		if (api instanceof LiteLoaderCoreAPI)
 		{
@@ -445,15 +440,15 @@ class LiteLoaderBootstrap implements LoaderBootstrap, LoaderEnvironment, LoaderP
 	 */
 	private void prepareBranding()
 	{
-		this.branding = this.internalProperties.getProperty(LiteLoaderBootstrap.OPTION_BRAND, null);
+		this.branding = this.internalProperties.getProperty(LoaderProperties.OPTION_BRAND, null);
 		if (this.branding != null && this.branding.length() < 1)
 			this.branding = null;
 		
 		// Save appropriate branding in the local properties file
 		if (this.branding != null)
-			this.localProperties.setProperty(LiteLoaderBootstrap.OPTION_BRAND, this.branding);
+			this.localProperties.setProperty(LoaderProperties.OPTION_BRAND, this.branding);
 		else
-			this.localProperties.remove(LiteLoaderBootstrap.OPTION_BRAND);
+			this.localProperties.remove(LoaderProperties.OPTION_BRAND);
 	}
 
 	/**

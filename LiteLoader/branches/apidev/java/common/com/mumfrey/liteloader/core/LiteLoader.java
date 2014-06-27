@@ -40,7 +40,7 @@ import com.mumfrey.liteloader.crashreport.CallableLiteLoaderMods;
 import com.mumfrey.liteloader.interfaces.Loadable;
 import com.mumfrey.liteloader.interfaces.LoadableMod;
 import com.mumfrey.liteloader.interfaces.LoaderEnumerator;
-import com.mumfrey.liteloader.interfaces.ModPanelManager;
+import com.mumfrey.liteloader.interfaces.PanelManager;
 import com.mumfrey.liteloader.interfaces.ObjectFactory;
 import com.mumfrey.liteloader.launch.LoaderEnvironment;
 import com.mumfrey.liteloader.launch.LoaderProperties;
@@ -153,7 +153,7 @@ public final class LiteLoader
 	 * Mod panel manager, deliberately raw
 	 */
 	@SuppressWarnings("rawtypes")
-	private ModPanelManager modPanelManager;
+	private PanelManager modPanelManager;
 	
 	/**
 	 * Interface Manager
@@ -503,9 +503,9 @@ public final class LiteLoader
 	 * @return
 	 */
 	@SuppressWarnings({ "cast", "unchecked" })
-	public static <T> ModPanelManager<T> getModPanelManager()
+	public static <T> PanelManager<T> getModPanelManager()
 	{
-		return (ModPanelManager<T>)LiteLoader.instance.modPanelManager;
+		return (PanelManager<T>)LiteLoader.instance.modPanelManager;
 	}
 	
 	/**
@@ -995,28 +995,6 @@ public final class LiteLoader
 	}
 	
 	/**
-	 * Set the "mod info" screen tab to hidden, regardless of the property setting
-	 * 
-	 * @deprecated use getModPanelManager().hideTab(); instead
-	 */
-	@Deprecated
-	public void hideModInfoScreenTab()
-	{
-		if (this.modPanelManager != null) this.modPanelManager.hideTab();
-	}
-	
-	/**
-	 * Set whether the "mod info" screen tab should be shown in the main menu
-	 * 
-	 * @deprecated use getModPanelManager().setDisplayModInfoScreenTab(show); instead
-	 */
-	@Deprecated
-	public void setDisplayModInfoScreenTab(boolean show)
-	{
-		if (this.modPanelManager != null) this.modPanelManager.setTabVisible(show);
-	}
-	
-	/**
 	 * Get whether the "mod info" screen tab is shown in the main menu
 	 * 
 	 * @deprecated use getModPanelManager().getDisplayModInfoScreenTab(); instead
@@ -1039,7 +1017,7 @@ public final class LiteLoader
 	public void displayModInfoScreen(Object parentScreen)
 	{
 		// Use implicit cast, because we want this to fail if the user tries to give us an invalid class
-		if (this.modPanelManager != null) this.modPanelManager.displayModInfoScreen(parentScreen);
+		if (this.modPanelManager != null) this.modPanelManager.displayLiteLoaderPanel(parentScreen);
 	}
 
 	/**

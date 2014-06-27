@@ -12,11 +12,11 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
 
 /**
- * Base class for panels which can be displayed on the mod info screen
+ * Base class for panels
  *
  * @author Adam Mummery-Smith
  */
-public abstract class ModInfoScreenPanel extends Gui
+public abstract class GuiPanel extends Gui
 {
 	protected static final int TOP = 26;
 	protected static final int BOTTOM = 40;
@@ -65,9 +65,14 @@ public abstract class ModInfoScreenPanel extends Gui
 	/**
 	 * @param minecraft
 	 */
-	public ModInfoScreenPanel(Minecraft minecraft)
+	public GuiPanel(Minecraft minecraft)
 	{
 		this.mc = minecraft;
+	}
+
+	boolean stealFocus()
+	{
+		return true;
 	}
 
 	/**
@@ -127,7 +132,7 @@ public abstract class ModInfoScreenPanel extends Gui
 			{
 				if (control.mousePressed(this.mc, mouseX, mouseY))
 				{
-					control.func_146113_a(this.mc.getSoundHandler());
+					control.playPressSound(this.mc.getSoundHandler());
 					this.actionPerformed(control);
 				}
 			}
@@ -201,5 +206,16 @@ public abstract class ModInfoScreenPanel extends Gui
 		drawTexturedModalRect(x, y, (frame % 4) * 16, 171 + (((frame / 4) % 3) * 16), 16, 16);
 		glAlphaFunc(GL_GREATER, 0.1F); 
 		glDisable(GL_BLEND);
+	}
+
+
+	protected static final void glEnableClipping(int xLeft, int xRight, int yTop, int yBottom)
+	{
+		GuiLiteLoaderPanel.glEnableClipping(xLeft, xRight, yTop, yBottom);
+	}
+	
+	protected static final void glDisableClipping()
+	{
+		GuiLiteLoaderPanel.glDisableClipping();
 	}
 }

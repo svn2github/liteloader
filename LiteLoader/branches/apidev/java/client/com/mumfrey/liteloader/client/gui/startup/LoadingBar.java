@@ -216,7 +216,7 @@ public class LoadingBar extends LoadingProgress
 			}
 		}
 		
-		ScaledResolution scaledResolution = new ScaledResolution(this.minecraft.gameSettings, this.minecraft.displayWidth, this.minecraft.displayHeight);
+		ScaledResolution scaledResolution = new ScaledResolution(this.minecraft, this.minecraft.displayWidth, this.minecraft.displayHeight);
 		int scaleFactor = scaledResolution.getScaleFactor();
 		int scaledWidth = scaledResolution.getScaledWidth();
 		int scaledHeight = scaledResolution.getScaledHeight();
@@ -345,7 +345,7 @@ public class LoadingBar extends LoadingProgress
 		glAlphaFunc(GL_GREATER, 0.1F);
 		glFlush();
 		
-		this.minecraft.func_147120_f();
+		this.minecraft.resetSize();
 	}
 	
 	private void renderLogTail(int yPos)

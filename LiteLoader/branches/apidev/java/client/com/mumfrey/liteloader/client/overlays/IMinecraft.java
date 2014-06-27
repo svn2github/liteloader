@@ -2,7 +2,6 @@ package com.mumfrey.liteloader.client.overlays;
 
 import java.util.List;
 
-import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.resources.IResourcePack;
 import net.minecraft.util.Timer;
 
@@ -45,9 +44,4 @@ public interface IMinecraft
 	 * Get the current server port (from connection)
 	 */
 	public abstract int getServerPort();
-	
-	/**
-	 * @return
-	 */
-	public abstract ServerData getCurrentServerData();
 }

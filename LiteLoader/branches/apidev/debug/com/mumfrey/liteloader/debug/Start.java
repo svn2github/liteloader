@@ -13,7 +13,6 @@ import com.mumfrey.liteloader.util.log.LiteLoaderLogger;
  * Wrapper class for LaunchWrapper Main class, which logs into minecraft.net first so that online shizzle can be tested
  * 
  * @author Adam Mummery-Smith
- * @version 0.6.2
  */
 public abstract class Start
 {
@@ -40,7 +39,7 @@ public abstract class Start
 			argsList.clear();
 			argsList.add("--tweakClass");argsList.add(FML_TWEAKER_NAME);
 		}
-
+		
 		String usernameFromCmdLine = null;
 		String passwordFromCmdLine = null;
 		
@@ -59,15 +58,18 @@ public abstract class Start
 		LiteLoaderLogger.info("Launching game as %s", loginManager.getProfileName());
 		
 		File gameDir = new File(System.getProperty("user.dir"));
-		File assetsDir = new File(gameDir, "assets/virtual/legacy");
+		File assetsDir = new File(gameDir, "assets");
 
-		argsList.add("--tweakClass");  argsList.add(LiteLoaderTweaker.class.getName());
-		argsList.add("--username");    argsList.add(loginManager.getProfileName());
-		argsList.add("--uuid");        argsList.add(loginManager.getUUID());
-		argsList.add("--accessToken"); argsList.add(loginManager.getAuthenticatedToken());
-		argsList.add("--version");     argsList.add("mcp");
-		argsList.add("--gameDir");     argsList.add(gameDir.getAbsolutePath());
-		argsList.add("--assetsDir");   argsList.add(assetsDir.getAbsolutePath());
+		argsList.add("--tweakClass");     argsList.add(LiteLoaderTweaker.class.getName());
+		argsList.add("--username");       argsList.add(loginManager.getProfileName());
+		argsList.add("--uuid");           argsList.add(loginManager.getUUID());
+		argsList.add("--accessToken");    argsList.add(loginManager.getAuthenticatedToken());
+		argsList.add("--userType");       argsList.add(loginManager.getUserType());
+		argsList.add("--userProperties"); argsList.add(loginManager.getUserProperties());
+		argsList.add("--version");        argsList.add("mcp");
+		argsList.add("--gameDir");        argsList.add(gameDir.getAbsolutePath());
+		argsList.add("--assetIndex");     argsList.add(LiteLoaderTweaker.VERSION);
+		argsList.add("--assetsDir");      argsList.add(assetsDir.getAbsolutePath());
 		
 		Launch.main(argsList.toArray(args));
 	}
