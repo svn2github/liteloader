@@ -158,9 +158,9 @@ public class Clock
 		int minute = calendar.get(Calendar.MINUTE);
 		int second = calendar.get(Calendar.SECOND);
 		
-		this.smallHandAngle  = (0.0833F * hour)   * 360.0F;
-		this.largeHandAngle  = (0.0166F * minute) * 360.0F;
-		this.secondHandAngle = (0.0166F * second) * 360.0F;
+		this.smallHandAngle  = 360.0F * (0.0833F * hour + 0.00138F * minute);
+		this.largeHandAngle  = 360.0F * (0.0166F * minute);
+		this.secondHandAngle = 360.0F * (0.0166F * second);
 	}
 
 	/**
