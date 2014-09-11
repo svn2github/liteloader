@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project default="create_run_jar" name="Create Runnable Jar for Project LiteLoaderJarAssassin">
+    <property name="version" value="1.0.0" />
+	<property name="mcp.dir" location="../../.." />
+
+	<target name="create_run_jar">
+		<delete file="${mcp.dir}/eclipse/LiteLoader/resources/update/liteloader-update-agent.jar" />
+        <jar destfile="${mcp.dir}/eclipse/LiteLoader/resources/update/liteloader-update-agent.jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Main-Class" value="com.mumfrey.liteloader.update.jarassassin.JarAssassin"/>
+                <attribute name="Class-Path" value="."/>
+                <attribute name="Implementation-Vendor" value="Adam Mummery-Smith" />
+                <attribute name="Implementation-Title" value="LiteLoaderJarAssassin" />
+                <attribute name="Implementation-Version" value="${version}" />
+            </manifest>
+            <fileset dir="${mcp.dir}/eclipse/LiteLoaderJarAssassin/bin"/>
+            <zipfileset excludes="META-INF/*.SF" src="${mcp.dir}/jars/libraries/net/sf/jopt-simple/jopt-simple/4.5/jopt-simple-4.5.jar"/>
+        </jar>
+    </target>
+</project>
