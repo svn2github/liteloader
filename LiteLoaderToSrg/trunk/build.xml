@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<project name="astroturf" basedir="." default="build" xmlns:ivy="antlib:org.apache.ivy.ant">
+
+    <property name="version" value="1.0.0" />
+    <property name="author" value="Mumfrey" />
+    
+    <property name="mcp.dir" location="../.." />
+    <property name="conf.dir" location="${mcp.dir}/conf" />
+    <property name="bin.dir" location="${mcp.dir}/eclipse/Client/bin" />
+    <property name="lib.dir" location="./lib" />
+    <property name="out.dir" location="./out" />
+    <property name="dist.dir" location="./dist" />
+    <property name="temp.dir" location="./temp" />
+    <property name="src.dir" location="./src" />
+	<property name="map.file" location="${temp.dir}/range.map" />
+    <property name="liteloader.src.base" location="${mcp.dir}/eclipse/LiteLoader/java" />
+    
+    <path id="class.path">
+        <fileset dir="${lib.dir}">
+            <include name="**/*.jar" />
+        </fileset>
+    	<fileset dir="${bin.dir}" />
+    </path>
+    
+    <property name="artefact" location="${dist.dir}/${ant.project.name}-${version}.jar" />
+    
+    <target name="build">
+        <ivy:configure file="ivysettings.xml" />
+        <antcall target="init" />
+        <antcall target="extractRanges" />
+        <antcall target="applyRanges" />
+    </target>
+
+    <path id="classpath">
+        <fileset dir="${ivy.lib.dir}">
+            <include name="**/*.jar"/>
+        </fileset>
+    </path>
+    
+    <target name="clean">
+        <delete dir="${src.dir}" failonerror="false" />
+        <delete dir="${out.dir}" failonerror="false" />
+        <delete dir="${dist.dir}" failonerror="false" />
+        <delete dir="${temp.dir}" failonerror="false" />
+    	
+    	<delete file="{map.file}" failonerror="false" />
+        
+        <mkdir dir="${src.dir}"/>
+        <mkdir dir="${out.dir}"/>
+        <mkdir dir="${dist.dir}"/>
+        <mkdir dir="${temp.dir}"/>
+    </target>
+    
+    <target name="init" depends="clean">
+        <copy todir="${src.dir}" overwrite="true">
+            <fileset dir="${liteloader.src.base}/common">
+            	<exclude name="**/Jump.java" />
+            </fileset>
+            <fileset dir="${liteloader.src.base}/client" />
+        </copy>
+        
+        <ivy:retrieve sync="true" />
+    </target>
+    
+    <target name="extractRanges">
+        <java classname="net.minecraftforge.srg2source.ast.RangeExtractor">
+            <classpath refid="class.path" />
+        	<arg value="${src.dir}" />
+        	<arg value="${lib.dir}" />
+        	<arg value="${map.file}" />
+        </java>
+    </target>
+    
+    <target name="applyRanges">
+        <java classname="net.minecraftforge.srg2source.rangeapplier.RangeApplier">
+            <classpath refid="class.path" />
+            <arg value="--srcRoot=${src.dir}" />
+            <arg value="--srcRangeMap=${map.file}" />
+            <arg value="--srgFiles=${mcp.dir}/temp/client_ro_srg.srg" />
+            <arg value="--outDir=${out.dir}" />
+        </java>
+    </target>
+    
+    <target name="jar" depends="extractRanges">
+        <jar destfile="${artefact}" duplicate="preserve" index="true" manifestencoding="UTF-8">
+            <manifest>
+                <attribute name="Implementation-Vendor" value="${author}" />
+                <attribute name="Implementation-Title" value="${ant.project.name}" />
+                <attribute name="Implementation-Version" value="${version}" />
+                <attribute name="TweakClass" value="${tweakclass}" />
+                <attribute name="TweakName" value="${tweakname}" />
+                <attribute name="TweakVersion" value="${version}" />
+                <attribute name="TweakAuthor" value="${author}" />
+            </manifest>
+            <fileset dir="${stage.dir}" />
+        </jar>
+    </target>
+</project>
