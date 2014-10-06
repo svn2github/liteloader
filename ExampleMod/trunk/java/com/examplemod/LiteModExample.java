@@ -86,7 +86,7 @@ public class LiteModExample implements Tickable
 	{
 		// The key binding declared above won't do anything unless we register it, ModUtilties provides 
 		// a convenience method for this
-		LiteLoader.getInput().registerKeyBinding(clockKeyBinding);
+		LiteLoader.getInput().registerKeyBinding(LiteModExample.clockKeyBinding);
 		
 		this.clock.setSize(this.clockSize);
 		this.clock.setVisible(this.clockVisible);

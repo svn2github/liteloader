@@ -1,11 +1,12 @@
 package com.examplemod;
 
-import static org.lwjgl.opengl.GL11.*;
+import static com.mumfrey.liteloader.gl.GL.*;
 
 import java.util.Calendar;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.WorldRenderer;
 import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.util.ReadableColor;
@@ -220,22 +221,23 @@ public class Clock
     private static void glDrawTexturedRect(int x, int y, int width, int height, int u, int v, int u2, int v2)
     {
 		// Set the appropriate OpenGL modes
-		glDisable(GL_LIGHTING);
-        glDisable(GL_BLEND);
+		glDisableLighting();
+        glDisableBlend();
 		glAlphaFunc(GL_GREATER, 0.01F);
-		glEnable(GL_TEXTURE_2D);
+		glEnableTexture2D();
 		glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
 
 		float texMapScale = 0.001953125F; // 512px
         
         // We use the tessellator rather than drawing individual quads because it uses vertex arrays to
         // draw the quads more efficiently.
-        Tessellator tessellator = Tessellator.instance;
-        tessellator.startDrawingQuads();
-        tessellator.addVertexWithUV(x + 0,     y + height, 0, u  * texMapScale, v2 * texMapScale);
-        tessellator.addVertexWithUV(x + width, y + height, 0, u2 * texMapScale, v2 * texMapScale);
-        tessellator.addVertexWithUV(x + width, y + 0,      0, u2 * texMapScale, v  * texMapScale);
-        tessellator.addVertexWithUV(x + 0,     y + 0,      0, u  * texMapScale, v  * texMapScale);
+		Tessellator tessellator = Tessellator.getInstance();
+		WorldRenderer worldRenderer = tessellator.getWorldRenderer();
+        worldRenderer.startDrawingQuads();
+        worldRenderer.addVertexWithUV(x + 0,     y + height, 0, u  * texMapScale, v2 * texMapScale);
+        worldRenderer.addVertexWithUV(x + width, y + height, 0, u2 * texMapScale, v2 * texMapScale);
+        worldRenderer.addVertexWithUV(x + width, y + 0,      0, u2 * texMapScale, v  * texMapScale);
+        worldRenderer.addVertexWithUV(x + 0,     y + 0,      0, u  * texMapScale, v  * texMapScale);
         tessellator.draw();
     }
 
@@ -245,23 +247,24 @@ public class Clock
 	private static void glDrawRect(float x1, float y1, float x2, float y2, ReadableColor colour)
     {
 		// Set GL modes
-        glDisable(GL_BLEND);
-        glDisable(GL_TEXTURE_2D);
-        glDisable(GL_CULL_FACE);
+        glDisableBlend();
+        glDisableTexture2D();
+        glDisableCulling();
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glColor4f(colour.getRed(), colour.getGreen(), colour.getBlue(), 1.0F);
         
         // Draw the quad
-        Tessellator tessellator = Tessellator.instance;
-        tessellator.startDrawingQuads();
-        tessellator.addVertex(x1, y2, 0);
-        tessellator.addVertex(x2, y2, 0);
-        tessellator.addVertex(x2, y1, 0);
-        tessellator.addVertex(x1, y1, 0);
+		Tessellator tessellator = Tessellator.getInstance();
+		WorldRenderer worldRenderer = tessellator.getWorldRenderer();
+        worldRenderer.startDrawingQuads();
+        worldRenderer.addVertex(x1, y2, 0);
+        worldRenderer.addVertex(x2, y2, 0);
+        worldRenderer.addVertex(x2, y1, 0);
+        worldRenderer.addVertex(x1, y1, 0);
         tessellator.draw();
         
         // Restore GL modes
-        glEnable(GL_CULL_FACE);
-        glEnable(GL_TEXTURE_2D);
+        glEnableCulling();
+        glEnableTexture2D();
     }
 }
