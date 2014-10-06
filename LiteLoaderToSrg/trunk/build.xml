@@ -1,34 +1,33 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<project name="astroturf" basedir="." default="build" xmlns:ivy="antlib:org.apache.ivy.ant">
+<project name="liteloader" basedir="." default="build" xmlns:ivy="antlib:org.apache.ivy.ant">
 
-    <property name="version" value="1.0.0" />
+    <property name="version" value="1.8" />
     <property name="author" value="Mumfrey" />
     
     <property name="mcp.dir" location="../.." />
-    <property name="conf.dir" location="${mcp.dir}/conf" />
-    <property name="bin.dir" location="${mcp.dir}/eclipse/Client/bin" />
+    <property name="mcp.temp.dir" location="${mcp.dir}/temp" />
+    <property name="minecraft.src.dir" location="${mcp.dir}/src/minecraft" />
     <property name="lib.dir" location="./lib" />
     <property name="out.dir" location="./out" />
     <property name="dist.dir" location="./dist" />
     <property name="temp.dir" location="./temp" />
     <property name="src.dir" location="./src" />
-	<property name="map.file" location="${temp.dir}/range.map" />
+    <property name="map.file" location="${temp.dir}/range.map" />
+    <property name="insrg.file" location="${mcp.temp.dir}/client_ro_srg.srg" />
+    <property name="outsrg.file" location="${temp.dir}/remap.srg" />
     <property name="liteloader.src.base" location="${mcp.dir}/eclipse/LiteLoader/java" />
     
     <path id="class.path">
         <fileset dir="${lib.dir}">
             <include name="**/*.jar" />
         </fileset>
-    	<fileset dir="${bin.dir}" />
     </path>
     
-    <property name="artefact" location="${dist.dir}/${ant.project.name}-${version}.jar" />
+    <property name="artefact" location="${dist.dir}/${ant.project.name}-${version}-srgnames-sources.jar" />
     
     <target name="build">
         <ivy:configure file="ivysettings.xml" />
-        <antcall target="init" />
-        <antcall target="extractRanges" />
-        <antcall target="applyRanges" />
+        <antcall target="jar" />
     </target>
 
     <path id="classpath">
@@ -42,8 +41,8 @@
         <delete dir="${out.dir}" failonerror="false" />
         <delete dir="${dist.dir}" failonerror="false" />
         <delete dir="${temp.dir}" failonerror="false" />
-    	
-    	<delete file="{map.file}" failonerror="false" />
+        
+        <delete file="{map.file}" failonerror="false" />
         
         <mkdir dir="${src.dir}"/>
         <mkdir dir="${out.dir}"/>
@@ -53,8 +52,11 @@
     
     <target name="init" depends="clean">
         <copy todir="${src.dir}" overwrite="true">
+            <fileset dir="${minecraft.src.dir}">
+            	<exclude name="*.java" />
+            </fileset>
             <fileset dir="${liteloader.src.base}/common">
-            	<exclude name="**/Jump.java" />
+                <exclude name="**/Jump.java" />
             </fileset>
             <fileset dir="${liteloader.src.base}/client" />
         </copy>
@@ -62,37 +64,41 @@
         <ivy:retrieve sync="true" />
     </target>
     
-    <target name="extractRanges">
+    <target name="flipsrg">
+        <copy file="${insrg.file}" tofile="${outsrg.file}" overwrite="true" />
+        <replaceregexp file="${outsrg.file}" byline="true" match="(FD|CL): ([^\s]+) ([^\s]+)" replace="\1: \3 \2" />
+        <replaceregexp file="${outsrg.file}" byline="true" match="MD: ([^\s]+) ([^\s]+) ([^\s]+) ([^\s]+)" replace="MD: \3 \4 \1 \2" />
+    </target>
+    
+    <target name="extractRanges" depends="init">
         <java classname="net.minecraftforge.srg2source.ast.RangeExtractor">
             <classpath refid="class.path" />
-        	<arg value="${src.dir}" />
-        	<arg value="${lib.dir}" />
-        	<arg value="${map.file}" />
+            <arg value="${src.dir}" />
+            <arg value="${lib.dir}" />
+            <arg value="${map.file}" />
         </java>
     </target>
     
-    <target name="applyRanges">
+    <target name="applyRanges" depends="extractRanges,flipsrg">
         <java classname="net.minecraftforge.srg2source.rangeapplier.RangeApplier">
             <classpath refid="class.path" />
             <arg value="--srcRoot=${src.dir}" />
             <arg value="--srcRangeMap=${map.file}" />
-            <arg value="--srgFiles=${mcp.dir}/temp/client_ro_srg.srg" />
+            <arg value="--srgFiles=${outsrg.file}" />
             <arg value="--outDir=${out.dir}" />
         </java>
     </target>
     
-    <target name="jar" depends="extractRanges">
+    <target name="jar" depends="applyRanges">
         <jar destfile="${artefact}" duplicate="preserve" index="true" manifestencoding="UTF-8">
             <manifest>
                 <attribute name="Implementation-Vendor" value="${author}" />
                 <attribute name="Implementation-Title" value="${ant.project.name}" />
                 <attribute name="Implementation-Version" value="${version}" />
-                <attribute name="TweakClass" value="${tweakclass}" />
-                <attribute name="TweakName" value="${tweakname}" />
-                <attribute name="TweakVersion" value="${version}" />
-                <attribute name="TweakAuthor" value="${author}" />
             </manifest>
-            <fileset dir="${stage.dir}" />
+            <fileset dir="${out.dir}">
+            	<exclude name="net/minecraft/**" />
+            </fileset>
         </jar>
     </target>
 </project>
